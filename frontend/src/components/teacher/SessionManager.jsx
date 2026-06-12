@@ -52,13 +52,16 @@ export default function SessionManager({ sid, onClose }) {
   };
 
   const releaseAll = async () => {
-    const ready = (sess?.participants || []).filter(p => p.confirmed && !p.ignored && p.matched_student_id).length;
-    if (ready === 0) return toast.error('لا يوجد طلاب مؤكدين — أكّد المطابقة أولاً');
-    if (!window.confirm(`إرسال الدرجات لـ ${ready} طالب؟`)) return;
+    const matchedReady = (sess?.participants || []).filter(p => !p.ignored && p.matched_student_id).length;
+    if (matchedReady === 0) {
+      toast.error('لا يوجد طلاب مطابقون — طابق الأسماء أولاً');
+      return;
+    }
     setBusy(true);
     try {
-      await axios.post(`${API}/grade-sessions/${sid}/release`, {}, getAuthHeaders());
-      toast.success('تم إرسال الدرجات — الطلاب يرونها الآن');
+      const r = await axios.post(`${API}/grade-sessions/${sid}/release`, {}, getAuthHeaders());
+      const sent = r.data?.released_to ?? matchedReady;
+      toast.success(`تم إرسال الدرجات لـ ${sent} طالب — يرونها الآن`);
       load();
     } catch (err) { toast.error(err.response?.data?.detail || 'تعذر الإرسال'); }
     finally { setBusy(false); }
@@ -78,6 +81,7 @@ export default function SessionManager({ sid, onClose }) {
 
   const participants = sess.participants || [];
   const released = sess.status === 'released';
+  const matchedReady = participants.filter(p => !p.ignored && p.matched_student_id).length;
   const confirmedCount = participants.filter(p => p.confirmed && !p.ignored).length;
   const ignoredCount = participants.filter(p => p.ignored).length;
   const pendingCount = participants.filter(p => !p.confirmed && !p.ignored).length;
@@ -94,7 +98,7 @@ export default function SessionManager({ sid, onClose }) {
                 style={released
                   ? { background: 'rgba(52,211,153,0.15)', color: '#34D399', border: '1px solid rgba(52,211,153,0.3)' }
                   : { background: 'rgba(251,191,36,0.15)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.3)' }}>
-                {released ? 'تم الإرسال' : 'مفتوحة — بانتظار المطابقة'}
+                {released ? 'تم الإرسال' : matchedReady > 0 ? `${matchedReady} جاهزون للإرسال` : 'بانتظار الطلاب'}
               </span>
             </div>
             <p className="text-xs" style={{ color: 'var(--text-hint)' }}>
@@ -180,11 +184,11 @@ export default function SessionManager({ sid, onClose }) {
               إعادة فتح الجلسة (إيقاف العرض)
             </button>
           ) : (
-            <button onClick={releaseAll} disabled={busy || confirmedCount === 0}
+            <button onClick={releaseAll} disabled={busy || matchedReady === 0}
               data-testid="session-release-btn"
               className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 disabled:opacity-40">
               <Send className="w-4 h-4" />
-              {busy ? 'جارٍ الإرسال...' : `إرسال الدرجات لـ ${confirmedCount} طالب`}
+              {busy ? 'جارٍ الإرسال...' : `إرسال الدرجات لـ ${matchedReady} طالب`}
             </button>
           )}
         </div>
@@ -243,7 +247,7 @@ function ParticipantRow({ p, roster, onChange, onRemove }) {
       <div className="flex flex-col sm:flex-row gap-2 items-stretch">
         <select
           value={p.matched_student_id || ''}
-          onChange={(e) => onChange({ matched_student_id: e.target.value, confirmed: false })}
+          onChange={(e) => onChange({ matched_student_id: e.target.value, confirmed: !!e.target.value })}
           data-testid={`match-select-${p.id}`}
           className="input-field flex-1 text-xs">
           <option value="">— لا مطابقة —</option>

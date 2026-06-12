@@ -2491,11 +2491,23 @@ async def release_session(sid: str, t=Depends(get_teacher)):
     sess = await db.grade_sessions.find_one({"id": sid, "owner_id": t["teacher_id"]})
     if not sess:
         raise HTTPException(404, "الجلسة غير موجودة")
-    await db.grade_sessions.update_one(
-        {"id": sid},
-        {"$set": {"status": "released", "released_at": now_iso()}}
-    )
-    return {"message": "تم إرسال الدرجات", "status": "released"}
+    # تأكيد تلقائي للمطابقات عالية الثقة (>= 0.85) عند الإرسال — حتى لو لم يضغط المعلم تأكيد يدوياً
+    participants = sess.get("participants", [])
+    auto_confirmed_count = 0
+    for p in participants:
+        if (not p.get("confirmed")
+                and not p.get("ignored")
+                and p.get("matched_student_id")
+                and (p.get("match_confidence") or 0) >= 0.85):
+            p["confirmed"] = True
+            auto_confirmed_count += 1
+    update = {"status": "released", "released_at": now_iso()}
+    if auto_confirmed_count:
+        update["participants"] = participants
+    await db.grade_sessions.update_one({"id": sid}, {"$set": update})
+    ready = sum(1 for p in participants if p.get("confirmed") and not p.get("ignored") and p.get("matched_student_id"))
+    return {"message": "تم إرسال الدرجات", "status": "released",
+            "released_to": ready, "auto_confirmed": auto_confirmed_count}
 
 
 @api_router.post("/grade-sessions/{sid}/reopen")
@@ -2531,6 +2543,8 @@ async def public_session_join(code: str, data: SessionJoinRequest):
             return {"participant_id": p["id"], "rejoined": True}
     gb = await db.gradebooks.find_one({"id": sess["gradebook_id"]}, {"_id": 0, "students": 1})
     match = _auto_match_participant(name, (gb or {}).get("students", []))
+    # تأكيد تلقائي للمطابقات عالية الثقة (>= 0.85) — يلغي الحاجة لتأكيد يدوي للأسماء المطابقة تماماً
+    auto_confirm = bool(match["matched_student_id"]) and (match["match_confidence"] or 0) >= 0.85
     participant = {
         "id": str(uuid.uuid4()),
         "joined_name": name,
@@ -2539,7 +2553,7 @@ async def public_session_join(code: str, data: SessionJoinRequest):
         "matched_student_id": match["matched_student_id"],
         "matched_student_name": match["matched_student_name"],
         "match_confidence": match["match_confidence"],
-        "confirmed": False,
+        "confirmed": auto_confirm,
         "ignored": False,
         "joined_at": now_iso(),
     }
@@ -2571,9 +2585,6 @@ async def public_session_state(code: str, participant_id: str):
     if p.get("ignored") or not p.get("matched_student_id"):
         return {**base, "phase": "not_matched",
                 "message": "لم يتم العثور على اسمك في السجل — راجع المعلم"}
-    if not p.get("confirmed"):
-        return {**base, "phase": "not_matched",
-                "message": "لم يؤكد المعلم مطابقة اسمك — راجع المعلم"}
     # جلب التقييم والمعايير
     rubric = await db.rubrics.find_one({"id": sess["rubric_id"]}, {"_id": 0})
     ev = await db.rubric_evaluations.find_one(
