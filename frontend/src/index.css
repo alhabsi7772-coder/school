@@ -1,0 +1,1059 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 290 100% 49%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 189 100% 50%;
+    --accent-foreground: 222 47% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 18%;
+    --input: 217 33% 15%;
+    --ring: 189 100% 50%;
+    --radius: 0.75rem;
+    --chart-1: 189 100% 50%;
+    --chart-2: 290 100% 49%;
+    --chart-3: 152 100% 45%;
+    --chart-4: 48 96% 53%;
+    --chart-5: 215 70% 60%;
+
+    /* Custom design tokens */
+    --cosmos-950: #0B1120;
+    --cosmos-900: #111827;
+    --cosmos-800: #1E2A3A;
+
+    /* ── Dynamic Theme Variables (cyber-cyan defaults) ── */
+    --theme-accent: #00E5FF;
+    --theme-accent-rgb: 0, 229, 255;
+    --theme-grad1: #00B8D4;
+    --theme-grad2: #0091EA;
+    --theme-orb1: rgba(0, 229, 255, 0.18);
+    --theme-orb2: rgba(41, 121, 255, 0.14);
+    --theme-orb3: rgba(0, 230, 118, 0.08);
+    --theme-grid-color: rgba(0, 229, 255, 0.05);
+
+    /* ── Mode variable (dark by default) ── */
+    --mode-bg: #0B1120;
+
+    /* ── Text readability variables ── */
+    --text-muted: rgba(255, 255, 255, 0.85);
+    --text-hint:  rgba(255, 255, 255, 0.68);
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    background-color: var(--mode-bg);
+    @apply text-slate-100;
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    min-height: 100vh;
+  }
+  html { direction: rtl; }
+
+  /* ── Boost dark-mode Tailwind text classes for readability ── */
+  .text-slate-300 { color: rgba(255, 255, 255, 0.60); }
+  .text-slate-400 { color: rgba(255, 255, 255, 0.70); }
+  .text-slate-500 { color: rgba(255, 255, 255, 0.78); }
+  .text-slate-600 { color: rgba(255, 255, 255, 0.86); }
+  .text-slate-700 { color: rgba(255, 255, 255, 0.92); }
+  .text-slate-800 { color: #FFFFFF; }
+  .text-slate-900 { color: #FFFFFF; }
+}
+
+/* ============================================================
+   ANIMATED BACKGROUND SYSTEM
+   ============================================================ */
+.page-bg {
+  background-color: transparent;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Grid removed — replaced by MatrixBackground canvas */
+.page-bg::before {
+  display: none;
+}
+
+/* ============================================================
+   ANIMATED ORBS
+   ============================================================ */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--theme-orb1) 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  animation: orb-float-1 14s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--theme-orb2) 0%, transparent 70%);
+  bottom: -150px;
+  left: -150px;
+  animation: orb-float-2 18s ease-in-out infinite;
+}
+
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--theme-orb3) 0%, transparent 70%);
+  top: 40%;
+  left: 30%;
+  animation: orb-float-3 22s ease-in-out infinite;
+}
+
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-60px, 80px) scale(1.1); }
+  66% { transform: translate(40px, -40px) scale(0.95); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(70px, -60px) scale(1.15); }
+  66% { transform: translate(-30px, 50px) scale(0.9); }
+}
+
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(-80px, -80px) scale(1.2); opacity: 0.9; }
+}
+
+/* ============================================================
+   GLASSMORPHISM COMPONENTS
+   ============================================================ */
+.glass-card {
+  background: rgba(30, 42, 58, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass-card-hover {
+  transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(var(--theme-accent-rgb), 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(var(--theme-accent-rgb), 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.glass-sidebar {
+  background: rgba(11, 17, 32, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(var(--theme-accent-rgb), 0.06);
+  box-shadow: -4px 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.glass-modal {
+  background: rgba(17, 24, 39, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================================
+   3D ICON SYSTEM
+   ============================================================ */
+.icon-3d-wrapper {
+  perspective: 400px;
+  display: inline-flex;
+}
+
+.icon-3d {
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), filter 0.5s ease;
+  transform-style: preserve-3d;
+}
+
+.icon-3d-wrapper:hover .icon-3d {
+  transform: perspective(400px) rotateY(20deg) rotateX(-10deg) translateZ(8px);
+  filter: drop-shadow(0 8px 12px rgba(var(--theme-accent-rgb), 0.5));
+}
+
+.icon-3d-float {
+  animation: icon-float 4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 20px rgba(var(--theme-accent-rgb), 0.4));
+}
+
+@keyframes icon-float {
+  0%, 100% { transform: perspective(400px) rotateY(-8deg) rotateX(5deg) translateY(0px); }
+  50% { transform: perspective(400px) rotateY(8deg) rotateX(-5deg) translateY(-10px); }
+}
+
+.icon-3d-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-3d-container::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 10px;
+  background: rgba(var(--theme-accent-rgb), 0.3);
+  border-radius: 50%;
+  filter: blur(6px);
+  animation: shadow-float 4s ease-in-out infinite;
+}
+
+@keyframes shadow-float {
+  0%, 100% { opacity: 0.6; width: 70%; }
+  50% { opacity: 0.2; width: 50%; }
+}
+
+/* ============================================================
+   NEON GLOW UTILITIES
+   ============================================================ */
+.neon-text-cyan {
+  color: var(--theme-accent);
+  text-shadow: 0 0 10px rgba(var(--theme-accent-rgb), 0.6), 0 0 30px rgba(var(--theme-accent-rgb), 0.3);
+}
+
+.neon-text-fuchsia {
+  color: #D500F9;
+  text-shadow: 0 0 10px rgba(213, 0, 249, 0.6), 0 0 30px rgba(213, 0, 249, 0.3);
+}
+
+.neon-border-cyan {
+  border-color: rgba(var(--theme-accent-rgb), 0.5);
+  box-shadow: 0 0 12px rgba(var(--theme-accent-rgb), 0.3), inset 0 0 12px rgba(var(--theme-accent-rgb), 0.05);
+}
+
+.neon-border-fuchsia {
+  border-color: rgba(213, 0, 249, 0.5);
+  box-shadow: 0 0 12px rgba(213, 0, 249, 0.3);
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.5), 0 0 60px rgba(var(--theme-accent-rgb), 0.2);
+}
+
+/* ============================================================
+   BUTTON SYSTEM
+   ============================================================ */
+.btn-primary {
+  background: linear-gradient(135deg, var(--theme-grad1) 0%, var(--theme-grad2) 100%);
+  color: white;
+  font-weight: 700;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-grad2) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary:hover { box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.5), 0 8px 24px rgba(0, 0, 0, 0.3); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-primary span, .btn-primary * { position: relative; z-index: 1; }
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.3s ease;
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(var(--theme-accent-rgb), 0.4); color: var(--theme-accent); }
+
+.btn-ghost {
+  background: transparent;
+  color: rgba(148, 163, 184, 0.8);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.06); color: white; }
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.25s ease;
+}
+.btn-danger:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); }
+
+/* ============================================================
+   INPUT SYSTEM
+   ============================================================ */
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.1);
+  border-radius: 0.75rem;
+  color: #F8FAFC;
+  font-family: 'Tajawal', sans-serif;
+  transition: all 0.25s ease;
+}
+
+.input-field::placeholder { color: rgba(148, 163, 184, 0.5); }
+.input-field:focus {
+  outline: none;
+  border-color: rgba(var(--theme-accent-rgb), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), 0.1), 0 0 15px rgba(var(--theme-accent-rgb), 0.1);
+  background: rgba(17, 24, 39, 0.9);
+}
+
+select.input-field option { background: #1E2A3A; color: #F8FAFC; }
+
+/* ============================================================
+   CARD COMPONENTS
+   ============================================================ */
+.quiz-card {
+  background: rgba(30, 42, 58, 0.5);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.06);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(12px);
+  transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.quiz-card:hover {
+  border-color: rgba(var(--theme-accent-rgb), 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 15px rgba(var(--theme-accent-rgb), 0.06);
+  transform: translateY(-1px);
+}
+
+.stat-card {
+  background: rgba(30, 42, 58, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(16px);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--stat-color, var(--theme-accent)), transparent);
+  opacity: 0.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   NAV ITEM (SIDEBAR)
+   ============================================================ */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  color: rgba(148, 163, 184, 0.8);
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.04));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: inherit;
+}
+
+.nav-item:hover { color: white; }
+.nav-item:hover::before { opacity: 1; }
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.12), rgba(var(--theme-accent-rgb), 0.08));
+  color: var(--theme-accent);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.2);
+  box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.1);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: var(--theme-accent);
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 0 8px rgba(var(--theme-accent-rgb), 0.8);
+}
+
+/* ============================================================
+   SHIMMER LOADING
+   ============================================================ */
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--theme-grad1), var(--theme-accent));
+  box-shadow: 0 0 8px rgba(var(--theme-accent-rgb), 0.6);
+  transition: width 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(17, 24, 39, 0.4); }
+::-webkit-scrollbar-thumb { background: rgba(var(--theme-accent-rgb), 0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--theme-accent-rgb), 0.4); }
+
+/* ============================================================
+   MISC UTILITIES
+   ============================================================ */
+@layer utilities {
+  .font-tajawal { font-family: 'Tajawal', sans-serif; }
+  .font-outfit { font-family: 'Outfit', sans-serif; }
+  .float-anim { animation: icon-float 4s ease-in-out infinite; }
+  .pulse-ring {
+    animation: pulse-ring-neon 2s infinite;
+  }
+}
+
+@keyframes pulse-ring-neon {
+  0% { box-shadow: 0 0 0 0 rgba(var(--theme-accent-rgb), 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(var(--theme-accent-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--theme-accent-rgb), 0); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Status badge colors */
+.badge-draft { background: rgba(71, 85, 105, 0.4); color: #94A3B8; border: 1px solid rgba(71, 85, 105, 0.3); }
+.badge-waiting { background: rgba(251, 191, 36, 0.15); color: #FCD34D; border: 1px solid rgba(251, 191, 36, 0.25); }
+.badge-active { background: rgba(0, 230, 118, 0.15); color: #4ADE80; border: 1px solid rgba(0, 230, 118, 0.3); }
+.badge-closed { background: rgba(239, 68, 68, 0.12); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+[data-debug-wrapper="true"] { display: contents !important; }
+
+/* ============================================================
+   DARK MODE TEXT OVERRIDES — pure white (guaranteed, outside @layer)
+   ============================================================ */
+.text-slate-300 { color: rgba(255, 255, 255, 0.60) !important; }
+.text-slate-400 { color: rgba(255, 255, 255, 0.70) !important; }
+.text-slate-500 { color: rgba(255, 255, 255, 0.78) !important; }
+.text-slate-600 { color: rgba(255, 255, 255, 0.86) !important; }
+.text-slate-700 { color: rgba(255, 255, 255, 0.92) !important; }
+.text-slate-800 { color: #FFFFFF !important; }
+.text-slate-900 { color: #FFFFFF !important; }
+
+/* ============================================================
+   DARK MODE BG / BORDER OVERRIDES  (global default = dark mode)
+   Prevent bright-white Tailwind classes from breaking dark UI
+   ============================================================ */
+.bg-slate-50  { background-color: rgba(30, 42, 58, 0.40) !important; }
+.bg-slate-100 { background-color: rgba(30, 42, 58, 0.60) !important; }
+.hover\:bg-slate-50:hover  { background-color: rgba(30, 42, 58, 0.30) !important; }
+.hover\:bg-slate-100:hover { background-color: rgba(30, 42, 58, 0.50) !important; }
+.border-slate-100 { border-color: rgba(255, 255, 255, 0.08) !important; }
+.border-slate-200 { border-color: rgba(255, 255, 255, 0.12) !important; }
+.divide-slate-50  > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* ── Make native inputs readable inside dark glass modals ── */
+.glass-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+.glass-modal select,
+.glass-modal textarea {
+  background-color: rgba(17, 24, 39, 0.70) !important;
+  color: #F8FAFC !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.glass-modal input::placeholder,
+.glass-modal textarea::placeholder { color: rgba(148, 163, 184, 0.70) !important; }
+
+/* ============================================================
+   LIGHT / DAY MODE OVERRIDES  (html.mode-light)
+   Identity: Gold (#C9A961) + Cream (#F5EEDC) + Near-black (#1a1a1a)
+   ============================================================ */
+
+/* Override theme accent → antique gold (calm on cream bg) */
+html.mode-light {
+  --theme-accent: #B8924A !important;
+  --theme-accent-rgb: 184, 146, 74 !important;
+}
+
+html.mode-light body {
+  background-color: #F5EEDC !important;  /* warm parchment cream */
+  color: #1a1a1a !important;
+}
+
+html.mode-light .page-bg {
+  background-color: transparent !important;
+}
+
+/* Orbs – hidden entirely in day mode (replaced by gold bubbles) */
+html.mode-light .orb { display: none !important; }
+
+/* ── Cards → soft off-white with subtle gold border ── */
+html.mode-light .glass-card {
+  background: rgba(253, 250, 241, 0.92) !important;
+  border-color: rgba(184, 146, 74, 0.22) !important;
+  box-shadow: 0 2px 12px rgba(120, 90, 30, 0.08) !important;
+}
+html.mode-light .glass-card-hover:hover {
+  border-color: rgba(184, 146, 74, 0.45) !important;
+  box-shadow: 0 6px 22px rgba(120, 90, 30, 0.12) !important;
+}
+html.mode-light .glass-sidebar {
+  background: rgba(250, 245, 232, 0.97) !important;
+  border-left-color: rgba(184, 146, 74, 0.18) !important;
+  box-shadow: -2px 0 14px rgba(120, 90, 30, 0.06) !important;
+}
+html.mode-light .glass-modal {
+  background: rgba(253, 250, 241, 0.99) !important;
+  border-color: rgba(184, 146, 74, 0.28) !important;
+  box-shadow: 0 18px 48px rgba(120, 90, 30, 0.18) !important;
+}
+html.mode-light .quiz-card {
+  background: rgba(253, 250, 241, 0.92) !important;
+  border-color: rgba(184, 146, 74, 0.20) !important;
+  box-shadow: 0 2px 10px rgba(120, 90, 30, 0.07) !important;
+}
+html.mode-light .quiz-card:hover {
+  border-color: rgba(184, 146, 74, 0.42) !important;
+  box-shadow: 0 6px 20px rgba(120, 90, 30, 0.11) !important;
+}
+html.mode-light .stat-card {
+  background: rgba(253, 250, 241, 0.92) !important;
+  border-color: rgba(184, 146, 74, 0.20) !important;
+  box-shadow: 0 2px 10px rgba(120, 90, 30, 0.06) !important;
+}
+
+/* ── Nav items ── */
+html.mode-light .nav-item { color: #2a2a2a !important; }
+html.mode-light .nav-item:hover { color: #000 !important; }
+html.mode-light .nav-item.active { color: #B8924A !important; }
+
+/* ── Input fields ── */
+html.mode-light .input-field {
+  background: #FBF6E7 !important;
+  border-color: rgba(184, 146, 74, 0.30) !important;
+  color: #1a1a1a !important;
+}
+html.mode-light .input-field::placeholder { color: #8a7d5e !important; }
+html.mode-light .input-field:focus {
+  background: #FFFDF5 !important;
+  border-color: rgba(184, 146, 74, 0.65) !important;
+}
+html.mode-light select.input-field option { background: #FFFDF5 !important; color: #1a1a1a !important; }
+
+/* ── Text: rich black on cream ── */
+html.mode-light .glass-card .text-white,
+html.mode-light .glass-modal .text-white,
+html.mode-light .quiz-card .text-white,
+html.mode-light .stat-card .text-white { color: #1a1a1a !important; }
+
+html.mode-light .glass-card .text-slate-100,
+html.mode-light .quiz-card .text-slate-100 { color: #1a1a1a !important; }
+
+html.mode-light .glass-card .text-slate-200,
+html.mode-light .quiz-card .text-slate-200 { color: #1a1a1a !important; }
+
+html.mode-light .glass-card .text-slate-300,
+html.mode-light .glass-card .text-slate-400,
+html.mode-light .glass-card .text-slate-500,
+html.mode-light .quiz-card .text-slate-300,
+html.mode-light .quiz-card .text-slate-400,
+html.mode-light .quiz-card .text-slate-500,
+html.mode-light .stat-card .text-slate-300,
+html.mode-light .stat-card .text-slate-400 { color: #4a4232 !important; }
+
+/* ── Sidebar text ── */
+html.mode-light .glass-sidebar .text-white  { color: #1a1a1a !important; }
+html.mode-light .glass-sidebar .text-slate-400 { color: #5a503c !important; }
+
+/* ── Buttons ── */
+html.mode-light .btn-secondary {
+  background: rgba(184, 146, 74, 0.08) !important;
+  color: #2a2a2a !important;
+  border-color: rgba(184, 146, 74, 0.30) !important;
+}
+html.mode-light .btn-secondary:hover {
+  background: rgba(184, 146, 74, 0.16) !important;
+  color: #B8924A !important;
+}
+html.mode-light .btn-ghost { color: #4a4232 !important; }
+html.mode-light .btn-ghost:hover { background: rgba(184, 146, 74, 0.10) !important; color: #1a1a1a !important; }
+
+/* ── Badges ── */
+html.mode-light .badge-draft  { background: rgba(74,66,50,0.08)   !important; color: #4a4232 !important; border-color: rgba(74,66,50,0.20)  !important; }
+html.mode-light .badge-waiting{ background: rgba(184,146,74,0.14) !important; color: #8B6914 !important; border-color: rgba(184,146,74,0.35) !important; }
+html.mode-light .badge-active { background: rgba(22,163,74,0.10)  !important; color: #14532d !important; border-color: rgba(22,163,74,0.30)  !important; }
+html.mode-light .badge-closed { background: rgba(180,40,40,0.08)  !important; color: #7a1f1f !important; border-color: rgba(180,40,40,0.25)  !important; }
+
+/* ── Shimmer ── */
+html.mode-light .shimmer {
+  background: linear-gradient(90deg, rgba(184,146,74,0.05) 25%, rgba(184,146,74,0.10) 50%, rgba(184,146,74,0.05) 75%) !important;
+}
+
+/* ── Scrollbar ── */
+html.mode-light ::-webkit-scrollbar-track { background: rgba(184,146,74,0.06) !important; }
+html.mode-light ::-webkit-scrollbar-thumb { background: rgba(184,146,74,0.30) !important; }
+html.mode-light ::-webkit-scrollbar-thumb:hover { background: rgba(184,146,74,0.55) !important; }
+
+/* ── Neon soften ── */
+html.mode-light .neon-text-cyan  { text-shadow: none !important; }
+html.mode-light .neon-glow-cyan  { box-shadow: none !important; }
+html.mode-light .icon-3d-float   { filter: drop-shadow(0 4px 10px rgba(184, 146, 74, 0.35)) !important; }
+
+/* ── Mobile header ── */
+html.mode-light [data-mobile-header] {
+  background: rgba(250, 245, 232, 0.97) !important;
+  border-bottom-color: rgba(184, 146, 74, 0.22) !important;
+}
+
+/* ── Global text overrides (cover slate-* used outside cards) ── */
+html.mode-light .text-slate-300 { color: rgba(74, 66, 50, 0.80) !important; }
+html.mode-light .text-slate-400 { color: rgba(74, 66, 50, 0.88) !important; }
+html.mode-light .text-slate-500 { color: rgba(42, 36, 24, 0.92) !important; }
+html.mode-light .text-slate-600 { color: #2a2a2a !important; }
+html.mode-light .text-slate-700,
+html.mode-light .text-slate-800,
+html.mode-light .text-slate-900 { color: #1a1a1a !important; }
+html.mode-light .text-white { color: #1a1a1a !important; }
+
+/* ── Restore dark-mode text overrides → proper dark text in light mode ── */
+html.mode-light { --text-muted: rgba(51, 65, 85, 0.90); --text-hint: rgba(71, 85, 105, 0.78); }
+html.mode-light .text-slate-300 { color: rgb(100 116 139) !important; }
+html.mode-light .text-slate-400 { color: rgb(85 99 120)   !important; }
+html.mode-light .text-slate-500 { color: rgb(71 85 105)   !important; }
+html.mode-light .text-slate-600 { color: rgb(71 85 105)   !important; }
+html.mode-light .text-slate-700 { color: rgb(51 65 85)    !important; }
+html.mode-light .text-slate-800 { color: rgb(30 41 59)    !important; }
+html.mode-light .text-slate-900 { color: rgb(15 23 42)    !important; }
+
+/* ── Restore dark-mode bg overrides → proper light backgrounds in light mode ── */
+html.mode-light .bg-slate-50  { background-color: rgb(248 250 252) !important; }
+html.mode-light .bg-slate-100 { background-color: rgb(241 245 249) !important; }
+html.mode-light .hover\:bg-slate-50:hover  { background-color: rgb(248 250 252) !important; }
+html.mode-light .hover\:bg-slate-100:hover { background-color: rgb(241 245 249) !important; }
+html.mode-light .border-slate-100 { border-color: rgb(241 245 249) !important; }
+html.mode-light .border-slate-200 { border-color: rgb(226 232 240) !important; }
+html.mode-light .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(248 250 252) !important; }
+
+/* ── Restore glass-modal inputs in light mode ── */
+html.mode-light .glass-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html.mode-light .glass-modal select,
+html.mode-light .glass-modal textarea {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+html.mode-light .glass-modal input::placeholder,
+html.mode-light .glass-modal textarea::placeholder { color: #94a3b8 !important; }
+
+/* ============================================================
+   FIX: Result detail cards — dark backgrounds + light text
+   ============================================================ */
+
+/* Dark backgrounds for result question cards */
+.glass-modal .bg-green-50  { background-color: rgba(22, 163, 74, 0.15) !important; }
+.glass-modal .bg-red-50    { background-color: rgba(239, 68, 68, 0.15) !important; }
+.glass-modal .bg-orange-50 { background-color: rgba(249, 115, 22, 0.15) !important; }
+.glass-modal .bg-green-100  { background-color: rgba(22, 163, 74, 0.22) !important; }
+.glass-modal .bg-red-100    { background-color: rgba(239, 68, 68, 0.22) !important; }
+.glass-modal .bg-orange-100 { background-color: rgba(249, 115, 22, 0.22) !important; }
+
+/* Dark borders for result question cards */
+.glass-modal .border-green-200  { border-color: rgba(22, 163, 74, 0.35) !important; }
+.glass-modal .border-red-200    { border-color: rgba(239, 68, 68, 0.35) !important; }
+.glass-modal .border-orange-200 { border-color: rgba(249, 115, 22, 0.35) !important; }
+
+/* Light/bright colored text for status indicators */
+.glass-modal .text-green-600  { color: #4ade80 !important; }
+.glass-modal .text-green-800  { color: #86efac !important; }
+.glass-modal .text-red-500    { color: #f87171 !important; }
+.glass-modal .text-red-800    { color: #fca5a5 !important; }
+.glass-modal .text-orange-500 { color: #fb923c !important; }
+.glass-modal .text-orange-600 { color: #fdba74 !important; }
+.glass-modal .text-orange-800 { color: #fed7aa !important; }
+
+/* ============================================================
+   FIX: Question Bank cards — dark backgrounds + light text
+   ============================================================ */
+
+/* Question cards: bg-white → dark */
+.bg-white.border.rounded-2xl { background-color: rgba(30, 42, 58, 0.60) !important; }
+
+/* Filter bar selects: bg-white → dark */
+select.bg-white { background-color: rgba(17, 24, 39, 0.70) !important; }
+select.bg-white option { background-color: #1e293b !important; }
+
+/* Colored badge backgrounds → dark tinted */
+.bg-emerald-50  { background-color: rgba(16, 185, 129, 0.15) !important; }
+.bg-amber-50    { background-color: rgba(245, 158, 11, 0.15) !important; }
+.bg-blue-50     { background-color: rgba(59, 130, 246, 0.15) !important; }
+.bg-purple-50   { background-color: rgba(168, 85, 247, 0.15) !important; }
+.bg-teal-50     { background-color: rgba(20, 184, 166, 0.15) !important; }
+.bg-violet-100  { background-color: rgba(139, 92, 246, 0.20) !important; }
+.bg-emerald-100 { background-color: rgba(16, 185, 129, 0.22) !important; }
+.bg-amber-100   { background-color: rgba(245, 158, 11, 0.22) !important; }
+
+/* Colored badge text → lighter/brighter for dark bg */
+.text-emerald-700 { color: #6ee7b7 !important; }
+.text-emerald-600 { color: #34d399 !important; }
+.text-amber-700   { color: #fcd34d !important; }
+.text-amber-500   { color: #fbbf24 !important; }
+.text-blue-700    { color: #93c5fd !important; }
+.text-purple-700  { color: #c4b5fd !important; }
+.text-teal-700    { color: #5eead4 !important; }
+.text-red-700     { color: #fca5a5 !important; }
+.text-red-600     { color: #f87171 !important; }
+.text-violet-600  { color: #a78bfa !important; }
+.text-violet-500  { color: #a78bfa !important; }
+
+/* Colored badge borders → subtle glow */
+.border-emerald-200 { border-color: rgba(16, 185, 129, 0.30) !important; }
+.border-amber-200   { border-color: rgba(245, 158, 11, 0.30) !important; }
+.border-blue-200    { border-color: rgba(59, 130, 246, 0.30) !important; }
+.border-purple-200  { border-color: rgba(168, 85, 247, 0.30) !important; }
+.border-teal-200    { border-color: rgba(20, 184, 166, 0.30) !important; }
+
+/* Dialog inner colored boxes */
+.glass-modal .bg-violet-100  { background-color: rgba(139, 92, 246, 0.20) !important; }
+.glass-modal .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.20) !important; }
+.glass-modal .bg-amber-50    { background-color: rgba(245, 158, 11, 0.15) !important; }
+.glass-modal .text-violet-600 { color: #a78bfa !important; }
+.glass-modal .text-emerald-600 { color: #34d399 !important; }
+.glass-modal .text-amber-500  { color: #fbbf24 !important; }
+.glass-modal .text-amber-700  { color: #fcd34d !important; }
+.glass-modal .border-amber-200 { border-color: rgba(245, 158, 11, 0.30) !important; }
+
+/* ── Restore light mode: revert all question bank dark overrides ── */
+html.mode-light .bg-white.border.rounded-2xl { background-color: #FAFBFD !important; }
+html.mode-light select.bg-white { background-color: #F4F7FA !important; }
+html.mode-light select.bg-white option { background-color: #FAFBFD !important; }
+html.mode-light .bg-emerald-50  { background-color: rgb(236 253 245) !important; }
+html.mode-light .bg-amber-50    { background-color: rgb(255 251 235) !important; }
+html.mode-light .bg-blue-50     { background-color: rgb(239 246 255) !important; }
+html.mode-light .bg-purple-50   { background-color: rgb(250 245 255) !important; }
+html.mode-light .bg-teal-50     { background-color: rgb(240 253 250) !important; }
+html.mode-light .bg-violet-100  { background-color: rgb(237 233 254) !important; }
+html.mode-light .bg-emerald-100 { background-color: rgb(209 250 229) !important; }
+html.mode-light .bg-amber-100   { background-color: rgb(254 243 199) !important; }
+html.mode-light .text-emerald-700 { color: rgb(4 120 87) !important; }
+html.mode-light .text-emerald-600 { color: rgb(5 150 105) !important; }
+html.mode-light .text-amber-700   { color: rgb(180 83 9) !important; }
+html.mode-light .text-amber-500   { color: rgb(245 158 11) !important; }
+html.mode-light .text-blue-700    { color: rgb(29 78 216) !important; }
+html.mode-light .text-purple-700  { color: rgb(126 34 206) !important; }
+html.mode-light .text-teal-700    { color: rgb(15 118 110) !important; }
+html.mode-light .text-red-700     { color: rgb(185 28 28) !important; }
+html.mode-light .text-red-600     { color: rgb(220 38 38) !important; }
+html.mode-light .text-violet-600  { color: rgb(124 58 237) !important; }
+html.mode-light .text-violet-500  { color: rgb(139 92 246) !important; }
+html.mode-light .border-emerald-200 { border-color: rgb(167 243 208) !important; }
+html.mode-light .border-amber-200   { border-color: rgb(253 230 138) !important; }
+html.mode-light .border-blue-200    { border-color: rgb(191 219 254) !important; }
+html.mode-light .border-purple-200  { border-color: rgb(233 213 255) !important; }
+html.mode-light .border-teal-200    { border-color: rgb(153 246 228) !important; }
+
+/* ============================================================
+   REALISTIC SOFT THEME — "سايبر أورورا" (html.theme-soft)
+   Smooth aurora lighting, deeper glass, layered realistic shadows
+   ============================================================ */
+
+/* Aurora light curtains drifting behind the content */
+html.theme-soft:not(.mode-light) body::before {
+  content: '';
+  position: fixed;
+  inset: -15%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 38% at 18% 8%,  rgba(103,232,249,0.11), transparent 62%),
+    radial-gradient(ellipse 48% 34% at 82% 18%, rgba(99,102,241,0.13),  transparent 60%),
+    radial-gradient(ellipse 65% 42% at 50% 95%, rgba(45,212,191,0.09),  transparent 65%);
+  filter: blur(42px) saturate(1.25);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1)    rotate(-1deg);  opacity: 0.85; }
+  50%  { transform: translate3d(2%, 2%, 0)   scale(1.06) rotate(1deg);   opacity: 1; }
+  100% { transform: translate3d(-1%, 3%, 0)  scale(1.02) rotate(-0.5deg);opacity: 0.9; }
+}
+
+/* Deeper, more saturated orbs — feel like real volumetric light */
+html.theme-soft .orb { filter: blur(110px); }
+
+/* Realistic frosted glass: layered shadow + inner top highlight */
+html.theme-soft:not(.mode-light) .glass-card,
+html.theme-soft:not(.mode-light) .quiz-card {
+  background: linear-gradient(160deg, rgba(30,42,58,0.74), rgba(15,23,38,0.66));
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 12px 40px rgba(2,8,20,0.55),
+    0 2px 8px rgba(2,8,20,0.35);
+}
+
+html.theme-soft .glass-card-hover,
+html.theme-soft .quiz-card {
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1), box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
+}
+
+html.theme-soft:not(.mode-light) .glass-card-hover:hover,
+html.theme-soft:not(.mode-light) .quiz-card:hover {
+  transform: translateY(-4px) scale(1.008);
+  border-color: rgba(var(--theme-accent-rgb), 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 22px 60px rgba(2,8,20,0.6),
+    0 0 30px rgba(var(--theme-accent-rgb), 0.10);
+}
+
+html.theme-soft:not(.mode-light) .glass-sidebar {
+  background: linear-gradient(180deg, rgba(13,20,36,0.90), rgba(8,13,26,0.95));
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-left: 1px solid rgba(255,255,255,0.07);
+  box-shadow: -8px 0 50px rgba(0,0,0,0.55);
+}
+
+html.theme-soft:not(.mode-light) .glass-modal {
+  background: linear-gradient(165deg, rgba(20,28,45,0.96), rgba(12,18,32,0.97));
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    0 30px 80px rgba(0,0,0,0.65);
+}
+
+/* Buttons: soft glow + spring-like lift */
+html.theme-soft .btn-primary {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.20),
+    0 8px 20px rgba(var(--theme-accent-rgb), 0.22),
+    0 2px 6px rgba(0,0,0,0.30);
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s ease;
+}
+html.theme-soft .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 14px 32px rgba(var(--theme-accent-rgb), 0.32),
+    0 4px 10px rgba(0,0,0,0.35);
+}
+html.theme-soft .btn-primary:active { transform: translateY(0) scale(0.98); }
+
+/* Inputs: subtle inner depth, glowing smooth focus */
+html.theme-soft:not(.mode-light) .input-field {
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.30);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+html.theme-soft:not(.mode-light) .input-field:focus {
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.25),
+    0 0 0 3px rgba(var(--theme-accent-rgb), 0.14),
+    0 0 18px rgba(var(--theme-accent-rgb), 0.18);
+}
+
+/* Smoother nav micro-interactions */
+html.theme-soft .nav-item { transition: color 0.35s ease, transform 0.35s cubic-bezier(0.22,1,0.36,1); }
+html.theme-soft .nav-item:hover { transform: translateX(-3px); }
+
+/* Light-mode flavor: gentle daylight aurora */
+html.theme-soft.mode-light body::before {
+  content: '';
+  position: fixed;
+  inset: -15%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 38% at 18% 8%,  rgba(6,182,212,0.08),  transparent 62%),
+    radial-gradient(ellipse 48% 34% at 82% 18%, rgba(99,102,241,0.08), transparent 60%),
+    radial-gradient(ellipse 65% 42% at 50% 95%, rgba(45,212,191,0.07), transparent 65%);
+  filter: blur(50px) saturate(1.1);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+
+/* ============================================================
+   LIGHT MODE: colored category/type badges → readable tints
+   ============================================================ */
+html.mode-light .text-cyan-300    { color: #0E7490 !important; }
+html.mode-light .text-teal-200,
+html.mode-light .text-teal-300    { color: #0F766E !important; }
+html.mode-light .text-violet-300  { color: #6D28D9 !important; }
+html.mode-light .text-emerald-300 { color: #047857 !important; }
+html.mode-light .text-blue-300    { color: #1D4ED8 !important; }
+html.mode-light .text-pink-300    { color: #BE185D !important; }
+html.mode-light .text-purple-300  { color: #7E22CE !important; }
+html.mode-light .text-orange-300  { color: #C2410C !important; }
+html.mode-light .text-yellow-300  { color: #A16207 !important; }
+
+html.mode-light .bg-cyan-900\/30    { background-color: rgba(8,145,178,0.10)  !important; }
+html.mode-light .bg-teal-900\/30    { background-color: rgba(13,148,136,0.10) !important; }
+html.mode-light .bg-violet-900\/30  { background-color: rgba(124,58,237,0.10) !important; }
+html.mode-light .bg-emerald-900\/30 { background-color: rgba(5,150,105,0.10)  !important; }
+html.mode-light .bg-blue-900\/30    { background-color: rgba(37,99,235,0.10)  !important; }
+html.mode-light .bg-pink-900\/30    { background-color: rgba(219,39,119,0.10) !important; }
+html.mode-light .bg-purple-900\/30  { background-color: rgba(147,51,234,0.10) !important; }
+html.mode-light .bg-orange-900\/30  { background-color: rgba(234,88,12,0.10)  !important; }
+html.mode-light .bg-slate-700\/40   { background-color: rgba(100,116,139,0.12)!important; }
+
+html.mode-light .bg-blue-900\/40    { background-color: rgba(37,99,235,0.10)  !important; }
+html.mode-light .bg-purple-900\/40  { background-color: rgba(147,51,234,0.10) !important; }
+html.mode-light .bg-teal-900\/40    { background-color: rgba(13,148,136,0.10) !important; }
+html.mode-light .bg-orange-900\/40  { background-color: rgba(234,88,12,0.10)  !important; }
+
+html.mode-light .border-cyan-700\/40,
+html.mode-light .border-cyan-800\/40    { border-color: rgba(8,145,178,0.30)  !important; }
+html.mode-light .border-teal-500\/40,
+html.mode-light .border-teal-700\/40,
+html.mode-light .border-teal-800\/40    { border-color: rgba(13,148,136,0.30) !important; }
+html.mode-light .border-violet-700\/40  { border-color: rgba(124,58,237,0.30) !important; }
+html.mode-light .border-emerald-700\/40 { border-color: rgba(5,150,105,0.30)  !important; }
+html.mode-light .border-blue-700\/40    { border-color: rgba(37,99,235,0.30)  !important; }
+html.mode-light .border-pink-700\/40    { border-color: rgba(219,39,119,0.30) !important; }
+html.mode-light .border-purple-700\/40,
+html.mode-light .border-purple-800\/40  { border-color: rgba(147,51,234,0.30) !important; }
+html.mode-light .border-orange-700\/40,
+html.mode-light .border-orange-800\/40  { border-color: rgba(234,88,12,0.30)  !important; }
+html.mode-light .border-slate-600\/40   { border-color: rgba(100,116,139,0.30)!important; }
+
+/* ============================================================
+   GRADEBOOK (سجل الدرجات) — spreadsheet-like table
+   ============================================================ */
+.gb-table { border-collapse: collapse; }
+.gb-table th, .gb-table td { border: 1px solid rgba(255,255,255,0.08); }
+/* All numeric body cells — larger & clearer */
+.gb-table tbody td.text-center { font-size: 16px; }
+.gb-head-row th {
+  background: rgba(var(--theme-accent-rgb), 0.08);
+  color: rgba(255,255,255,0.92);
+  font-weight: 700;
+  text-align: center;
+}
+.gb-max { font-size: 11px; opacity: 0.7; font-weight: 600; }
+.gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.04); }
+.gb-total-col {
+  background: rgba(var(--theme-accent-rgb), 0.05);
+  color: rgba(255,255,255,0.95);
+  font-size: 17px;
+}
+.gb-grand-col {
+  background: rgba(var(--theme-accent-rgb), 0.09);
+  font-size: 18px;
+}
+
+.gb-cell-input {
+  width: 62px;
+  text-align: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 6px 2px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.3px;
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  -moz-appearance: textfield;
+}
+.gb-cell-input::-webkit-outer-spin-button,
+.gb-cell-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.gb-cell-input:focus {
+  outline: none;
+  border-color: rgba(var(--theme-accent-rgb), 0.6);
+  background: rgba(var(--theme-accent-rgb), 0.08);
+  box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), 0.12);
+}
+
+html.mode-light .gb-table th, html.mode-light .gb-table td { border-color: rgba(15,23,42,0.10) !important; }
+html.mode-light .gb-head-row th { background: rgba(var(--theme-accent-rgb), 0.08) !important; color: #1e293b !important; }
+html.mode-light .gb-total-col { background: rgba(var(--theme-accent-rgb), 0.06) !important; color: #0f172a !important; }
+html.mode-light .gb-grand-col { background: rgba(var(--theme-accent-rgb), 0.10) !important; }
+html.mode-light .gb-cell-input { background: #fff; color: #0f172a; border-color: rgba(15,23,42,0.15); }
+html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.04); }
