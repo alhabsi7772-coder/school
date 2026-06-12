@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Send, X, Plus, ClipboardList, ArrowLeft, Trash2, Users, Link2 } from 'lucide-react';
 import { API, getAuthHeaders } from '../../utils';
+import { themeOfGrade } from '../../utils/gradebook';
 import SessionManager from './SessionManager';
 
 const semLabel = (s) => (s === '2' ? 'الفصل الثاني' : 'الفصل الأول');
@@ -52,10 +53,28 @@ export default function ReleaseGradesButton() {
       ]);
       setRubrics(rs.data);
       setGradebooks(gs.data);
-      if (rs.data.length) setRubricId(rs.data[0].id);
-      if (gs.data.length) setGbId(gs.data[0].id);
+      const firstR = rs.data[0];
+      if (firstR) {
+        setRubricId(firstR.id);
+        // اختيار أول سجل من نفس صف البطاقة افتراضياً
+        const match = firstR.grade ? gs.data.find(g => g.grade === firstR.grade) : gs.data[0];
+        if (match) setGbId(match.id);
+        else setGbId('');
+      } else if (gs.data.length) setGbId(gs.data[0].id);
     } catch { toast.error('تعذر تحميل البيانات'); setCreating(false); }
   };
+
+  // عند اختيار بطاقة جديدة، إعادة ضبط السجل تلقائياً ليطابق صف البطاقة
+  const pickRubric = (r) => {
+    setRubricId(r.id);
+    if (r.grade) {
+      const match = gradebooks.find(g => g.grade === r.grade);
+      setGbId(match ? match.id : '');
+    }
+  };
+
+  const selRubric = rubrics.find(r => r.id === rubricId);
+  const filteredGbs = selRubric?.grade ? gradebooks.filter(g => g.grade === selRubric.grade) : gradebooks;
 
   const submitCreate = async () => {
     if (!rubricId) return toast.error('اختر بطاقة التقييم');
@@ -211,35 +230,76 @@ export default function ReleaseGradesButton() {
                   <div>
                     <label className="block text-sm font-bold text-white mb-2.5">بطاقة التقييم (النشاط/المشروع)</label>
                     <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
-                      {rubrics.map(r => (
-                        <button key={r.id} onClick={() => setRubricId(r.id)} data-testid={`pick-rubric-${r.id}`}
-                          className="text-right p-3 rounded-xl border-2 transition-all"
-                          style={rubricId === r.id
-                            ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.1)' }
-                            : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
-                          <p className="text-sm font-bold text-white mb-0.5">{r.title}</p>
-                          <p className="text-[11px]" style={{ color: 'var(--text-hint)' }}>
-                            {r.column} • {semLabel(r.semester)} • {r.criteria?.length || 0} معايير
-                          </p>
-                        </button>
-                      ))}
+                      {rubrics.map(r => {
+                        const th = r.grade ? themeOfGrade(r.grade) : null;
+                        const sel = rubricId === r.id;
+                        return (
+                          <button key={r.id} onClick={() => pickRubric(r)} data-testid={`pick-rubric-${r.id}`}
+                            className="text-right p-3 rounded-xl border-2 transition-all"
+                            style={sel
+                              ? th
+                                ? { borderColor: th.hex, background: `rgba(${th.rgb},0.12)` }
+                                : { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.1)' }
+                              : th
+                                ? { borderColor: `rgba(${th.rgb},0.2)`, background: `rgba(${th.rgb},0.04)` }
+                                : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              {r.grade && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0"
+                                  style={{ background: `rgba(${th.rgb},0.18)`, color: th.hex }}>
+                                  الصف {r.grade}
+                                </span>
+                              )}
+                              <p className="text-sm font-bold text-white">{r.title}</p>
+                            </div>
+                            <p className="text-[11px]" style={{ color: 'var(--text-hint)' }}>
+                              {r.column} • {semLabel(r.semester)} • {r.criteria?.length || 0} معايير
+                            </p>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-white mb-2.5">سجل الدرجات (الصف / الشعبة)</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {gradebooks.map(g => (
-                        <button key={g.id} onClick={() => setGbId(g.id)} data-testid={`pick-gb-${g.grade}-${g.section}`}
-                          className="text-right p-3 rounded-xl border-2 transition-all"
-                          style={gbId === g.id
-                            ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.1)' }
-                            : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
-                          <p className="text-sm font-bold text-white">الصف {g.grade}/{g.section}</p>
-                          <p className="text-[11px]" style={{ color: 'var(--text-hint)' }}>{g.student_count} طالب</p>
-                        </button>
-                      ))}
-                    </div>
+                    <label className="block text-sm font-bold text-white mb-1.5">
+                      سجل الدرجات (الشعبة)
+                    </label>
+                    {selRubric?.grade && (
+                      <p className="text-[11px] mb-2.5" style={{ color: 'var(--text-hint)' }} data-testid="release-grade-hint">
+                        تُعرض فقط سجلات <span className="font-bold" style={{ color: themeOfGrade(selRubric.grade).hex }}>الصف {selRubric.grade}</span>
+                        {gradebooks.length !== filteredGbs.length && ` (${gradebooks.length - filteredGbs.length} مخفي)`}
+                      </p>
+                    )}
+                    {filteredGbs.length === 0 ? (
+                      <div className="text-center py-4 px-3 rounded-xl text-sm"
+                        style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', color: '#F87171' }}>
+                        لا يوجد سجل درجات للصف {selRubric?.grade} — أنشئ سجلاً من قسم سجل الدرجات أولاً
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {filteredGbs.map(g => {
+                          const th = themeOfGrade(g.grade);
+                          const sel = gbId === g.id;
+                          return (
+                            <button key={g.id} onClick={() => setGbId(g.id)} data-testid={`pick-gb-${g.grade}-${g.section}`}
+                              className="text-right p-3 rounded-xl border-2 transition-all flex items-center gap-2.5"
+                              style={sel
+                                ? { borderColor: th.hex, background: `rgba(${th.rgb},0.14)` }
+                                : { borderColor: `rgba(${th.rgb},0.2)`, background: `rgba(${th.rgb},0.05)` }}>
+                              <span className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
+                                style={{ background: `rgba(${th.rgb},0.2)`, color: th.hex }}>
+                                {g.section}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-white truncate">الصف {g.grade}/{g.section}</span>
+                                <span className="block text-[11px]" style={{ color: 'var(--text-hint)' }}>{g.student_count} طالب</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
