@@ -11,6 +11,7 @@ import {
   GB_FIELDS, sumKeys, totalScore, midterm,
   levelLetter, descNum, LEVEL_COLORS, fileToBase64
 } from '../../utils/gradebook';
+import useGlobalSemester from '../../utils/useGlobalSemester';
 
 const TABS = [
   { id: '1', label: 'الفصل الأول' },
@@ -54,7 +55,12 @@ export default function GradebookDetail() {
   const [gb, setGb] = useState(null);
   const [scores, setScores] = useState({ 1: {}, 2: {} });
   const [dirty, setDirty] = useState(new Set());
+  const [globalSemester] = useGlobalSemester();
   const [tab, setTab] = useState(() => localStorage.getItem('semester') === '2' ? '2' : '1');
+  // مزامنة مع الفصل العالمي (الإعدادات) ما لم يكن المستخدم على تبويب السجل السنوي
+  useEffect(() => {
+    setTab(prev => prev === 'annual' ? prev : globalSemester);
+  }, [globalSemester]);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);

@@ -6,6 +6,7 @@ import { Plus, Trash2, Save, GripVertical, AlertCircle, ImagePlus } from 'lucide
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 import { GB_FIELDS } from '../../utils/gradebook';
+import useGlobalSemester from '../../utils/useGlobalSemester';
 
 const toLatinDigits = (s) => String(s)
   .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
@@ -18,7 +19,7 @@ export default function RubricEditor() {
   const { rubricId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
-  const [semester, setSemester] = useState(() => localStorage.getItem('semester') === '2' ? '2' : '1');
+  const [semester, setSemester] = useGlobalSemester();
   const [column, setColumn] = useState('p1');
   const [criteria, setCriteria] = useState([newCriterion(), newCriterion(), newCriterion()]);
   const [images, setImages] = useState([]);

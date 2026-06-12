@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ClipboardList, X, ArrowLeft, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { API, getAuthHeaders } from '../../utils';
 import { gbFields, gbMaxMap, themeOfGrade, GRADE_ORDER_NUM } from '../../utils/gradebook';
+import useGlobalSemester from '../../utils/useGlobalSemester';
 
 const COLUMN_GROUPS_56 = [
   { label: 'الأسئلة القصيرة (5)', keys: ['q1', 'q2', 'q3', 'q4'] },
@@ -29,7 +30,7 @@ export default function GradebookSyncButton({ quizId }) {
   const [open, setOpen] = useState(false);
   const [gradebooks, setGradebooks] = useState(null);
   const [gbId, setGbId] = useState('');
-  const [semester, setSemester] = useState(() => localStorage.getItem('semester') === '2' ? '2' : '1');
+  const [semester, setSemester] = useGlobalSemester();
   const [column, setColumn] = useState('q1');
   const [step, setStep] = useState(1);
   const [matchData, setMatchData] = useState(null);
