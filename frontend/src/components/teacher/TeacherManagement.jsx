@@ -89,27 +89,30 @@ function TeacherCard({ t, onEdit, onToggleActive, onDelete }) {
         </div>
       </div>
 
-      {!isAdmin && (
-        <div className="flex gap-2">
-          <button onClick={() => onEdit(t)} data-testid={`edit-teacher-${t.username}`}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
-            style={{ background: 'rgba(var(--theme-accent-rgb),0.1)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb),0.2)' }}>
-            <Pencil className="w-3.5 h-3.5" /> تعديل
-          </button>
-          <button onClick={() => onToggleActive(t)} data-testid={`toggle-active-${t.username}`}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
-            style={active
-              ? { background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.2)' }
-              : { background: 'rgba(52,211,153,0.1)', color: '#34D399', border: '1px solid rgba(52,211,153,0.2)' }}>
-            <Power className="w-3.5 h-3.5" /> {active ? 'تعطيل' : 'تفعيل'}
-          </button>
-          <button onClick={() => onDelete(t)} data-testid={`delete-teacher-${t.username}`}
-            className="flex items-center justify-center px-3 py-2 rounded-xl transition-all hover:scale-[1.02]"
-            style={{ background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      {/* المدير: تعديل فقط (بدون تعطيل/حذف). معلم عادي: تعديل + تعطيل + حذف */}
+      <div className="flex gap-2">
+        <button onClick={() => onEdit(t)} data-testid={`edit-teacher-${t.username}`}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+          style={{ background: 'rgba(var(--theme-accent-rgb),0.1)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb),0.2)' }}>
+          <Pencil className="w-3.5 h-3.5" /> تعديل
+        </button>
+        {!isAdmin && (
+          <>
+            <button onClick={() => onToggleActive(t)} data-testid={`toggle-active-${t.username}`}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+              style={active
+                ? { background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.2)' }
+                : { background: 'rgba(52,211,153,0.1)', color: '#34D399', border: '1px solid rgba(52,211,153,0.2)' }}>
+              <Power className="w-3.5 h-3.5" /> {active ? 'تعطيل' : 'تفعيل'}
+            </button>
+            <button onClick={() => onDelete(t)} data-testid={`delete-teacher-${t.username}`}
+              className="flex items-center justify-center px-3 py-2 rounded-xl transition-all hover:scale-[1.02]"
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -153,8 +156,14 @@ export default function TeacherManagement() {
     setSaving(true);
     try {
       const payload = { teacher_name: form.teacher_name, school_name: form.school_name };
+      if (form.username && form.username !== modal.teacher.username) payload.username = form.username;
       if (form.password) payload.new_password = form.password;
-      await axios.put(`${API}/admin/teachers/${modal.teacher.id}`, payload, getAuthHeaders());
+      const res = await axios.put(`${API}/admin/teachers/${modal.teacher.id}`, payload, getAuthHeaders());
+      // إذا غيّر المدير اسم المستخدم لنفسه — حدّث localStorage حتى لا يضطر لإعادة الدخول
+      const myUsername = localStorage.getItem('teacherUsername');
+      if (myUsername === modal.teacher.username && res.data?.username && res.data.username !== myUsername) {
+        localStorage.setItem('teacherUsername', res.data.username);
+      }
       toast.success('تم حفظ التعديلات');
       setModal(null);
       fetchTeachers();
@@ -284,6 +293,15 @@ export default function TeacherManagement() {
                 <input className="input-field" placeholder="مثال: مدرسة الخيرات للتعليم الأساسي"
                   value={form.school_name} onChange={e => setForm(f => ({ ...f, school_name: e.target.value }))}
                   data-testid="edit-teacher-school-input" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>اسم المستخدم (بالإنجليزية)</label>
+                <input className="input-field" required dir="ltr" style={{ textAlign: 'left' }} minLength={3}
+                  value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value.trim().toLowerCase() }))}
+                  data-testid="edit-teacher-username-input" />
+                <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-hint)' }}>
+                  أحرف إنجليزية وأرقام فقط · 3 خانات على الأقل
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>

@@ -1952,6 +1952,7 @@ class TeacherCreateReq(BaseModel):
 
 
 class TeacherUpdateReq(BaseModel):
+    username: Optional[str] = None
     teacher_name: Optional[str] = None
     school_name: Optional[str] = None
     new_password: Optional[str] = None
@@ -2002,6 +2003,16 @@ async def admin_update_teacher(tid: str, req: TeacherUpdateReq, _=Depends(requir
     if not doc:
         raise HTTPException(404, "المعلم غير موجود")
     upd = {}
+    if req.username is not None:
+        new_username = req.username.strip().lower()
+        if new_username != doc.get("username"):
+            if len(new_username) < 3:
+                raise HTTPException(400, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل")
+            if not new_username.replace("_", "").replace(".", "").isalnum() or not new_username.isascii():
+                raise HTTPException(400, "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط")
+            if await db.teachers.find_one({"username": new_username, "id": {"$ne": tid}}):
+                raise HTTPException(400, "اسم المستخدم موجود مسبقاً")
+            upd["username"] = new_username
     if req.teacher_name is not None and req.teacher_name.strip():
         upd["teacher_name"] = req.teacher_name.strip()
     if req.school_name is not None:
@@ -2016,7 +2027,7 @@ async def admin_update_teacher(tid: str, req: TeacherUpdateReq, _=Depends(requir
         upd["is_active"] = req.is_active
     if upd:
         await db.teachers.update_one({"id": tid}, {"$set": upd})
-    return {"message": "تم التحديث"}
+    return {"message": "تم التحديث", "username": upd.get("username", doc.get("username"))}
 
 
 @api_router.delete("/admin/teachers/{tid}")
