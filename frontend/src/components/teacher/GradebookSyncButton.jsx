@@ -102,20 +102,22 @@ export default function GradebookSyncButton({ quizId }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/60 backdrop-blur-sm" onClick={close}>
           <div className="glass-modal rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="p-4 md:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-              <div>
-                <h3 className="font-bold text-white text-lg">نقل الدرجات إلى سجل الدرجات</h3>
+            <div className="p-5 md:p-6 border-b border-white/10 flex items-start justify-between gap-3 flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-lg mb-1">نقل الدرجات إلى سجل الدرجات</h3>
                 <p className="text-xs" style={{ color: 'var(--text-hint)' }}>
-                  {step === 1 ? 'اختر السجل والفصل والعمود المستهدف' : 'راجع المطابقة الذكية للأسماء وعدّل يدوياً عند الحاجة'}
+                  {step === 1 ? 'الخطوة 1 من 2 — اختر السجل والفصل والعمود' : 'الخطوة 2 من 2 — راجع المطابقة وعدّل عند الحاجة'}
                 </p>
               </div>
-              <button onClick={close} className="p-2 hover:bg-white/5 rounded-xl"><X className="w-4 h-4 text-slate-400" /></button>
+              <button onClick={close} className="p-2 hover:bg-white/5 rounded-xl flex-shrink-0" data-testid="sync-close-btn">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
             </div>
 
             {/* Body */}
-            <div className="overflow-y-auto flex-1 p-4 md:p-5">
+            <div className="overflow-y-auto flex-1 p-4 md:p-6">
               {step === 1 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {gradebooks !== null && gradebooks.length === 0 ? (
                     <div className="text-center py-8">
                       <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--text-hint)' }} />
@@ -126,9 +128,15 @@ export default function GradebookSyncButton({ quizId }) {
                     </div>
                   ) : (
                     <>
-                      <div>
-                        <label className="block text-sm font-bold text-white mb-2">السجل (الصف / الشعبة)</label>
-                        <div className="grid sm:grid-cols-2 gap-2">
+                      {/* القسم 1: السجل */}
+                      <section className="rounded-2xl p-4 md:p-5"
+                        style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                            style={{ background: 'rgba(var(--theme-accent-rgb),0.15)', color: 'var(--theme-accent)' }}>1</span>
+                          <h4 className="text-sm font-bold text-white">السجل (الصف / الشعبة)</h4>
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-2.5">
                           {(gradebooks || []).map(g => (
                             <button key={g.id} onClick={() => pickGb(g)} data-testid={`sync-gb-${g.grade}-${g.section}`}
                               className="flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-right"
@@ -144,29 +152,43 @@ export default function GradebookSyncButton({ quizId }) {
                             </button>
                           ))}
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-white mb-2">الفصل الدراسي</label>
-                        <div className="flex gap-2">
+                      </section>
+
+                      {/* القسم 2: الفصل الدراسي */}
+                      <section className="rounded-2xl p-4 md:p-5"
+                        style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                            style={{ background: 'rgba(var(--theme-accent-rgb),0.15)', color: 'var(--theme-accent)' }}>2</span>
+                          <h4 className="text-sm font-bold text-white">الفصل الدراسي</h4>
+                        </div>
+                        <div className="flex gap-2.5">
                           {[['1', 'الفصل الأول'], ['2', 'الفصل الثاني']].map(([v, l]) => (
                             <button key={v} onClick={() => setSemester(v)} data-testid={`sync-sem-${v}`}
-                              className="px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
+                              className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all"
                               style={semester === v
                                 ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.1)', color: 'var(--theme-accent)' }
                                 : { borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}>{l}</button>
                           ))}
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-white mb-1">إلى أين تُنقل الدرجات؟ اختر العمود المستهدف في السجل:</label>
-                        <p className="text-xs mb-3" style={{ color: 'var(--text-hint)' }}>
-                          مثال: إذا كان هذا الاختبار هو "القصير الثاني" اختر "قصيرة 2"
+                      </section>
+
+                      {/* القسم 3: العمود المستهدف */}
+                      <section className="rounded-2xl p-4 md:p-5"
+                        style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                            style={{ background: 'rgba(var(--theme-accent-rgb),0.15)', color: 'var(--theme-accent)' }}>3</span>
+                          <h4 className="text-sm font-bold text-white">العمود المستهدف في السجل</h4>
+                        </div>
+                        <p className="text-xs mb-4 pr-8" style={{ color: 'var(--text-hint)' }}>
+                          اختر إلى أي عمود تُنقل هذه الدرجة — مثال: لو كان هذا الاختبار &quot;القصير الثاني&quot; اختر &quot;قصيرة 2&quot;
                         </p>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {COLUMN_GROUPS.map(g => (
                             <div key={g.label}>
-                              <p className="text-xs font-bold mb-1.5" style={{ color: 'var(--text-hint)' }}>{g.label}</p>
-                              <div className="flex gap-2 flex-wrap">
+                              <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-hint)' }}>{g.label}</p>
+                              <div className="flex gap-2.5 flex-wrap">
                                 {g.keys.map(k => {
                                   const f = fields.find(x => x.key === k);
                                   return (
@@ -176,7 +198,7 @@ export default function GradebookSyncButton({ quizId }) {
                                         ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.14)', color: 'var(--theme-accent)' }
                                         : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
                                       {f.label}
-                                      <span className="block text-[10px] font-semibold opacity-70">من {f.max} درجات</span>
+                                      <span className="block text-[10px] font-semibold opacity-70 mt-0.5">من {f.max} درجات</span>
                                     </button>
                                   );
                                 })}
@@ -184,12 +206,14 @@ export default function GradebookSyncButton({ quizId }) {
                             </div>
                           ))}
                         </div>
-                        <p className="text-xs mt-3 px-3 py-2 rounded-lg inline-block"
-                          style={{ background: 'rgba(var(--theme-accent-rgb),0.07)', color: 'var(--theme-accent)' }}
+                        <div className="mt-5 flex items-start gap-2 px-3 py-2.5 rounded-xl"
+                          style={{ background: 'rgba(var(--theme-accent-rgb),0.07)', border: '1px solid rgba(var(--theme-accent-rgb),0.18)' }}
                           data-testid="sync-column-hint">
-                          نسبة الطالب في الاختبار ستتحول تلقائياً إلى درجة من {maxMap[column]} — مثال: 80% = {Math.round(80 * maxMap[column] / 100 * 2) / 2} درجة
-                        </p>
-                      </div>
+                          <span className="text-xs leading-relaxed" style={{ color: 'var(--theme-accent)' }}>
+                            💡 نسبة الطالب في الاختبار ستتحول تلقائياً إلى درجة من {maxMap[column]} — مثال: 80% = {Math.round(80 * maxMap[column] / 100 * 2) / 2} درجة
+                          </span>
+                        </div>
+                      </section>
                     </>
                   )}
                 </div>
@@ -218,38 +242,62 @@ export default function GradebookSyncButton({ quizId }) {
                       const scaled = Math.round(p.percentage * maxMap[column] / 100 * 2) / 2;
                       return (
                         <div key={p.id} data-testid={`sync-row-${p.id}`}
-                          className="flex items-center gap-3 p-3 rounded-xl border transition-colors flex-wrap"
+                          className="p-3 rounded-xl border transition-colors"
                           style={sid
                             ? (isDup
                               ? { background: 'rgba(251,191,36,0.08)', borderColor: 'rgba(251,191,36,0.35)' }
                               : { background: 'rgba(52,211,153,0.07)', borderColor: 'rgba(52,211,153,0.30)' })
                             : { background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.30)' }}>
-                          {sid
-                            ? (isDup
-                              ? <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#FBBF24' }} />
-                              : <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#34D399' }} />)
-                            : <XCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#F87171' }} />}
-                          <div className="flex-1 min-w-[140px]">
-                            <p className="text-sm font-bold text-white">{p.student_name}</p>
-                            <p className="text-[11px]" style={{ color: 'var(--text-hint)' }}>
-                              {p.grade}/{p.section} — {Math.round(p.percentage)}% في الاختبار
-                              {p.confidence > 0 && sid === p.matched_student_id && ` — ثقة المطابقة ${Math.round(p.confidence * 100)}%`}
-                            </p>
+                          {/* الصف العلوي: حالة + اسم الطالب + الدرجة */}
+                          <div className="flex items-center gap-2.5 mb-2.5">
+                            {sid
+                              ? (isDup
+                                ? <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#FBBF24' }} />
+                                : <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#34D399' }} />)
+                              : <XCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#F87171' }} />}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white truncate">{p.student_name}</p>
+                              <p className="text-[11px] leading-tight mt-0.5" style={{ color: 'var(--text-hint)' }}>
+                                <span>{p.grade}/{p.section}</span>
+                                <span className="mx-1.5">·</span>
+                                <span>{Math.round(p.percentage)}% في الاختبار</span>
+                                {p.confidence > 0 && sid === p.matched_student_id && (
+                                  <>
+                                    <span className="mx-1.5">·</span>
+                                    <span>ثقة {Math.round(p.confidence * 100)}%</span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            <span className="px-2 py-1 rounded-lg text-xs font-black flex-shrink-0"
+                              style={sid
+                                ? { background: 'rgba(52,211,153,0.15)', color: '#34D399' }
+                                : { background: 'rgba(255,255,255,0.06)', color: 'var(--text-hint)' }}>
+                              {sid ? `${scaled} / ${maxMap[column]}` : '—'}
+                            </span>
                           </div>
-                          <select className="input-field" style={{ maxWidth: '230px', padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
-                            value={sid}
-                            data-testid={`sync-select-${p.id}`}
-                            onChange={e => setMappings(m => ({ ...m, [p.id]: e.target.value }))}>
-                            <option value="">— بدون نقل —</option>
-                            {matchData.students.map(st => (
-                              <option key={st.id} value={st.id}>{st.name}</option>
-                            ))}
-                          </select>
-                          <span className="text-sm font-black w-14 text-center flex-shrink-0"
-                            style={{ color: sid ? '#34D399' : 'var(--text-hint)' }}>
-                            {sid ? `${scaled}/${maxMap[column]}` : '—'}
-                          </span>
-                          {isDup && <span className="text-[10px] font-bold w-full" style={{ color: '#FBBF24' }}>⚠ هذا الطالب مرتبط بأكثر من نتيجة — الأخيرة ستعتمد</span>}
+                          {/* الصف السفلي: قائمة الربط بالطالب من السجل */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                              ↩ مرتبط بـ:
+                            </span>
+                            <select className="input-field flex-1"
+                              style={{ padding: '0.45rem 0.6rem', fontSize: '0.82rem', minWidth: 0 }}
+                              value={sid}
+                              data-testid={`sync-select-${p.id}`}
+                              onChange={e => setMappings(m => ({ ...m, [p.id]: e.target.value }))}>
+                              <option value="">— بدون نقل —</option>
+                              {matchData.students.map(st => (
+                                <option key={st.id} value={st.id}>{st.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {isDup && (
+                            <p className="text-[10px] font-bold mt-2 flex items-center gap-1" style={{ color: '#FBBF24' }}>
+                              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                              هذا الطالب مرتبط بأكثر من نتيجة — الأخيرة ستعتمد
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -259,7 +307,7 @@ export default function GradebookSyncButton({ quizId }) {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/10 flex gap-3 flex-shrink-0">
+            <div className="p-4 md:p-5 border-t border-white/10 flex gap-3 flex-shrink-0">
               {step === 1 ? (
                 <button onClick={runMatch} disabled={!gbId || loading}
                   className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40"
