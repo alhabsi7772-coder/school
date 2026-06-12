@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle2, Circle, X, ChevronRight, Zap, Users, ArrowRight, ImagePlus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, X, ChevronRight, Zap, Users, ArrowRight, ImagePlus } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 import { GB_FIELDS } from '../../utils/gradebook';
@@ -26,8 +26,7 @@ export default function RubricEvaluate() {
   const [evals, setEvals] = useState({});
   const [active, setActive] = useState(null);
   const [draft, setDraft] = useState({});
-  const [draftImages, setDraftImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [previewImg, setPreviewImg] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -52,39 +51,10 @@ export default function RubricEvaluate() {
   const openStudent = (st) => {
     setActive(st);
     setDraft({ ...(evals[st.id]?.scores || {}) });
-    setDraftImages([...(evals[st.id]?.images || [])]);
   };
 
   const setVal = (cid, v) => setDraft(d => ({ ...d, [cid]: d[cid] === v ? undefined : v }));
   const fullMarks = () => setDraft(Object.fromEntries(rubric.criteria.map(c => [c.id, c.max])));
-
-  const uploadImages = async (files) => {
-    if (!files || files.length === 0) return;
-    if (draftImages.length + files.length > 8) {
-      toast.error('الحد الأقصى 8 صور لكل تقييم');
-      return;
-    }
-    setUploading(true);
-    const added = [];
-    for (const file of files) {
-      if (file.size > 3 * 1024 * 1024) {
-        toast.error(`الصورة "${file.name}" أكبر من 3MB`);
-        continue;
-      }
-      try {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await axios.post(`${API}/upload-image`, fd, {
-          headers: { ...getAuthHeaders().headers, 'Content-Type': 'multipart/form-data' },
-        });
-        added.push(res.data.image_url);
-      } catch { toast.error(`تعذر رفع ${file.name}`); }
-    }
-    if (added.length) setDraftImages(prev => [...prev, ...added]);
-    setUploading(false);
-  };
-
-  const removeImage = (idx) => setDraftImages(prev => prev.filter((_, i) => i !== idx));
 
   const total = rubric ? rubric.criteria.reduce((s, c) => s + (draft[c.id] ?? 0), 0) : 0;
   const students = gb?.students || [];
@@ -95,8 +65,8 @@ export default function RubricEvaluate() {
     try {
       const scores = Object.fromEntries(Object.entries(draft).filter(([, v]) => v != null));
       const res = await axios.put(`${API}/rubrics/${rubricId}/evaluations`,
-        { gradebook_id: gb.id, student_id: active.id, scores, images: draftImages }, getAuthHeaders());
-      setEvals(prev => ({ ...prev, [active.id]: { student_id: active.id, scores, images: draftImages, total: res.data.total, gb_score: res.data.gb_score } }));
+        { gradebook_id: gb.id, student_id: active.id, scores }, getAuthHeaders());
+      setEvals(prev => ({ ...prev, [active.id]: { student_id: active.id, scores, total: res.data.total, gb_score: res.data.gb_score } }));
       toast.success(`${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} — نُقلت للسجل (${colLabel(res.data.column)}: ${fmt(res.data.gb_score)}) ✓`);
       if (goNext) {
         const idx = students.findIndex(s => s.id === active.id);
@@ -125,7 +95,7 @@ export default function RubricEvaluate() {
           </p>
           {gradebooks.length === 0 ? (
             <div className="quiz-card rounded-2xl p-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              لا توجد سجلات درجات بعد — أنشئ سجلاً من قسم "سجل الدرجات" أولاً
+              لا توجد سجلات درجات بعد — أنشئ سجلاً من قسم &quot;سجل الدرجات&quot; أولاً
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-3" data-testid="rubric-gradebook-list">
@@ -183,12 +153,6 @@ export default function RubricEvaluate() {
                     : <Circle className="w-6 h-6 flex-shrink-0" style={{ color: 'var(--text-hint)' }} />}
                   <span className="w-6 text-center text-sm font-bold flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
                   <span className="flex-1 font-semibold text-white text-base leading-snug">{st.name}</span>
-                  {ev?.images?.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 flex-shrink-0"
-                      style={{ background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }} title={`${ev.images.length} صور مرفقة`}>
-                      <ImagePlus className="w-3 h-3" /> {ev.images.length}
-                    </span>
-                  )}
                   {ev && (
                     <span className="px-2.5 py-1 rounded-lg text-sm font-black flex-shrink-0"
                       style={{ background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
@@ -248,42 +212,30 @@ export default function RubricEvaluate() {
                 </div>
               ))}
 
-              {/* صور مرفقة */}
-              <div className="rounded-2xl p-3.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div className="flex items-center justify-between mb-3 gap-2">
-                  <p className="font-semibold text-white text-sm flex items-center gap-1.5">
-                    <ImagePlus className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
-                    صور مرفقة <span className="text-[10px] font-normal" style={{ color: 'var(--text-hint)' }}>(اختياري — حتى 8 صور)</span>
-                  </p>
-                  <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{draftImages.length} / 8</span>
-                </div>
-                {draftImages.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3" data-testid="rubric-eval-images">
-                    {draftImages.map((url, i) => (
-                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden group" data-testid={`rubric-eval-img-${i}`}
+              {/* صور البطاقة المرجعية (للعرض فقط) */}
+              {rubric.images?.length > 0 && (
+                <div className="rounded-2xl p-3.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="flex items-center justify-between mb-3 gap-2">
+                    <p className="font-semibold text-white text-sm flex items-center gap-1.5">
+                      <ImagePlus className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
+                      صور مرجعية من البطاقة
+                    </p>
+                    <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
+                      {rubric.images.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" data-testid="rubric-reference-images">
+                    {rubric.images.map((url, i) => (
+                      <button type="button" key={i} onClick={() => setPreviewImg(url)}
+                        data-testid={`rubric-reference-img-${i}`}
+                        className="relative aspect-square rounded-xl overflow-hidden transition-all hover:scale-[1.03]"
                         style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <img src={url} alt="" className="w-full h-full object-cover" />
-                        <button type="button" onClick={() => removeImage(i)}
-                          data-testid={`rubric-eval-img-remove-${i}`}
-                          className="absolute top-1 left-1 p-1 rounded-md transition-all opacity-0 group-hover:opacity-100"
-                          style={{ background: 'rgba(239,68,68,0.9)', color: 'white' }}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
+                      </button>
                     ))}
                   </div>
-                )}
-                <label className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all hover:scale-[1.01]"
-                  data-testid="rubric-eval-upload-label"
-                  style={{ background: 'rgba(var(--theme-accent-rgb),0.1)', color: 'var(--theme-accent)', border: '1px dashed rgba(var(--theme-accent-rgb),0.4)' }}>
-                  <ImagePlus className="w-4 h-4" />
-                  {uploading ? 'جارٍ الرفع...' : draftImages.length === 0 ? 'إضافة صور (من المعرض أو الكاميرا)' : 'إضافة المزيد'}
-                  <input type="file" accept="image/*" multiple className="hidden"
-                    data-testid="rubric-eval-image-input"
-                    disabled={uploading || draftImages.length >= 8}
-                    onChange={e => { uploadImages(e.target.files); e.target.value = ''; }} />
-                </label>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* تذييل ثابت */}
@@ -306,6 +258,19 @@ export default function RubricEvaluate() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* معاينة صورة مرجعية بحجم كبير */}
+      {previewImg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+          onClick={() => setPreviewImg(null)} data-testid="rubric-img-preview">
+          <button onClick={() => setPreviewImg(null)} data-testid="rubric-img-preview-close"
+            className="absolute top-4 left-4 p-2 rounded-xl bg-white/10 hover:bg-white/20">
+            <X className="w-6 h-6 text-white" />
+          </button>
+          <img src={previewImg} alt="" className="max-w-full max-h-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()} />
         </div>
       )}
     </TeacherLayout>

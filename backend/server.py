@@ -2050,12 +2050,12 @@ class RubricCreate(BaseModel):
     semester: str = "1"
     column: str
     criteria: List[RubricCriterion]
+    images: Optional[List[str]] = None  # قائمة data URLs للصور المرفقة بالبطاقة (اختياري)
 
 class RubricEvalSave(BaseModel):
     gradebook_id: str
     student_id: str
     scores: dict
-    images: Optional[List[str]] = None  # قائمة data URLs للصور المرفقة (اختياري)
 
 
 def _clean_criteria(criteria):
@@ -2103,6 +2103,7 @@ async def list_rubrics(t=Depends(get_teacher)):
 async def create_rubric(data: RubricCreate, t=Depends(get_teacher)):
     _validate_rubric_meta(data)
     criteria = _clean_criteria(data.criteria)
+    images = [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8]
     rubric = {
         "id": str(uuid.uuid4()),
         "owner_id": t["teacher_id"],
@@ -2111,6 +2112,7 @@ async def create_rubric(data: RubricCreate, t=Depends(get_teacher)):
         "semester": data.semester,
         "column": data.column,
         "criteria": criteria,
+        "images": images,
         "total_max": round(sum(c["max"] for c in criteria), 2),
         "created_at": now_iso(),
         "updated_at": now_iso(),
@@ -2129,9 +2131,11 @@ async def update_rubric(rid: str, data: RubricCreate, t=Depends(get_teacher)):
     await _get_rubric(rid, t)
     _validate_rubric_meta(data)
     criteria = _clean_criteria(data.criteria)
+    images = [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8]
     await db.rubrics.update_one({"id": rid}, {"$set": {
         "title": data.title.strip(), "semester": data.semester, "column": data.column,
-        "criteria": criteria, "total_max": round(sum(c["max"] for c in criteria), 2),
+        "criteria": criteria, "images": images,
+        "total_max": round(sum(c["max"] for c in criteria), 2),
         "updated_at": now_iso(),
     }})
     return await _get_rubric(rid, t)
@@ -2179,7 +2183,6 @@ async def save_rubric_evaluation(rid: str, data: RubricEvalSave, t=Depends(get_t
         {"$set": {
             "owner_id": t["teacher_id"], "scores": scores, "total": total,
             "gb_score": gb_score,
-            "images": [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8],
             "updated_at": now_iso(),
         }, "$setOnInsert": {"id": str(uuid.uuid4()), "created_at": now_iso()}},
         upsert=True
