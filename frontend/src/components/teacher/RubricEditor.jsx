@@ -118,10 +118,10 @@ export default function RubricEditor() {
               <div key={c.key} className="flex items-center gap-2">
                 <GripVertical className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-hint)' }} />
                 <span className="w-6 text-center text-sm font-bold flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
-                <input className="input-field flex-1" placeholder="مثال: فتح مستكشف الملفات"
+                <input className="input-field" style={{ flex: '1 1 0%', minWidth: 0 }} placeholder="مثال: فتح مستكشف الملفات"
                   value={c.name} onChange={e => setCrit(c.key, { name: e.target.value })}
                   data-testid={`rubric-crit-name-${i}`} />
-                <input className="input-field w-20 text-center" placeholder="الدرجة" dir="ltr" inputMode="decimal"
+                <input className="input-field text-center" style={{ flex: '0 0 5.5rem', width: '5.5rem' }} placeholder="الدرجة" dir="ltr" inputMode="decimal"
                   value={c.max}
                   onChange={e => {
                     const t = toLatinDigits(e.target.value);
