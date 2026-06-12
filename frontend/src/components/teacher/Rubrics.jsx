@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListChecks } from 'lucide-react';
+import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListChecks, Printer } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import ReleaseGradesButton from './ReleaseGradesButton';
 import { API, getAuthHeaders } from '../../utils';
@@ -85,6 +85,10 @@ export default function Rubrics() {
                   <ClipboardCheck className="w-5 h-5" style={{ color: '#64B5F6' }} />
                 </div>
                 <div className="flex gap-1">
+                  <button onClick={() => navigate(`/teacher/rubrics/${r.id}/print`)}
+                    className="p-1.5 rounded-lg hover:bg-white/10" title="طباعة / تنزيل PDF" data-testid={`print-rubric-${r.id}`}>
+                    <Printer className="w-4 h-4" style={{ color: '#FBBF24' }} />
+                  </button>
                   <button onClick={() => navigate(`/teacher/rubrics/${r.id}/edit`)}
                     className="p-1.5 rounded-lg hover:bg-white/10" title="تعديل" data-testid={`edit-rubric-${r.id}`}>
                     <Pencil className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />

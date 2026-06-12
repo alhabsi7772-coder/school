@@ -20,6 +20,7 @@ import GradebookDetail from './components/teacher/GradebookDetail';
 import Rubrics from './components/teacher/Rubrics';
 import RubricEditor from './components/teacher/RubricEditor';
 import RubricEvaluate from './components/teacher/RubricEvaluate';
+import RubricPrint from './components/teacher/RubricPrint';
 import StudentJoin from './components/student/StudentJoin';
 import StudentLobby from './components/student/StudentLobby';
 import StudentExam from './components/student/StudentExam';
@@ -69,6 +70,7 @@ function App() {
             <Route path="/teacher/rubrics/new" element={<ProtectedRoute><RubricEditor /></ProtectedRoute>} />
             <Route path="/teacher/rubrics/:rubricId/edit" element={<ProtectedRoute><RubricEditor /></ProtectedRoute>} />
             <Route path="/teacher/rubrics/:rubricId/evaluate" element={<ProtectedRoute><RubricEvaluate /></ProtectedRoute>} />
+            <Route path="/teacher/rubrics/:rubricId/print" element={<ProtectedRoute><RubricPrint /></ProtectedRoute>} />
             <Route path="/teacher/teachers" element={<AdminRoute><TeacherManagement /></AdminRoute>} />
             <Route path="/teacher/quiz/new" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/edit" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
