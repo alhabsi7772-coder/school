@@ -227,8 +227,8 @@ export default function GradebookSyncButton({ quizId }) {
                           {COLUMN_GROUPS.map(g => (
                             <div key={g.label} className="rounded-xl p-3"
                               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                              <p className="text-[11px] font-bold mb-2.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                                <span className="inline-block w-1 h-3 rounded-sm" style={{ background: 'var(--theme-accent)' }} />
+                              <p className="text-sm font-bold mb-2.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                                <span className="inline-block w-1 h-4 rounded-sm" style={{ background: 'var(--theme-accent)' }} />
                                 {g.label}
                               </p>
                               <div className="flex gap-2 flex-wrap">
@@ -236,12 +236,12 @@ export default function GradebookSyncButton({ quizId }) {
                                   const f = fields.find(x => x.key === k);
                                   return (
                                     <button key={k} onClick={() => setColumn(k)} data-testid={`sync-col-${k}`}
-                                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-2 transition-all flex-1 min-w-[88px]"
+                                      className="px-3.5 py-2 rounded-lg text-sm font-bold border-2 transition-all flex-1 min-w-[88px]"
                                       style={column === k
                                         ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.14)', color: 'var(--theme-accent)' }
                                         : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-muted)' }}>
                                       {f.label}
-                                      <span className="block text-[10px] font-semibold opacity-70 mt-0.5">من {f.max} درجات</span>
+                                      <span className="block text-[11px] font-semibold opacity-70 mt-0.5">من {f.max} درجات</span>
                                     </button>
                                   );
                                 })}
