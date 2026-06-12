@@ -1948,10 +1948,12 @@ class TeacherCreateReq(BaseModel):
     username: str
     password: str
     teacher_name: str
+    school_name: Optional[str] = None
 
 
 class TeacherUpdateReq(BaseModel):
     teacher_name: Optional[str] = None
+    school_name: Optional[str] = None
     new_password: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -1981,7 +1983,7 @@ async def admin_create_teacher(req: TeacherCreateReq, _=Depends(require_admin)):
         "username": username,
         "password_hash": hash_password(req.password),
         "teacher_name": req.teacher_name.strip() or "معلم جديد",
-        "school_name": "مدرسة الخيرات للتعليم الأساسي",
+        "school_name": (req.school_name or "").strip() or "مدرسة الخيرات للتعليم الأساسي",
         "role": "teacher",
         "is_active": True,
         "created_at": now_iso()
@@ -2002,6 +2004,8 @@ async def admin_update_teacher(tid: str, req: TeacherUpdateReq, _=Depends(requir
     upd = {}
     if req.teacher_name is not None and req.teacher_name.strip():
         upd["teacher_name"] = req.teacher_name.strip()
+    if req.school_name is not None:
+        upd["school_name"] = req.school_name.strip() or "مدرسة الخيرات للتعليم الأساسي"
     if req.new_password:
         if len(req.new_password) < 6:
             raise HTTPException(400, "كلمة المرور يجب أن تكون 6 أحرف على الأقل")

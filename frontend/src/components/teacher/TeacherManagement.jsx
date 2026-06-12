@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   Users, UserPlus, KeyRound, Trash2, Power, ShieldCheck,
-  FileText, FolderOpen, Eye, EyeOff, X, AlertTriangle, Pencil
+  FileText, FolderOpen, Eye, EyeOff, X, AlertTriangle, Pencil, School
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
@@ -62,6 +62,13 @@ function TeacherCard({ t, onEdit, onToggleActive, onDelete }) {
           <p className="text-xs mt-0.5" dir="ltr" style={{ color: 'var(--text-hint)', textAlign: 'right', fontFamily: 'monospace' }}>
             @{t.username}
           </p>
+          {t.school_name && (
+            <p className="text-[11px] mt-1 flex items-center gap-1 truncate" style={{ color: 'var(--text-muted)' }}
+              data-testid={`teacher-school-${t.username}`}>
+              <School className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{t.school_name}</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -111,7 +118,7 @@ export default function TeacherManagement() {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // {type: 'create'|'edit'|'delete', teacher}
-  const [form, setForm] = useState({ username: '', password: '', teacher_name: '' });
+  const [form, setForm] = useState({ username: '', password: '', teacher_name: '', school_name: '' });
   const [showPwd, setShowPwd] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -126,8 +133,8 @@ export default function TeacherManagement() {
     } finally { setLoading(false); }
   };
 
-  const openCreate = () => { setForm({ username: '', password: '', teacher_name: '' }); setShowPwd(false); setModal({ type: 'create' }); };
-  const openEdit = (t) => { setForm({ username: t.username, password: '', teacher_name: t.teacher_name }); setShowPwd(false); setModal({ type: 'edit', teacher: t }); };
+  const openCreate = () => { setForm({ username: '', password: '', teacher_name: '', school_name: '' }); setShowPwd(false); setModal({ type: 'create' }); };
+  const openEdit = (t) => { setForm({ username: t.username, password: '', teacher_name: t.teacher_name, school_name: t.school_name || '' }); setShowPwd(false); setModal({ type: 'edit', teacher: t }); };
 
   const createTeacher = async (e) => {
     e.preventDefault();
@@ -145,7 +152,7 @@ export default function TeacherManagement() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { teacher_name: form.teacher_name };
+      const payload = { teacher_name: form.teacher_name, school_name: form.school_name };
       if (form.password) payload.new_password = form.password;
       await axios.put(`${API}/admin/teachers/${modal.teacher.id}`, payload, getAuthHeaders());
       toast.success('تم حفظ التعديلات');
@@ -226,6 +233,14 @@ export default function TeacherManagement() {
                   data-testid="new-teacher-name-input" />
               </div>
               <div>
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5" /> اسم المدرسة</span>
+                </label>
+                <input className="input-field" placeholder="مثال: مدرسة الخيرات للتعليم الأساسي"
+                  value={form.school_name} onChange={e => setForm(f => ({ ...f, school_name: e.target.value }))}
+                  data-testid="new-teacher-school-input" />
+              </div>
+              <div>
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>اسم المستخدم (بالإنجليزية)</label>
                 <input className="input-field" placeholder="example: mohammed" required dir="ltr" style={{ textAlign: 'left' }}
                   value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
@@ -261,6 +276,14 @@ export default function TeacherManagement() {
                 <input className="input-field" required
                   value={form.teacher_name} onChange={e => setForm(f => ({ ...f, teacher_name: e.target.value }))}
                   data-testid="edit-teacher-name-input" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5" /> اسم المدرسة</span>
+                </label>
+                <input className="input-field" placeholder="مثال: مدرسة الخيرات للتعليم الأساسي"
+                  value={form.school_name} onChange={e => setForm(f => ({ ...f, school_name: e.target.value }))}
+                  data-testid="edit-teacher-school-input" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
