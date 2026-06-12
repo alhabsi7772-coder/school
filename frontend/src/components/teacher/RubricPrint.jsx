@@ -18,7 +18,7 @@ export default function RubricPrint() {
   const [gbId, setGbId] = useState('');
   const [gb, setGb] = useState(null);
   const [evals, setEvals] = useState({});
-  const [mode, setMode] = useState('filled'); // 'filled' | 'blank' | 'class'
+  const [mode, setMode] = useState('filled'); // 'filled' | 'blank'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,11 +41,10 @@ export default function RubricPrint() {
     }).catch(() => toast.error('تعذر تحميل بيانات السجل'));
   }, [gbId, rubricId]);
 
-  // Decide what to render: blank template, per-student filled, or class summary
+  // Decide what to render: blank template or per-student filled
   const students = useMemo(() => {
     if (mode === 'blank') return [{ id: 'blank', name: '', section: '', grade: '' }];
     if (!gb) return [];
-    if (mode === 'class') return [{ ...gb, isClass: true }];
     return gb.students || [];
   }, [mode, gb]);
 
@@ -113,7 +112,6 @@ export default function RubricPrint() {
           <span className="text-xs font-bold text-white">النمط:</span>
           {[
             ['filled', 'مملوءة لكل طالب', <Users className="w-3.5 h-3.5" key="i1" />],
-            ['class', 'جدول الصف كامل', <FileText className="w-3.5 h-3.5" key="i2" />],
             ['blank', 'نموذج فارغ', <FileText className="w-3.5 h-3.5" key="i3" />],
           ].map(([v, l, icn]) => (
             <button key={v} onClick={() => setMode(v)} data-testid={`print-mode-${v}`}
@@ -161,10 +159,6 @@ export default function RubricPrint() {
           <PrintCard key={st.id} rubric={rubric} student={st} evaluation={evals[st.id]}
             grade={gb.grade} section={gb.section} />
         ))}
-
-        {mode === 'class' && gb && (
-          <ClassSummary rubric={rubric} gb={gb} evals={evals} />
-        )}
       </div>
     </>
   );
@@ -228,96 +222,6 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section }) {
           </tr>
         </tbody>
       </table>
-
-      <div className="print-footer">
-        <div className="sig">
-          <div className="label">اسم المعلم:</div>
-          <div className="line" />
-        </div>
-        <div className="sig">
-          <div className="label">التوقيع:</div>
-          <div className="line" />
-        </div>
-        <div className="sig">
-          <div className="label">التاريخ:</div>
-          <div className="line" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ClassSummary({ rubric, gb, evals }) {
-  return (
-    <div className="print-page">
-      <Header />
-      <div className="print-divider" />
-      <div className="print-title">{rubric.title} — كشف الدرجات</div>
-
-      <div className="print-meta-row">
-        <div className="field">
-          <span className="label">الصف/الشعبة:</span>
-          <span className="value">{gb.grade}/{gb.section}</span>
-        </div>
-        <div className="field">
-          <span className="label">عدد الطلاب:</span>
-          <span className="value">{(gb.students || []).length}</span>
-        </div>
-        <div className="field">
-          <span className="label">الفصل:</span>
-          <span className="value">{semLabel(rubric.semester)}</span>
-        </div>
-      </div>
-
-      <table className="print-table class-table">
-        <thead>
-          <tr>
-            <th className="col-no">م</th>
-            <th className="name-col">اسم الطالب</th>
-            {rubric.criteria.map((c, i) => (
-              <th key={c.id} title={c.name}>
-                {i + 1}<br /><span style={{ fontWeight: 400, fontSize: '9pt' }}>({fmt(c.max)})</span>
-              </th>
-            ))}
-            <th className="col-max">المجموع<br /><span style={{ fontWeight: 400, fontSize: '9pt' }}>({fmt(rubric.total_max)})</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {(gb.students || []).map((st, i) => {
-            const ev = evals[st.id];
-            const sc = ev?.scores || {};
-            return (
-              <tr key={st.id}>
-                <td className="col-no">{i + 1}</td>
-                <td className="name-col">{st.name}</td>
-                {rubric.criteria.map(c => (
-                  <td key={c.id} style={{ textAlign: 'center' }}>
-                    {sc[c.id] != null ? fmt(sc[c.id]) : ''}
-                  </td>
-                ))}
-                <td className="col-max" style={{ fontWeight: 800 }}>
-                  {ev?.total != null ? fmt(ev.total) : ''}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <div className="print-footer">
-        <div className="sig">
-          <div className="label">معلم المادة:</div>
-          <div className="line" />
-        </div>
-        <div className="sig">
-          <div className="label">مدير المدرسة:</div>
-          <div className="line" />
-        </div>
-        <div className="sig">
-          <div className="label">التاريخ:</div>
-          <div className="line" />
-        </div>
-      </div>
     </div>
   );
 }

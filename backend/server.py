@@ -2055,6 +2055,7 @@ class RubricEvalSave(BaseModel):
     gradebook_id: str
     student_id: str
     scores: dict
+    images: Optional[List[str]] = None  # قائمة data URLs للصور المرفقة (اختياري)
 
 
 def _clean_criteria(criteria):
@@ -2177,7 +2178,9 @@ async def save_rubric_evaluation(rid: str, data: RubricEvalSave, t=Depends(get_t
         {"rubric_id": rid, "gradebook_id": data.gradebook_id, "student_id": data.student_id},
         {"$set": {
             "owner_id": t["teacher_id"], "scores": scores, "total": total,
-            "gb_score": gb_score, "updated_at": now_iso(),
+            "gb_score": gb_score,
+            "images": [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8],
+            "updated_at": now_iso(),
         }, "$setOnInsert": {"id": str(uuid.uuid4()), "created_at": now_iso()}},
         upsert=True
     )
