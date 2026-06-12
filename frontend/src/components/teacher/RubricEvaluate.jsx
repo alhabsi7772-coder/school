@@ -5,9 +5,13 @@ import { toast } from 'sonner';
 import { CheckCircle2, Circle, X, ChevronRight, Zap, Users, ArrowRight, ImagePlus } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
-import { GB_FIELDS } from '../../utils/gradebook';
+import { GB_FIELDS, GB_FIELDS_78, themeOfGrade } from '../../utils/gradebook';
 
-const colLabel = (key) => GB_FIELDS.find(f => f.key === key)?.label || key;
+const GRADES_56 = ['الخامس', 'السادس'];
+const colLabel = (key, grade) => {
+  const fields = (grade && !GRADES_56.includes(grade)) ? GB_FIELDS_78 : GB_FIELDS;
+  return fields.find(f => f.key === key)?.label || key;
+};
 const fmt = (v) => v == null ? '—' : (v % 1 === 0 ? v : v.toFixed(1));
 
 // أزرار الدرجات: 0..max (أعداد صحيحة) + الحد الأقصى إن كان كسرياً
@@ -67,7 +71,7 @@ export default function RubricEvaluate() {
       const res = await axios.put(`${API}/rubrics/${rubricId}/evaluations`,
         { gradebook_id: gb.id, student_id: active.id, scores }, getAuthHeaders());
       setEvals(prev => ({ ...prev, [active.id]: { student_id: active.id, scores, total: res.data.total, gb_score: res.data.gb_score } }));
-      toast.success(`${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} — نُقلت للسجل (${colLabel(res.data.column)}: ${fmt(res.data.gb_score)}) ✓`);
+      toast.success(`${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} — نُقلت للسجل (${colLabel(res.data.column, rubric.grade)}: ${fmt(res.data.gb_score)}) ✓`);
       if (goNext) {
         const idx = students.findIndex(s => s.id === active.id);
         const next = [...students.slice(idx + 1), ...students.slice(0, idx)].find(s => !evals[s.id] && s.id !== active.id);
@@ -87,24 +91,38 @@ export default function RubricEvaluate() {
   return (
     <TeacherLayout title={rubric.title} backTo="/teacher/rubrics">
       {/* اختيار الصف/الشعبة */}
-      {!gb ? (
+      {!gb ? (() => {
+        const filtered = rubric.grade ? gradebooks.filter(g => g.grade === rubric.grade) : gradebooks;
+        const th = rubric.grade ? themeOfGrade(rubric.grade) : null;
+        return (
         <div className="max-w-2xl">
-          <p className="font-bold text-white mb-4 flex items-center gap-2">
+          <p className="font-bold text-white mb-2 flex items-center gap-2">
             <Users className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
-            اختر الصف والشعبة لبدء التقييم
+            اختر شعبة الصف {rubric.grade || ''} لبدء التقييم
           </p>
-          {gradebooks.length === 0 ? (
+          {rubric.grade && (
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }} data-testid="rubric-grade-hint">
+              تُعرض فقط سجلات <span className="font-bold" style={{ color: th.hex }}>الصف {rubric.grade}</span>
+              {gradebooks.length !== filtered.length && ` (${gradebooks.length - filtered.length} سجل من صفوف أخرى مخفي)`}
+            </p>
+          )}
+          {filtered.length === 0 ? (
             <div className="quiz-card rounded-2xl p-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              لا توجد سجلات درجات بعد — أنشئ سجلاً من قسم &quot;سجل الدرجات&quot; أولاً
+              {gradebooks.length === 0
+                ? <>لا توجد سجلات درجات بعد — أنشئ سجلاً من قسم &quot;سجل الدرجات&quot; أولاً</>
+                : <>لا يوجد سجل درجات للصف {rubric.grade} بعد — أنشئ سجلاً من قسم &quot;سجل الدرجات&quot; أولاً</>}
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-3" data-testid="rubric-gradebook-list">
-              {gradebooks.map(g => (
+              {filtered.map(g => (
                 <button key={g.id} onClick={() => selectGradebook(g)}
                   data-testid={`rubric-pick-gb-${g.grade}-${g.section}`}
-                  className="quiz-card rounded-2xl p-4 flex items-center gap-3 text-right transition-all hover:scale-[1.02]">
+                  className="quiz-card rounded-2xl p-4 flex items-center gap-3 text-right transition-all hover:scale-[1.02]"
+                  style={th ? { borderColor: `rgba(${th.rgb},0.25)` } : undefined}>
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg flex-shrink-0"
-                    style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', border: '1px solid rgba(var(--theme-accent-rgb),0.25)', color: 'var(--theme-accent)' }}>
+                    style={th
+                      ? { background: `rgba(${th.rgb},0.15)`, border: `1px solid rgba(${th.rgb},0.3)`, color: th.hex }
+                      : { background: 'rgba(var(--theme-accent-rgb),0.12)', border: '1px solid rgba(var(--theme-accent-rgb),0.25)', color: 'var(--theme-accent)' }}>
                     {g.section}
                   </div>
                   <div className="flex-1">
@@ -117,7 +135,8 @@ export default function RubricEvaluate() {
             </div>
           )}
         </div>
-      ) : (
+        );
+      })() : (
         <div className="max-w-2xl">
           {/* شريط التقدم */}
           <div className="quiz-card rounded-2xl p-4 mb-4">
