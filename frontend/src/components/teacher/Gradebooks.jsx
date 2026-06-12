@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -11,6 +11,27 @@ const GRADE_OPTIONS = ['الخامس', 'السادس', 'السابع', 'الثا
 const GRADES_56 = ['الخامس', 'السادس'];
 const templateOfGrade = (g) => (GRADES_56.includes(g) ? '5-6' : '7-10');
 
+// ترتيب الصفوف للفرز
+const GRADE_ORDER = { 'الخامس': 1, 'السادس': 2, 'السابع': 3, 'الثامن': 4, 'التاسع': 5, 'العاشر': 6 };
+
+// لون مميز لكل صف (rgb لتسهيل استخدامه مع شفافيات)
+const GRADE_THEMES = {
+  'الخامس':  { rgb: '52,211,153',  hex: '#34D399', name: 'أخضر' },     // emerald
+  'السادس':  { rgb: '96,165,250',  hex: '#60A5FA', name: 'أزرق' },     // sky
+  'السابع':  { rgb: '251,191,36',  hex: '#FBBF24', name: 'كهرماني' },  // amber
+  'الثامن':  { rgb: '167,139,250', hex: '#A78BFA', name: 'بنفسجي' },   // violet
+  'التاسع':  { rgb: '244,114,182', hex: '#F472B6', name: 'وردي' },     // pink
+  'العاشر':  { rgb: '45,212,191',  hex: '#2DD4BF', name: 'فيروزي' },   // teal
+};
+const DEFAULT_THEME = { rgb: '156,163,175', hex: '#9CA3AF', name: '' };
+const themeOf = (grade) => GRADE_THEMES[grade] || DEFAULT_THEME;
+
+// فرز شعبة (رقمي إن أمكن)
+const sectionVal = (s) => {
+  const n = parseInt(String(s).replace(/[^\d]/g, ''), 10);
+  return isNaN(n) ? 9999 : n;
+};
+
 export default function Gradebooks() {
   const navigate = useNavigate();
   const [gradebooks, setGradebooks] = useState([]);
@@ -20,6 +41,7 @@ export default function Gradebooks() {
   const [form, setForm] = useState({ grade: 'الخامس', section: '', students: '' });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const fileRef = useRef(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -31,6 +53,26 @@ export default function Gradebooks() {
     } catch { toast.error('تعذر تحميل سجلات الدرجات'); }
     finally { setLoading(false); }
   };
+
+  // فرز السجلات حسب الصف ثم الشعبة + تجميعها لأقسام
+  const groupedGradebooks = useMemo(() => {
+    const sorted = gradebooks.slice().sort((a, b) => {
+      const ga = GRADE_ORDER[a.grade] || 99;
+      const gx = GRADE_ORDER[b.grade] || 99;
+      if (ga !== gx) return ga - gx;
+      return sectionVal(a.section) - sectionVal(b.section);
+    });
+    const order = [];
+    const buckets = {};
+    sorted.forEach(gb => {
+      if (!buckets[gb.grade]) {
+        buckets[gb.grade] = [];
+        order.push(gb.grade);
+      }
+      buckets[gb.grade] = buckets[gb.grade].concat([gb]);
+    });
+    return order.map(grade => ({ grade, items: buckets[grade] }));
+  }, [gradebooks]);
 
   const createGradebook = async (e) => {
     e.preventDefault();
@@ -45,17 +87,51 @@ export default function Gradebooks() {
   };
 
   const importFile = async (e) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    if (files.length === 0) return;
     setImporting(true);
-    try {
-      const b64 = await fileToBase64(file);
-      const res = await axios.post(`${API}/gradebooks/import`, { data_base64: b64 }, getAuthHeaders());
-      toast.success(`تم الاستيراد: ${res.data.total_in_file} طالب`);
-      navigate(`/teacher/gradebooks/${res.data.gradebook_id}`);
-    } catch (err) { toast.error(err.response?.data?.detail || 'تعذر استيراد الملف'); }
-    finally { setImporting(false); }
+    setImportProgress({ current: 0, total: files.length });
+
+    const results = { ok: [], fail: [] };
+    let lastGradebookId = null;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setImportProgress({ current: i + 1, total: files.length });
+      try {
+        const b64 = await fileToBase64(file);
+        const res = await axios.post(`${API}/gradebooks/import`, { data_base64: b64 }, getAuthHeaders());
+        results.ok.push({ name: file.name, ...res.data });
+        lastGradebookId = res.data.gradebook_id;
+      } catch (err) {
+        results.fail.push({ name: file.name, error: err.response?.data?.detail || 'تعذر القراءة' });
+      }
+    }
+
+    // عرض الملخص
+    if (results.ok.length && !results.fail.length) {
+      const totalStudents = results.ok.reduce((s, r) => s + (r.total_in_file || 0), 0);
+      toast.success(`تم استيراد ${results.ok.length} ${results.ok.length === 1 ? 'سجل' : 'سجلات'} (${totalStudents} طالب إجمالاً)`);
+    } else if (results.ok.length && results.fail.length) {
+      toast.warning(`نجح ${results.ok.length} | فشل ${results.fail.length}`, {
+        description: results.fail.map(f => `${f.name}: ${f.error}`).join(' • '),
+        duration: 7000,
+      });
+    } else {
+      toast.error(`فشل استيراد جميع الملفات (${results.fail.length})`, {
+        description: results.fail.map(f => `${f.name}: ${f.error}`).join(' • '),
+        duration: 7000,
+      });
+    }
+
+    setImporting(false);
+    setImportProgress({ current: 0, total: 0 });
+    await fetchAll();
+    // إذا استورد ملفاً واحداً ونجح، انتقل إليه مباشرة كما السابق
+    if (files.length === 1 && results.ok.length === 1 && lastGradebookId) {
+      navigate(`/teacher/gradebooks/${lastGradebookId}`);
+    }
   };
 
   const deleteGradebook = async () => {
@@ -84,13 +160,17 @@ export default function Gradebooks() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <input ref={fileRef} type="file" accept=".xlsx" className="hidden" onChange={importFile} data-testid="import-gradebook-file" />
+          <input ref={fileRef} type="file" accept=".xlsx" multiple className="hidden" onChange={importFile} data-testid="import-gradebook-file" />
           <button onClick={() => fileRef.current?.click()} disabled={importing}
             data-testid="import-gradebook-btn"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
             style={{ background: 'rgba(52,211,153,0.1)', color: '#34D399', border: '1px solid rgba(52,211,153,0.25)' }}>
             <FileUp className="w-4 h-4" />
-            {importing ? 'جارٍ الاستيراد...' : 'استيراد من Excel'}
+            {importing
+              ? (importProgress.total > 1
+                  ? `جارٍ الاستيراد ${importProgress.current}/${importProgress.total}...`
+                  : 'جارٍ الاستيراد...')
+              : 'استيراد من Excel (متعدد)'}
           </button>
           <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2" data-testid="create-gradebook-btn">
             <Plus className="w-4 h-4" />
@@ -110,50 +190,85 @@ export default function Gradebooks() {
           <ClipboardList className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-hint)' }} />
           <p className="font-bold text-white mb-1">لا توجد سجلات بعد</p>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            أنشئ سجلاً جديداً لكل صف وشعبة، أو استورد ملف Excel الرسمي مباشرة
+            أنشئ سجلاً جديداً لكل صف وشعبة، أو استورد ملف Excel الرسمي مباشرة (يمكنك تحديد عدة ملفات دفعة واحدة)
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="gradebooks-grid">
-          {gradebooks.map(gb => (
-            <div key={gb.id} className="quiz-card rounded-2xl p-5 cursor-pointer group"
-              data-testid={`gradebook-card-${gb.grade}-${gb.section}`}
-              onClick={() => navigate(`/teacher/gradebooks/${gb.id}`)}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg"
-                    style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', border: '1px solid rgba(var(--theme-accent-rgb),0.25)', color: 'var(--theme-accent)' }}>
-                    {gb.section}
+        <div className="space-y-6" data-testid="gradebooks-grid">
+          {groupedGradebooks.map(group => {
+            const th = themeOf(group.grade);
+            return (
+              <div key={group.grade} data-testid={`grade-section-${group.grade}`}>
+                {/* رأس مجموعة الصف */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                    style={{ background: `rgba(${th.rgb},0.12)`, border: `1px solid rgba(${th.rgb},0.3)` }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: th.hex }} />
+                    <span className="text-sm font-bold" style={{ color: th.hex }}>الصف {group.grade}</span>
+                    <span className="text-xs font-bold opacity-70" style={{ color: th.hex }}>
+                      · {group.items.length} {group.items.length === 1 ? 'سجل' : 'سجلات'}
+                    </span>
                   </div>
-                  <div>
-                    <p className="font-bold text-white">الصف {gb.grade}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-hint)' }}>الشعبة {gb.section}</p>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold self-start"
-                    data-testid={`gb-template-badge-${gb.grade}-${gb.section}`}
-                    style={{ background: 'rgba(var(--theme-accent-rgb),0.1)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb),0.2)' }}>
-                    نموذج {gb.template || '5-6'}
-                  </span>
+                  <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, rgba(${th.rgb},0.25), transparent)` }} />
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(gb); }}
-                  data-testid={`delete-gradebook-${gb.grade}-${gb.section}`}
-                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ color: '#F87171' }}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                {/* بطاقات الشعب */}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map(gb => (
+                    <div key={gb.id} className="quiz-card rounded-2xl p-5 cursor-pointer group transition-all hover:scale-[1.01]"
+                      data-testid={`gradebook-card-${gb.grade}-${gb.section}`}
+                      onClick={() => navigate(`/teacher/gradebooks/${gb.id}`)}
+                      style={{
+                        borderRight: `4px solid ${th.hex}`,
+                        background: `linear-gradient(to left, rgba(${th.rgb},0.05), transparent 60%)`,
+                      }}>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg"
+                            style={{
+                              background: `rgba(${th.rgb},0.15)`,
+                              border: `1px solid rgba(${th.rgb},0.35)`,
+                              color: th.hex,
+                            }}>
+                            {gb.section}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white">الصف {gb.grade}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-hint)' }}>الشعبة {gb.section}</p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold self-start"
+                            data-testid={`gb-template-badge-${gb.grade}-${gb.section}`}
+                            style={{
+                              background: `rgba(${th.rgb},0.12)`,
+                              color: th.hex,
+                              border: `1px solid rgba(${th.rgb},0.25)`,
+                            }}>
+                            نموذج {gb.template || '5-6'}
+                          </span>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(gb); }}
+                          data-testid={`delete-gradebook-${gb.grade}-${gb.section}`}
+                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: '#F87171' }}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+                          <Users className="w-4 h-4" />
+                          {gb.student_count} طالب
+                        </span>
+                        <span className="flex items-center gap-1 text-xs font-bold" style={{ color: th.hex }}>
+                          فتح السجل
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  <Users className="w-4 h-4" />
-                  {gb.student_count} طالب
-                </span>
-                <span className="flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--theme-accent)' }}>
-                  فتح السجل
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
