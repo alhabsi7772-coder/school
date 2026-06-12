@@ -5,26 +5,11 @@ import { toast } from 'sonner';
 import { ClipboardList, Plus, Trash2, Users, FileUp, X, AlertTriangle, ArrowLeft } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
-import { fileToBase64 } from '../../utils/gradebook';
+import { fileToBase64, GRADE_ORDER_NUM, themeOfGrade as themeOf } from '../../utils/gradebook';
 
 const GRADE_OPTIONS = ['الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
 const GRADES_56 = ['الخامس', 'السادس'];
 const templateOfGrade = (g) => (GRADES_56.includes(g) ? '5-6' : '7-10');
-
-// ترتيب الصفوف للفرز
-const GRADE_ORDER = { 'الخامس': 1, 'السادس': 2, 'السابع': 3, 'الثامن': 4, 'التاسع': 5, 'العاشر': 6 };
-
-// لون مميز لكل صف (rgb لتسهيل استخدامه مع شفافيات)
-const GRADE_THEMES = {
-  'الخامس':  { rgb: '52,211,153',  hex: '#34D399', name: 'أخضر' },     // emerald
-  'السادس':  { rgb: '96,165,250',  hex: '#60A5FA', name: 'أزرق' },     // sky
-  'السابع':  { rgb: '251,191,36',  hex: '#FBBF24', name: 'كهرماني' },  // amber
-  'الثامن':  { rgb: '167,139,250', hex: '#A78BFA', name: 'بنفسجي' },   // violet
-  'التاسع':  { rgb: '244,114,182', hex: '#F472B6', name: 'وردي' },     // pink
-  'العاشر':  { rgb: '45,212,191',  hex: '#2DD4BF', name: 'فيروزي' },   // teal
-};
-const DEFAULT_THEME = { rgb: '156,163,175', hex: '#9CA3AF', name: '' };
-const themeOf = (grade) => GRADE_THEMES[grade] || DEFAULT_THEME;
 
 // فرز شعبة (رقمي إن أمكن)
 const sectionVal = (s) => {
@@ -56,22 +41,14 @@ export default function Gradebooks() {
 
   // فرز السجلات حسب الصف ثم الشعبة + تجميعها لأقسام
   const groupedGradebooks = useMemo(() => {
-    const sorted = gradebooks.slice().sort((a, b) => {
-      const ga = GRADE_ORDER[a.grade] || 99;
-      const gx = GRADE_ORDER[b.grade] || 99;
+    const sorted = gradebooks.toSorted((a, b) => {
+      const ga = GRADE_ORDER_NUM[a.grade] || 99;
+      const gx = GRADE_ORDER_NUM[b.grade] || 99;
       if (ga !== gx) return ga - gx;
       return sectionVal(a.section) - sectionVal(b.section);
     });
-    const order = [];
-    const buckets = {};
-    sorted.forEach(gb => {
-      if (!buckets[gb.grade]) {
-        buckets[gb.grade] = [];
-        order.push(gb.grade);
-      }
-      buckets[gb.grade] = buckets[gb.grade].concat([gb]);
-    });
-    return order.map(grade => ({ grade, items: buckets[grade] }));
+    const grades = [...new Set(sorted.map(g => g.grade))];
+    return grades.map(grade => ({ grade, items: sorted.filter(g => g.grade === grade) }));
   }, [gradebooks]);
 
   const createGradebook = async (e) => {

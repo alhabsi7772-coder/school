@@ -26,6 +26,20 @@ export const gbMaxMap = (tpl) => Object.fromEntries(gbFields(tpl).map(f => [f.ke
 
 export const GB_MAX = Object.fromEntries(GB_FIELDS.map(f => [f.key, f.max]));
 
+// لون مميز لكل صف (rgb لتسهيل استخدامه مع شفافيات)
+export const GRADE_THEMES = {
+  'الخامس':  { rgb: '52,211,153',  hex: '#34D399', name: 'أخضر' },     // emerald
+  'السادس':  { rgb: '96,165,250',  hex: '#60A5FA', name: 'أزرق' },     // sky
+  'السابع':  { rgb: '251,191,36',  hex: '#FBBF24', name: 'كهرماني' },  // amber
+  'الثامن':  { rgb: '167,139,250', hex: '#A78BFA', name: 'بنفسجي' },   // violet
+  'التاسع':  { rgb: '244,114,182', hex: '#F472B6', name: 'وردي' },     // pink
+  'العاشر':  { rgb: '45,212,191',  hex: '#2DD4BF', name: 'فيروزي' },   // teal
+};
+export const GRADE_ORDER_NUM = { 'الخامس': 1, 'السادس': 2, 'السابع': 3, 'الثامن': 4, 'التاسع': 5, 'العاشر': 6 };
+export const DEFAULT_GRADE_THEME = { rgb: '156,163,175', hex: '#9CA3AF', name: '' };
+export const themeOfGrade = (grade) => GRADE_THEMES[grade] || DEFAULT_GRADE_THEME;
+
+
 export const GB_GROUPS = [
   { name: 'الحوار', keys: ['d1', 'd2'], totalMax: 20 },
   { name: 'الأسئلة القصيرة', keys: ['q1', 'q2', 'q3', 'q4'], totalMax: 20 },

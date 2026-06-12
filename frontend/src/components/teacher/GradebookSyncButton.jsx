@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { ClipboardList, X, ArrowLeft, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { API, getAuthHeaders } from '../../utils';
-import { gbFields, gbMaxMap } from '../../utils/gradebook';
+import { gbFields, gbMaxMap, themeOfGrade, GRADE_ORDER_NUM } from '../../utils/gradebook';
 
 const COLUMN_GROUPS_56 = [
   { label: 'الأسئلة القصيرة (5)', keys: ['q1', 'q2', 'q3', 'q4'] },
@@ -18,6 +18,12 @@ const COLUMN_GROUPS_78 = [
   { label: 'الأنشطة العملية (20)', keys: ['p1', 'p2'] },
   { label: 'المشروع (20)', keys: ['proj'] },
 ];
+
+// فرز رقمي للشعب
+const sectionVal = (s) => {
+  const n = parseInt(String(s).replace(/[^\d]/g, ''), 10);
+  return isNaN(n) ? 9999 : n;
+};
 
 export default function GradebookSyncButton({ quizId }) {
   const [open, setOpen] = useState(false);
@@ -37,6 +43,23 @@ export default function GradebookSyncButton({ quizId }) {
   const maxMap = gbMaxMap(tpl);
   const COLUMN_GROUPS = tpl === '7-10' ? COLUMN_GROUPS_78 : COLUMN_GROUPS_56;
   const FIELD_LABEL = Object.fromEntries(fields.map(f => [f.key, `${f.label} (من ${f.max})`]));
+
+  // تجميع السجلات حسب الصف (مع ترتيب الخامس → العاشر)
+  const groupedGbs = (() => {
+    if (!gradebooks?.length) return [];
+    const buckets = {}; const order = [];
+    const sorted = gradebooks.slice().sort((a, b) => {
+      const ga = GRADE_ORDER_NUM[a.grade] || 99;
+      const gb_ = GRADE_ORDER_NUM[b.grade] || 99;
+      if (ga !== gb_) return ga - gb_;
+      return sectionVal(a.section) - sectionVal(b.section);
+    });
+    sorted.forEach(g => {
+      if (!buckets[g.grade]) { buckets[g.grade] = []; order.push(g.grade); }
+      buckets[g.grade].push(g);
+    });
+    return order.map(grade => ({ grade, items: buckets[grade], theme: themeOfGrade(grade) }));
+  })();
 
   // اختيار سجل مع إعادة ضبط العمود إذا لم يكن متاحاً في نموذجه
   const pickGb = (g) => {
@@ -136,21 +159,37 @@ export default function GradebookSyncButton({ quizId }) {
                             style={{ background: 'rgba(var(--theme-accent-rgb),0.15)', color: 'var(--theme-accent)' }}>1</span>
                           <h4 className="text-sm font-bold text-white">السجل (الصف / الشعبة)</h4>
                         </div>
-                        <div className="grid sm:grid-cols-2 gap-2.5">
-                          {(gradebooks || []).map(g => (
-                            <button key={g.id} onClick={() => pickGb(g)} data-testid={`sync-gb-${g.grade}-${g.section}`}
-                              className="flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-right"
-                              style={gbId === g.id
-                                ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.1)' }
-                                : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
-                              <span className="w-9 h-9 rounded-lg flex items-center justify-center font-black"
-                                style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', color: 'var(--theme-accent)' }}>{g.section}</span>
-                              <span>
-                                <span className="block text-sm font-bold text-white">الصف {g.grade} / {g.section}</span>
-                                <span className="block text-xs" style={{ color: 'var(--text-hint)' }}>{g.student_count} طالب</span>
-                              </span>
-                            </button>
-                          ))}
+                        <div className="space-y-3.5">
+                          {groupedGbs.map(group => {
+                            const th = group.theme;
+                            return (
+                              <div key={group.grade} data-testid={`sync-grade-group-${group.grade}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="w-1.5 h-4 rounded-sm" style={{ background: th.hex }} />
+                                  <span className="text-xs font-bold" style={{ color: th.hex }}>الصف {group.grade}</span>
+                                  <span className="text-[10px] font-bold opacity-60" style={{ color: th.hex }}>
+                                    ({group.items.length})
+                                  </span>
+                                </div>
+                                <div className="grid sm:grid-cols-2 gap-2">
+                                  {group.items.map(g => (
+                                    <button key={g.id} onClick={() => pickGb(g)} data-testid={`sync-gb-${g.grade}-${g.section}`}
+                                      className="flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-right"
+                                      style={gbId === g.id
+                                        ? { borderColor: th.hex, background: `rgba(${th.rgb},0.12)` }
+                                        : { borderColor: `rgba(${th.rgb},0.18)`, background: `rgba(${th.rgb},0.04)` }}>
+                                      <span className="w-9 h-9 rounded-lg flex items-center justify-center font-black flex-shrink-0"
+                                        style={{ background: `rgba(${th.rgb},0.18)`, color: th.hex }}>{g.section}</span>
+                                      <span className="min-w-0">
+                                        <span className="block text-sm font-bold text-white truncate">الصف {g.grade} / {g.section}</span>
+                                        <span className="block text-xs" style={{ color: 'var(--text-hint)' }}>{g.student_count} طالب</span>
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </section>
 
@@ -184,19 +223,23 @@ export default function GradebookSyncButton({ quizId }) {
                         <p className="text-xs mb-4 pr-8" style={{ color: 'var(--text-hint)' }}>
                           اختر إلى أي عمود تُنقل هذه الدرجة — مثال: لو كان هذا الاختبار &quot;القصير الثاني&quot; اختر &quot;قصيرة 2&quot;
                         </p>
-                        <div className="space-y-4">
+                        <div className="grid sm:grid-cols-2 gap-3">
                           {COLUMN_GROUPS.map(g => (
-                            <div key={g.label}>
-                              <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-hint)' }}>{g.label}</p>
-                              <div className="flex gap-2.5 flex-wrap">
+                            <div key={g.label} className="rounded-xl p-3"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <p className="text-[11px] font-bold mb-2.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                                <span className="inline-block w-1 h-3 rounded-sm" style={{ background: 'var(--theme-accent)' }} />
+                                {g.label}
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
                                 {g.keys.map(k => {
                                   const f = fields.find(x => x.key === k);
                                   return (
                                     <button key={k} onClick={() => setColumn(k)} data-testid={`sync-col-${k}`}
-                                      className="px-4 py-2.5 rounded-xl text-sm font-bold border-2 transition-all"
+                                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-2 transition-all flex-1 min-w-[88px]"
                                       style={column === k
                                         ? { borderColor: 'var(--theme-accent)', background: 'rgba(var(--theme-accent-rgb),0.14)', color: 'var(--theme-accent)' }
-                                        : { borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
+                                        : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-muted)' }}>
                                       {f.label}
                                       <span className="block text-[10px] font-semibold opacity-70 mt-0.5">من {f.max} درجات</span>
                                     </button>
