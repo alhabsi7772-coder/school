@@ -21,11 +21,16 @@
 - اختيار العام الدراسي (2025/2026 → 2029/2030) واختيار الفصل (1/2) — لكل معلم تفضيل خاص
 
 ### Recent (June 2026 — Import Session)
-- ✅ **إرفاق صور في تقييم البطاقة**:
-  - حقل `images` في `rubric_evaluations` (حد أقصى 8 صور لكل تقييم، كل صورة ≤ 3MB)
-  - واجهة رفع متعدد في `RubricEvaluate` مع شبكة معاينة + زر حذف لكل صورة
-  - شارة 📎 على صف الطالب في القائمة تعرض عدد الصور المرفقة
-  - يستخدم نقطة `POST /api/upload-image` الموجودة (data URL base64)
+- ✅ **نقل إرفاق الصور إلى بطاقة التقييم نفسها** (Feb 2026 update):
+  - حقل `images` في `rubrics` (حد أقصى 8، base64 data URL ≤ 3MB لكل صورة)
+  - واجهة رفع متعدد جديدة في `RubricEditor` (إنشاء/تعديل البطاقة)
+  - في `RubricEvaluate`: حُذفت واجهة الرفع لكل طالب، ويُعرض **معرض مرجعي للقراءة فقط** من صور البطاقة، مع معاينة كاملة الشاشة عند النقر
+  - تنظيف: حُذف `images` من `RubricEvalSave` ومن مستندات `rubric_evaluations`
+- ✅ **استيراد متعدد لسجلات الدرجات + ترميز ألوان حسب الصف**:
+  - `Gradebooks.jsx`: استيراد عدة ملفات Excel دفعة واحدة
+  - ترتيب: الخامس → السادس → السابع → الثامن → التاسع → العاشر، مع لون مميّز لكل صف
+- ✅ **إرفاق صور في تقييم البطاقة** (مُلغى — استُبدل بصور بطاقة البطاقة أعلاه):
+  - ~~حقل `images` في `rubric_evaluations`~~ (لم يعد قيد الاستخدام)
 - ✅ **تبسيط صفحة الطباعة**: حذف نمط "جدول الصف كامل" + حذف تذييل التوقيع/التاريخ — تبقى صفحة نظيفة فقط بالترويسة والمعايير
 - ✅ **طباعة بطاقات التقييم / تنزيل PDF (A4)**:
   - مسار جديد `/teacher/rubrics/:rubricId/print` + زر طابعة على كل بطاقة في `/teacher/rubrics`
@@ -79,6 +84,7 @@
 ## Data Models
 - `grade_sessions`: `{id, code, owner_id, rubric_id, rubric_title, gradebook_id, grade, section, column, column_label, semester, status (open|released|closed), participants[], released_at, created_at}`
 - `participants[]` item: `{id, joined_name, joined_grade, joined_section, matched_student_id, matched_student_name, match_confidence, confirmed, ignored, joined_at}`
+- `rubrics`: `{id, owner_id, year, title, semester, column, criteria[], images[], total_max, created_at, updated_at}`
 - `rubric_evaluations`: `{rubric_id, gradebook_id, student_id, scores{cid:val}, total, gb_score}`
 
 ## Pending / Backlog
