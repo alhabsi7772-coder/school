@@ -2060,8 +2060,18 @@ class RubricCriterion(BaseModel):
     name: str
     max: float
 
+GRADES_56 = ("الخامس", "السادس")
+GRADES_78 = ("السابع", "الثامن", "التاسع", "العاشر")
+ALL_GRADES = GRADES_56 + GRADES_78
+
+
+def template_of_grade(grade: str) -> str:
+    return "5-6" if grade in GRADES_56 else "7-10"
+
+
 class RubricCreate(BaseModel):
     title: str
+    grade: str
     semester: str = "1"
     column: str
     criteria: List[RubricCriterion]
@@ -2086,8 +2096,11 @@ def _clean_criteria(criteria):
 
 
 def _validate_rubric_meta(data: RubricCreate):
-    if data.column not in GB_MAX:
-        raise HTTPException(400, "عمود السجل غير صحيح")
+    if data.grade not in ALL_GRADES:
+        raise HTTPException(400, "الصف غير صحيح")
+    mx = GB_MAX_78 if template_of_grade(data.grade) == "7-10" else GB_MAX
+    if data.column not in mx:
+        raise HTTPException(400, "عمود السجل غير متاح لهذا الصف")
     if data.semester not in ("1", "2"):
         raise HTTPException(400, "الفصل غير صحيح")
     if not data.title.strip():
@@ -2124,6 +2137,7 @@ async def create_rubric(data: RubricCreate, t=Depends(get_teacher)):
         "owner_id": t["teacher_id"],
         "year": teacher_year(t),
         "title": data.title.strip(),
+        "grade": data.grade,
         "semester": data.semester,
         "column": data.column,
         "criteria": criteria,
@@ -2148,7 +2162,7 @@ async def update_rubric(rid: str, data: RubricCreate, t=Depends(get_teacher)):
     criteria = _clean_criteria(data.criteria)
     images = [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8]
     await db.rubrics.update_one({"id": rid}, {"$set": {
-        "title": data.title.strip(), "semester": data.semester, "column": data.column,
+        "title": data.title.strip(), "grade": data.grade, "semester": data.semester, "column": data.column,
         "criteria": criteria, "images": images,
         "total_max": round(sum(c["max"] for c in criteria), 2),
         "updated_at": now_iso(),

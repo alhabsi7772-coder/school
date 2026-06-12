@@ -6,9 +6,13 @@ import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListCh
 import TeacherLayout from './TeacherLayout';
 import ReleaseGradesButton from './ReleaseGradesButton';
 import { API, getAuthHeaders } from '../../utils';
-import { GB_FIELDS } from '../../utils/gradebook';
+import { GB_FIELDS, GB_FIELDS_78, themeOfGrade } from '../../utils/gradebook';
 
-const colLabel = (key) => GB_FIELDS.find(f => f.key === key)?.label || key;
+const GRADES_56 = ['الخامس', 'السادس'];
+const colLabel = (key, grade) => {
+  const fields = (grade && !GRADES_56.includes(grade)) ? GB_FIELDS_78 : GB_FIELDS;
+  return fields.find(f => f.key === key)?.label || key;
+};
 const semLabel = (s) => s === '2' ? 'الفصل الثاني' : 'الفصل الأول';
 
 export default function Rubrics() {
@@ -101,13 +105,23 @@ export default function Rubrics() {
               </div>
               <p className="font-bold text-white mb-2 leading-snug">{r.title}</p>
               <div className="flex flex-wrap gap-1.5 mb-4">
+                {r.grade && (() => {
+                  const th = themeOfGrade(r.grade);
+                  return (
+                    <span className="px-2 py-0.5 rounded-md text-xs font-bold"
+                      style={{ background: `rgba(${th.rgb},0.15)`, color: th.hex, border: `1px solid rgba(${th.rgb},0.3)` }}
+                      data-testid={`rubric-grade-badge-${r.id}`}>
+                      الصف {r.grade}
+                    </span>
+                  );
+                })()}
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold"
                   style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', color: 'var(--theme-accent)' }}>
                   {r.criteria.length} معايير — {r.total_max} درجة
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold"
                   style={{ background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
-                  → عمود: {colLabel(r.column)}
+                  → عمود: {colLabel(r.column, r.grade)}
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold"
                   style={{ background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }}>

@@ -5,8 +5,12 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Save, GripVertical, AlertCircle, ImagePlus } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
-import { GB_FIELDS } from '../../utils/gradebook';
+import { GB_FIELDS, GB_FIELDS_78 } from '../../utils/gradebook';
 import useGlobalSemester from '../../utils/useGlobalSemester';
+
+const ALL_GRADES = ['الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
+const GRADES_56 = ['الخامس', 'السادس'];
+const fieldsOfGrade = (g) => (GRADES_56.includes(g) ? GB_FIELDS : GB_FIELDS_78);
 
 const toLatinDigits = (s) => String(s)
   .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
@@ -19,6 +23,7 @@ export default function RubricEditor() {
   const { rubricId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
+  const [grade, setGrade] = useState('الخامس');
   const [semester, setSemester] = useGlobalSemester();
   const [column, setColumn] = useState('p1');
   const [criteria, setCriteria] = useState([newCriterion(), newCriterion(), newCriterion()]);
@@ -27,18 +32,31 @@ export default function RubricEditor() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!!rubricId);
 
+  // أعمدة السجل المتاحة حسب الصف
+  const availableFields = fieldsOfGrade(grade);
+
   useEffect(() => {
     if (!rubricId) return;
     axios.get(`${API}/rubrics/${rubricId}`, getAuthHeaders())
       .then(res => {
         const r = res.data;
         setTitle(r.title); setSemester(r.semester); setColumn(r.column);
+        if (r.grade) setGrade(r.grade);
         setCriteria(r.criteria.map(c => ({ key: c.id, id: c.id, name: c.name, max: String(c.max % 1 === 0 ? Math.round(c.max) : c.max) })));
         setImages(Array.isArray(r.images) ? r.images : []);
       })
       .catch(() => toast.error('تعذر تحميل البطاقة'))
       .finally(() => setLoading(false));
   }, [rubricId]);
+
+  // عند تغيير الصف، إذا كان العمود الحالي غير متاح، نعيد ضبطه
+  const handleGradeChange = (g) => {
+    setGrade(g);
+    const next = fieldsOfGrade(g);
+    if (!next.find(f => f.key === column)) {
+      setColumn(next[0]?.key || 'p1');
+    }
+  };
 
   const setCrit = (key, patch) => setCriteria(cs => cs.map(c => c.key === key ? { ...c, ...patch } : c));
   const removeCrit = (key) => setCriteria(cs => cs.filter(c => c.key !== key));
@@ -72,7 +90,7 @@ export default function RubricEditor() {
   const removeImage = (idx) => setImages(prev => prev.filter((_, i) => i !== idx));
 
   const totalMax = criteria.reduce((s, c) => s + (parseFloat(c.max) || 0), 0);
-  const colMax = GB_FIELDS.find(f => f.key === column)?.max || 0;
+  const colMax = availableFields.find(f => f.key === column)?.max || 0;
 
   const save = async (e) => {
     e.preventDefault();
@@ -81,7 +99,7 @@ export default function RubricEditor() {
     setSaving(true);
     try {
       const payload = {
-        title, semester, column,
+        title, grade, semester, column,
         criteria: valid.map(c => ({ id: c.id, name: c.name.trim(), max: parseFloat(c.max) })),
         images,
       };
@@ -110,6 +128,23 @@ export default function RubricEditor() {
               placeholder="مثال: النشاط العملي الأول — وحدة أساسيات الحاسوب (الصف الخامس)"
               data-testid="rubric-title-input" />
           </div>
+
+          {/* الصف */}
+          <div>
+            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الصف الدراسي</label>
+            <div className="flex flex-wrap gap-2" data-testid="rubric-grade-picker">
+              {ALL_GRADES.map(g => (
+                <button type="button" key={g} onClick={() => handleGradeChange(g)} data-testid={`rubric-grade-${g}`}
+                  className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                  style={grade === g
+                    ? { background: 'rgba(var(--theme-accent-rgb),0.15)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb),0.4)' }
+                    : { background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الفصل الدراسي</label>
@@ -130,7 +165,7 @@ export default function RubricEditor() {
                 عمود السجل الذي تنتقل إليه الدرجة
               </label>
               <select className="input-field" value={column} onChange={e => setColumn(e.target.value)} data-testid="rubric-column-select">
-                {GB_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label} (من {f.max})</option>)}
+                {availableFields.map(f => <option key={f.key} value={f.key}>{f.label} (من {f.max})</option>)}
               </select>
             </div>
           </div>
