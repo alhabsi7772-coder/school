@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListChecks, Printer } from 'lucide-react';
+import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListChecks, Printer, RefreshCcw } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import ReleaseGradesButton from './ReleaseGradesButton';
 import { API, getAuthHeaders } from '../../utils';
@@ -38,6 +38,16 @@ export default function Rubrics() {
       setDeleteTarget(null);
       fetchAll();
     } catch { toast.error('تعذر الحذف'); }
+  };
+
+  const [resyncing, setResyncing] = useState(null);
+  const resyncRubric = async (r) => {
+    setResyncing(r.id);
+    try {
+      await axios.post(`${API}/rubrics/${r.id}/resync-gradebook`, {}, getAuthHeaders());
+      toast.success(`تمت إعادة مزامنة "${r.title}" مع سجل الدرجات`);
+    } catch { toast.error('تعذر إعادة المزامنة'); }
+    finally { setResyncing(null); }
   };
 
   return (
@@ -129,10 +139,22 @@ export default function Rubrics() {
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <ListChecks className="w-3.5 h-3.5" />
-                  {r.evaluation_count} تقييم
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <ListChecks className="w-3.5 h-3.5" />
+                    {r.evaluation_count} تقييم
+                  </span>
+                  {r.evaluation_count > 0 && (
+                    <button onClick={() => resyncRubric(r)} disabled={resyncing === r.id}
+                      data-testid={`resync-rubric-${r.id}`}
+                      title="إعادة نقل الدرجات إلى سجل الدرجات (في حال اختلال البيانات)"
+                      className="flex items-center gap-1 text-xs font-bold disabled:opacity-50"
+                      style={{ color: '#FBBF24' }}>
+                      <RefreshCcw className={`w-3.5 h-3.5 ${resyncing === r.id ? 'animate-spin' : ''}`} />
+                      {resyncing === r.id ? 'مزامنة...' : 'إعادة المزامنة'}
+                    </button>
+                  )}
+                </div>
                 <button onClick={() => navigate(`/teacher/rubrics/${r.id}/evaluate`)}
                   data-testid={`evaluate-rubric-${r.id}`}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.03]"

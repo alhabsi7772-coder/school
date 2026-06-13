@@ -2157,22 +2157,113 @@ async def get_rubric(rid: str, t=Depends(get_teacher)):
 
 @api_router.put("/rubrics/{rid}")
 async def update_rubric(rid: str, data: RubricCreate, t=Depends(get_teacher)):
-    await _get_rubric(rid, t)
+    old = await _get_rubric(rid, t)
     _validate_rubric_meta(data)
     criteria = _clean_criteria(data.criteria)
     images = [img for img in (data.images or []) if isinstance(img, str) and img.startswith("data:")][:8]
+    new_total_max = round(sum(c["max"] for c in criteria), 2)
     await db.rubrics.update_one({"id": rid}, {"$set": {
         "title": data.title.strip(), "grade": data.grade, "semester": data.semester, "column": data.column,
         "criteria": criteria, "images": images,
-        "total_max": round(sum(c["max"] for c in criteria), 2),
+        "total_max": new_total_max,
         "updated_at": now_iso(),
     }})
+    # إذا تغيّر الفصل أو العمود أو الحد الأقصى للمعايير: ترحيل التقييمات السابقة في سجلات الدرجات
+    sem_changed = old.get("semester") != data.semester
+    col_changed = old.get("column") != data.column
+    max_changed = float(old.get("total_max") or 0) != new_total_max
+    if sem_changed or col_changed or max_changed:
+        await _resync_rubric_evaluations_to_gradebooks(rid, data, criteria, new_total_max, old)
     return await _get_rubric(rid, t)
+
+
+async def _resync_rubric_evaluations_to_gradebooks(rid: str, data: RubricCreate, criteria: list, new_total_max: float, old: dict):
+    """
+    ينقل تقييمات الطلاب المخزّنة في rubric_evaluations إلى الموقع الجديد في سجل الدرجات
+    (الفصل/العمود الجديد) ويحذف القيم من الموقع القديم. يُعاد حساب gb_score مع الحدّ الأقصى الجديد.
+    """
+    old_sem = old.get("semester")
+    old_col = old.get("column")
+    new_sem = data.semester
+    new_col = data.column
+    crit_max = {c["id"]: c["max"] for c in criteria}
+    # تجميع التقييمات حسب gradebook_id لتنفيذ تحديثات مجمّعة
+    evs = await db.rubric_evaluations.find({"rubric_id": rid}).to_list(2000)
+    by_gb: dict = {}
+    for ev in evs:
+        by_gb.setdefault(ev["gradebook_id"], []).append(ev)
+    for gid, gb_evs in by_gb.items():
+        gb = await db.gradebooks.find_one({"id": gid}, {"_id": 0})
+        if not gb:
+            continue
+        mx_map = gb_max_map(gb)
+        if new_col not in mx_map:
+            # العمود الجديد غير متاح لقالب هذا السجل: نحذف القيم القديمة فقط
+            unsets = {f"scores.{old_sem}.{ev['student_id']}.{old_col}": "" for ev in gb_evs}
+            if unsets:
+                await db.gradebooks.update_one({"id": gid}, {"$unset": unsets, "$set": {"updated_at": now_iso()}})
+            continue
+        col_max = float(mx_map[new_col])
+        sets: dict = {}
+        unsets: dict = {}
+        ev_updates = []
+        for ev in gb_evs:
+            # احتفظ فقط بالنتائج للمعايير التي ما زالت موجودة بالحد الأقصى الجديد
+            scores = {cid: max(0.0, min(float(v), float(crit_max[cid])))
+                      for cid, v in (ev.get("scores") or {}).items() if cid in crit_max}
+            total = round(sum(scores.values()), 2)
+            tot_max = new_total_max or col_max
+            gb_score = round((total / tot_max) * col_max * 2) / 2 if tot_max > 0 else 0
+            gb_score = max(0.0, min(gb_score, col_max))
+            ev_updates.append((ev["id"], scores, total, gb_score))
+            sets[f"scores.{new_sem}.{ev['student_id']}.{new_col}"] = gb_score
+            # احذف الموقع القديم (إن اختلف)
+            if (old_sem, old_col) != (new_sem, new_col):
+                unsets[f"scores.{old_sem}.{ev['student_id']}.{old_col}"] = ""
+        op = {"$set": {**sets, "updated_at": now_iso()}}
+        if unsets:
+            op["$unset"] = unsets
+        await db.gradebooks.update_one({"id": gid}, op)
+        # حدّث وثائق التقييم بالحساب الجديد
+        for ev_id, scores, total, gb_score in ev_updates:
+            await db.rubric_evaluations.update_one(
+                {"id": ev_id},
+                {"$set": {"scores": scores, "total": total, "gb_score": gb_score, "updated_at": now_iso()}}
+            )
+
+
+@api_router.post("/rubrics/{rid}/resync-gradebook")
+async def resync_rubric_gradebook(rid: str, t=Depends(get_teacher)):
+    """مزامنة جميع تقييمات هذه البطاقة مع سجلات الدرجات (إصلاح لتقييمات نُقلت بشكل ناقص)."""
+    rubric = await _get_rubric(rid, t)
+    # rubric هنا هو الـ dict من الـ DB؛ نحتاج فقط البيانات الأساسية
+    fake_data = RubricCreate(
+        title=rubric["title"],
+        grade=rubric.get("grade", "الخامس"),
+        semester=rubric["semester"],
+        column=rubric["column"],
+        criteria=[RubricCriterion(id=c["id"], name=c["name"], max=c["max"]) for c in rubric["criteria"]],
+        images=rubric.get("images") or []
+    )
+    # القيمة "old" تساوي rubric الحالي حتى لا تُحذف أي قيم؛ نريد فقط إعادة كتابة القيم في موقعها الصحيح
+    await _resync_rubric_evaluations_to_gradebooks(rid, fake_data, rubric["criteria"], float(rubric.get("total_max") or 0), rubric)
+    return {"message": "تمت المزامنة"}
 
 
 @api_router.delete("/rubrics/{rid}")
 async def delete_rubric(rid: str, t=Depends(get_teacher)):
-    await _get_rubric(rid, t)
+    rubric = await _get_rubric(rid, t)
+    sem = rubric.get("semester")
+    col = rubric.get("column")
+    # حذف القيم المنقولة لسجلات الدرجات (لتفادي بقاء درجات يتيمة)
+    evs = await db.rubric_evaluations.find({"rubric_id": rid}, {"_id": 0, "gradebook_id": 1, "student_id": 1}).to_list(2000)
+    by_gb: dict = {}
+    for ev in evs:
+        by_gb.setdefault(ev["gradebook_id"], []).append(ev["student_id"])
+    for gid, sids in by_gb.items():
+        unsets = {f"scores.{sem}.{sid}.{col}": "" for sid in sids}
+        if unsets:
+            await db.gradebooks.update_one({"id": gid}, {"$unset": unsets, "$set": {"updated_at": now_iso()}})
     await db.rubric_evaluations.delete_many({"rubric_id": rid})
     await db.rubrics.delete_one({"id": rid})
     return {"message": "تم الحذف"}
