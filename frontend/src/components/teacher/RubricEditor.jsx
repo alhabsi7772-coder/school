@@ -90,7 +90,7 @@ export default function RubricEditor() {
   const removeImage = (idx) => setImages(prev => prev.filter((_, i) => i !== idx));
 
   const totalMax = criteria.reduce((s, c) => s + (parseFloat(c.max) || 0), 0);
-  const colMax = availableFields.find(f => f.key === column)?.max || 0;
+  const colMax = column === 'none' ? null : (availableFields.find(f => f.key === column)?.max || 0);
 
   const save = async (e) => {
     e.preventDefault();
@@ -165,8 +165,15 @@ export default function RubricEditor() {
                 عمود السجل الذي تنتقل إليه الدرجة
               </label>
               <select className="input-field" value={column} onChange={e => setColumn(e.target.value)} data-testid="rubric-column-select">
+                <option value="none">— بدون نقل (نشاط بلا درجات) —</option>
                 {availableFields.map(f => <option key={f.key} value={f.key}>{f.label} (من {f.max})</option>)}
               </select>
+              {column === 'none' && (
+                <p className="text-[11px] mt-1.5 flex items-center gap-1.5" style={{ color: '#FBBF24' }}>
+                  <span>ℹ️</span>
+                  لن تُنقل الدرجات تلقائياً إلى سجل الدرجات. مفيد للأنشطة غير المُقيَّمة بدرجة.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -210,7 +217,7 @@ export default function RubricEditor() {
             <Plus className="w-4 h-4" /> إضافة معيار
           </button>
 
-          {totalMax > 0 && totalMax !== colMax && (
+          {colMax !== null && totalMax > 0 && totalMax !== colMax && (
             <div className="mt-4 flex items-start gap-2 p-3 rounded-xl text-sm"
               style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#FBBF24' }}
               data-testid="rubric-scale-warning">

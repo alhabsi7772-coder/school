@@ -51,7 +51,7 @@ export default function ReleaseGradesButton() {
         axios.get(`${API}/rubrics`, getAuthHeaders()),
         axios.get(`${API}/gradebooks`, getAuthHeaders()),
       ]);
-      setRubrics(rs.data);
+      setRubrics(rs.data.filter(r => r.column !== 'none'));
       setGradebooks(gs.data);
       const firstR = rs.data[0];
       if (firstR) {

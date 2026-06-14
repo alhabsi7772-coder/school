@@ -9,6 +9,7 @@ import { GB_FIELDS, GB_FIELDS_78, themeOfGrade } from '../../utils/gradebook';
 
 const GRADES_56 = ['الخامس', 'السادس'];
 const colLabel = (key, grade) => {
+  if (key === 'none') return 'بدون نقل';
   const fields = (grade && !GRADES_56.includes(grade)) ? GB_FIELDS_78 : GB_FIELDS;
   return fields.find(f => f.key === key)?.label || key;
 };
@@ -71,7 +72,10 @@ export default function RubricEvaluate() {
       const res = await axios.put(`${API}/rubrics/${rubricId}/evaluations`,
         { gradebook_id: gb.id, student_id: active.id, scores }, getAuthHeaders());
       setEvals(prev => ({ ...prev, [active.id]: { student_id: active.id, scores, total: res.data.total, gb_score: res.data.gb_score } }));
-      toast.success(`${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} — نُقلت للسجل (${colLabel(res.data.column, rubric.grade)}: ${fmt(res.data.gb_score)}) ✓`);
+      const isNoTransfer = rubric.column === 'none';
+      toast.success(isNoTransfer
+        ? `${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} ✓ حُفظ (بدون نقل)`
+        : `${active.name.split(' ')[0]}: ${fmt(res.data.total)}/${fmt(rubric.total_max)} — نُقلت للسجل (${colLabel(res.data.column, rubric.grade)}: ${fmt(res.data.gb_score)}) ✓`);
       if (goNext) {
         const idx = students.findIndex(s => s.id === active.id);
         const next = [...students.slice(idx + 1), ...students.slice(0, idx)].find(s => !evals[s.id] && s.id !== active.id);

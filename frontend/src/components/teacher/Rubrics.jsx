@@ -10,6 +10,7 @@ import { GB_FIELDS, GB_FIELDS_78, themeOfGrade } from '../../utils/gradebook';
 
 const GRADES_56 = ['الخامس', 'السادس'];
 const colLabel = (key, grade) => {
+  if (key === 'none') return 'بدون نقل';
   const fields = (grade && !GRADES_56.includes(grade)) ? GB_FIELDS_78 : GB_FIELDS;
   return fields.find(f => f.key === key)?.label || key;
 };
@@ -130,8 +131,10 @@ export default function Rubrics() {
                   {r.criteria.length} معايير — {r.total_max} درجة
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold"
-                  style={{ background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
-                  → عمود: {colLabel(r.column, r.grade)}
+                  style={r.column === 'none'
+                    ? { background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }
+                    : { background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
+                  {r.column === 'none' ? '— بدون نقل —' : `→ عمود: ${colLabel(r.column, r.grade)}`}
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold"
                   style={{ background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }}>
@@ -144,7 +147,7 @@ export default function Rubrics() {
                     <ListChecks className="w-3.5 h-3.5" />
                     {r.evaluation_count} تقييم
                   </span>
-                  {r.evaluation_count > 0 && (
+                  {r.evaluation_count > 0 && r.column !== 'none' && (
                     <button onClick={() => resyncRubric(r)} disabled={resyncing === r.id}
                       data-testid={`resync-rubric-${r.id}`}
                       title="إعادة نقل الدرجات إلى سجل الدرجات (في حال اختلال البيانات)"
