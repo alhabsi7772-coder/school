@@ -17,6 +17,7 @@ import jwt
 import random
 import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncOpenAI
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -1019,23 +1020,27 @@ async def generate_questions(req: GenerateQuestionsReq, t=Depends(get_teacher)):
     topics_list = GRADE5_TOPICS if req.grade == "5" else GRADE8_TOPICS
     topic = req.topic if req.topic else random.choice(topics_list)
 
-    llm_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not llm_key:
-        raise HTTPException(500, "مفتاح LLM غير مهيأ")
-
-    chat = LlmChat(
-        api_key=llm_key,
-        session_id=str(uuid.uuid4()),
-        system_message="أنت أستاذ متخصص في تقنية المعلومات. تُنشئ أسئلة امتحانية بصيغة JSON فقط."
-    ).with_model("gemini", "gemini-2.0-flash")
+    # مزوّد الذكاء الاصطناعي: ZAI (واجهة متوافقة مع OpenAI) — يستخدم نموذج GLM-5.2
+    zai_key = os.environ.get('ZAI_API_KEY')
+    if not zai_key:
+        raise HTTPException(500, "مفتاح ZAI غير مهيأ — أضف ZAI_API_KEY إلى /app/backend/.env")
+    zai_base_url = os.environ.get('ZAI_BASE_URL', 'https://api.z.ai/api/paas/v4')
+    zai_model = os.environ.get('ZAI_MODEL', 'GLM-5.2')
+    client = AsyncOpenAI(api_key=zai_key, base_url=zai_base_url)
 
     prompt = build_generation_prompt(req.grade, topic)
-    user_msg = UserMessage(text=prompt)
-
     try:
-        response_text = await chat.send_message(user_msg)
+        completion = await client.chat.completions.create(
+            model=zai_model,
+            messages=[
+                {"role": "system", "content": "أنت أستاذ متخصص في تقنية المعلومات. تُنشئ أسئلة امتحانية بصيغة JSON فقط."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+        )
+        response_text = completion.choices[0].message.content or ""
     except Exception as e:
-        raise HTTPException(500, f"خطأ في توليد الأسئلة: {str(e)}")
+        raise HTTPException(500, f"خطأ في توليد الأسئلة عبر ZAI: {str(e)}")
 
     # استخراج JSON من الاستجابة
     try:
