@@ -15,9 +15,11 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
         controlsList="nodownload nofullscreen noremoteplayback"
         className="absolute inset-0 w-full h-full object-cover"
         style={{
-          filter: 'saturate(1.1) contrast(1.05) brightness(0.95)',
+          filter: 'saturate(1.05) contrast(1.02)',
           willChange: 'transform',
         }}
+        onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}
+        onEnded={(e) => { e.currentTarget.currentTime = 0; e.currentTarget.play().catch(() => {}); }}
       >
         <source src="/login-bg.mp4" type="video/mp4" />
       </video>
