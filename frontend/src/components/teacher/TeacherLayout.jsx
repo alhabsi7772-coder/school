@@ -119,23 +119,29 @@ export default function TeacherLayout({ children, title, backTo }) {
         })}
       </nav>
 
-      {/* AI Badge + Logout */}
-      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2" style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
-        <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#D500F9' }} />
-        <p className="text-xs font-medium flex-1 min-w-0 truncate" style={{ color: 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
-        <button onClick={logout} data-testid="ai-badge-logout-btn"
-          title="تسجيل الخروج"
-          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all flex-shrink-0"
-          style={{ background: 'rgba(239,68,68,0.12)', color: '#F87171', border: '1px solid rgba(239,68,68,0.22)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.25)'; e.currentTarget.style.transform = 'scale(1.06)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-          <LogOut className="w-3.5 h-3.5" />
+      {/* Logout button (above AI badge for quick access) */}
+      <div className="mx-3 mb-2">
+        <button onClick={logout} data-testid="quick-logout-btn"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={{ background: 'rgba(239,68,68,0.10)', color: '#F87171', border: '1px solid rgba(239,68,68,0.25)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.22)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+          <LogOut className="w-4 h-4" />
+          تسجيل الخروج
         </button>
+      </div>
+
+      {/* AI Badge */}
+      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#D500F9' }} />
+          <p className="text-xs font-medium" style={{ color: 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
+        </div>
       </div>
 
       {/* Footer */}
       <div className="p-3 border-t border-white/5">
-        <div className="px-3 py-2 mb-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div className="px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
           <p className="text-xs" style={{ color: 'var(--text-hint)' }}>مرحباً،</p>
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-semibold text-white truncate">
@@ -151,14 +157,6 @@ export default function TeacherLayout({ children, title, backTo }) {
             )}
           </div>
         </div>
-        <button onClick={logout} data-testid="logout-btn"
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{ color: '#F87171' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-          <LogOut className="w-4 h-4" />
-          تسجيل الخروج
-        </button>
       </div>
     </>
   );
