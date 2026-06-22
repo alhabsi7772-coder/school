@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Search, GraduationCap, ArrowLeft, User, CreditCard, Zap, Clock } from 'lucide-react';
 import { API, GRADES } from '../../utils';
-import Particles from '../Particles';
+import LoginVideoBackground from '../LoginVideoBackground';
 import { useStudentMode } from '../../hooks/useStudentMode';
 
 export default function StudentJoin() {
@@ -67,14 +67,11 @@ export default function StudentJoin() {
   const sections = form.grade ? GRADES[form.grade] || [] : [];
 
   return (
-    <div className="min-h-screen page-bg font-tajawal flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen font-tajawal flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: '#0B1120' }}>
 
-      {/* Orbs */}
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-      <div className="page-bg" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />
-      <Particles />
+      {/* خلفية فيديو لانهائية بكامل الشاشة */}
+      <LoginVideoBackground accentRgb="213,0,249" overlay={0.6} />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}
@@ -82,21 +79,30 @@ export default function StudentJoin() {
           <div className="icon-3d-container inline-flex mb-5">
             <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, rgba(213,0,249,0.12), rgba(0,229,255,0.08))',
-                border: '1px solid rgba(213,0,249,0.25)',
-                boxShadow: '0 0 40px rgba(213,0,249,0.15)'
+                background: 'linear-gradient(135deg, rgba(213,0,249,0.18), rgba(0,229,255,0.10))',
+                border: '1px solid rgba(213,0,249,0.35)',
+                boxShadow: '0 0 60px rgba(213,0,249,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
               }}>
               <GraduationCap className="w-10 h-10 icon-3d-float" style={{ color: '#D500F9', filter: 'drop-shadow(0 4px 12px rgba(213,0,249,0.5))' }} />
             </div>
           </div>
-          <h1 className="text-3xl font-black text-white mb-1">
+          <h1 className="text-3xl font-black text-white mb-1" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
             منصة <span className="neon-text-fuchsia">الاختبارات</span>
           </h1>
-          <p className="text-sm" style={{ color: 'var(--text-hint)' }}>مدرسة الخيرات للتعليم الأساسي</p>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>مدرسة الخيرات للتعليم الأساسي</p>
         </div>
 
         {/* Card */}
-        <div className="glass-modal rounded-3xl overflow-hidden">
+        <div className="glass-modal rounded-3xl overflow-hidden"
+          style={{
+            background: 'rgba(11,17,32,0.55)',
+            backdropFilter: 'blur(28px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}>
           {step === 0 && (
             <div className="p-10 text-center">
               <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4"

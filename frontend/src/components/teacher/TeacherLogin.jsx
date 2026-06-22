@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Lock, GraduationCap, Zap, User } from 'lucide-react';
 import { API } from '../../utils';
-import Particles from '../Particles';
+import LoginVideoBackground from '../LoginVideoBackground';
 
 export default function TeacherLogin() {
   const [username, setUsername] = useState('');
@@ -35,14 +35,8 @@ export default function TeacherLogin() {
     <div className="min-h-screen font-tajawal flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: '#0B1120' }}>
 
-      {/* Animated Orbs */}
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-      {/* Grid bg */}
-      <div className="page-bg" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />
-      {/* Particles */}
-      <Particles />
+      {/* خلفية فيديو لانهائية بكامل الشاشة */}
+      <LoginVideoBackground />
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-md animation: slide-in-up 0.5s ease-out">
@@ -51,23 +45,32 @@ export default function TeacherLogin() {
           <div className="icon-3d-container inline-flex mb-6">
             <div className="w-24 h-24 rounded-3xl flex items-center justify-center relative"
               style={{
-                background: 'linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.12), rgba(var(--theme-accent-rgb), 0.06))',
-                border: '1px solid rgba(var(--theme-accent-rgb), 0.25)',
-                boxShadow: '0 0 40px rgba(var(--theme-accent-rgb), 0.15)'
+                background: 'linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.18), rgba(var(--theme-accent-rgb), 0.08))',
+                border: '1px solid rgba(var(--theme-accent-rgb), 0.35)',
+                boxShadow: '0 0 60px rgba(var(--theme-accent-rgb), 0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
               }}>
               <GraduationCap className="w-12 h-12 icon-3d-float" style={{ color: 'var(--theme-accent)' }} />
             </div>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 leading-tight">
+          <h1 className="text-4xl font-black text-white mb-2 leading-tight" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
             منصة <span className="neon-text-cyan">الاختبارات</span>
           </h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
             مدرسة الخيرات للتعليم الأساسي
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-modal rounded-3xl p-8">
+        <div className="glass-modal rounded-3xl p-8"
+          style={{
+            background: 'rgba(11,17,32,0.55)',
+            backdropFilter: 'blur(28px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}>
           <div className="flex items-center gap-3 mb-7">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ background: 'rgba(var(--theme-accent-rgb), 0.1)', border: '1px solid rgba(var(--theme-accent-rgb), 0.2)' }}>
