@@ -26,10 +26,9 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
         preload="auto"
         disablePictureInPicture
         controlsList="nodownload nofullscreen noremoteplayback"
-        className="absolute inset-0 w-full h-full object-cover login-kenburns"
+        className="absolute inset-0 w-full h-full object-cover login-kenburns login-video-tinted"
         style={{
           objectPosition: '30% center',  // قصّ ناعم للنجمة في اليمين
-          filter: 'saturate(1.4) contrast(1.18) brightness(0.92)',
           willChange: 'transform',
         }}
         onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}

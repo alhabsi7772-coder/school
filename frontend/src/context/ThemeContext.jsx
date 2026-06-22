@@ -22,6 +22,29 @@ const hexToRgb = (hex) => {
   return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
 };
 
+// تحويل HEX إلى زاوية اللون (Hue) بين 0-360 لاستخدامها في hue-rotate
+const hexToHue = (hex) => {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return 0;
+  let h2 = 0;
+  if (max === r) h2 = ((g - b) / d) % 6;
+  else if (max === g) h2 = (b - r) / d + 2;
+  else h2 = (r - g) / d + 4;
+  h2 = Math.round(h2 * 60);
+  if (h2 < 0) h2 += 360;
+  return h2;
+};
+
+// الفيديو الأصلي مكوّن من خطوط بلون سماوي قريب من 190° (cyan).
+// نحسب الإزاحة المطلوبة لتدوير اللون نحو لون الثيم الجديد.
+const VIDEO_BASE_HUE = 190;
+
 export function ThemeProvider({ children }) {
   const [themeId, setThemeId] = useState(
     () => localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_THEME_ID
@@ -51,6 +74,13 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--theme-orb2',       t.orb2);
     root.style.setProperty('--theme-orb3',       t.orb3);
     root.style.setProperty('--theme-grid-color', t.gridColor);
+    // إزاحة لون الفيديو لتطابق لون الثيم — يتغيّر فوراً عند تبديل الثيم
+    const targetHex = light ? t.grad1 : t.accent;
+    const targetHue = hexToHue(targetHex);
+    let delta = (targetHue - VIDEO_BASE_HUE) % 360;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    root.style.setProperty('--login-video-hue', `${delta}deg`);
     // Soft/realistic treatment for premium themes
     root.classList.toggle('theme-soft', !!t.soft);
   }, [theme, mode]);
