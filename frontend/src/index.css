@@ -1138,12 +1138,10 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
 
 /* فيديو الدخول — يتلوّن ديناميكياً مع لون الثيم */
 .login-video-tinted {
-  /* hue-rotate يُغيّر لون الخطوط الزاهية إلى لون الثيم الحالي.
-     الأماكن الداكنة لا تتأثّر كثيراً (لا hue فيها) فيبقى الإحساس السينمائي. */
   filter:
     hue-rotate(var(--login-video-hue, 0deg))
-    saturate(1.4)
-    contrast(1.18)
-    brightness(0.92);
-  transition: filter 1.2s ease-in-out;  /* تحوّل ناعم عند تبديل الثيم */
+    saturate(1.5)
+    contrast(1.22)
+    brightness(0.95);
+  transition: filter 1.2s ease-in-out;
 }

@@ -96,9 +96,9 @@ export default function StudentJoin() {
         {/* Card */}
         <div className="glass-modal rounded-3xl overflow-hidden relative login-stagger login-stagger-2 login-card-shimmer"
           style={{
-            background: 'rgba(11,17,32,0.58)',
-            backdropFilter: 'blur(30px) saturate(170%)',
-            WebkitBackdropFilter: 'blur(30px) saturate(170%)',
+            background: 'rgba(11,17,32,0.62)',
+            backdropFilter: 'blur(16px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(150%)',
             border: '1px solid rgba(255,255,255,0.10)',
             boxShadow: '0 30px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
