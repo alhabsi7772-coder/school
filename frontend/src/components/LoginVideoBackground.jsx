@@ -15,7 +15,10 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
         controlsList="nodownload nofullscreen noremoteplayback"
         className="absolute inset-0 w-full h-full object-cover"
         style={{
-          filter: 'saturate(1.05) contrast(1.02)',
+          // إزاحة لطيفة لقصّ الجانب الأيمن من الفيديو حيث توجد النجمة (object-position) — طريقة احترافية بلا تشويه
+          objectPosition: '30% center',
+          // تعزيز حدة الخطوط السماوية والتباين دون تأثير على بقية المحتوى
+          filter: 'saturate(1.35) contrast(1.15) brightness(0.95)',
           willChange: 'transform',
         }}
         onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}
