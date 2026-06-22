@@ -75,33 +75,32 @@ export default function StudentJoin() {
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 login-stagger login-stagger-1">
           <div className="icon-3d-container inline-flex mb-5">
-            <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center login-glow-pulse"
               style={{
-                background: 'linear-gradient(135deg, rgba(213,0,249,0.18), rgba(0,229,255,0.10))',
-                border: '1px solid rgba(213,0,249,0.35)',
-                boxShadow: '0 0 60px rgba(213,0,249,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+                background: 'linear-gradient(135deg, rgba(213,0,249,0.22), rgba(0,229,255,0.10))',
+                border: '1px solid rgba(213,0,249,0.40)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
               }}>
-              <GraduationCap className="w-10 h-10 icon-3d-float" style={{ color: '#D500F9', filter: 'drop-shadow(0 4px 12px rgba(213,0,249,0.5))' }} />
+              <GraduationCap className="w-10 h-10 icon-3d-float" style={{ color: '#D500F9', filter: 'drop-shadow(0 4px 14px rgba(213,0,249,0.6))' }} />
             </div>
           </div>
-          <h1 className="text-3xl font-black text-white mb-1" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
+          <h1 className="text-3xl font-black text-white mb-1" style={{ textShadow: '0 4px 28px rgba(0,0,0,0.85)' }}>
             منصة <span className="neon-text-fuchsia">الاختبارات</span>
           </h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>مدرسة الخيرات للتعليم الأساسي</p>
+          <p className="text-sm tracking-wide" style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>مدرسة الخيرات للتعليم الأساسي</p>
         </div>
 
         {/* Card */}
-        <div className="glass-modal rounded-3xl overflow-hidden"
+        <div className="glass-modal rounded-3xl overflow-hidden relative login-stagger login-stagger-2 login-card-shimmer"
           style={{
-            background: 'rgba(11,17,32,0.55)',
-            backdropFilter: 'blur(28px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+            background: 'rgba(11,17,32,0.58)',
+            backdropFilter: 'blur(30px) saturate(170%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(170%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            boxShadow: '0 30px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
           {step === 0 && (
             <div className="p-10 text-center">

@@ -39,37 +39,36 @@ export default function TeacherLogin() {
       <LoginVideoBackground />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-md animation: slide-in-up 0.5s ease-out">
+      <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 login-stagger login-stagger-1">
           <div className="icon-3d-container inline-flex mb-6">
-            <div className="w-24 h-24 rounded-3xl flex items-center justify-center relative"
+            <div className="w-24 h-24 rounded-3xl flex items-center justify-center relative login-glow-pulse"
               style={{
-                background: 'linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.18), rgba(var(--theme-accent-rgb), 0.08))',
-                border: '1px solid rgba(var(--theme-accent-rgb), 0.35)',
-                boxShadow: '0 0 60px rgba(var(--theme-accent-rgb), 0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+                background: 'linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.22), rgba(var(--theme-accent-rgb), 0.08))',
+                border: '1px solid rgba(var(--theme-accent-rgb), 0.40)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
               }}>
               <GraduationCap className="w-12 h-12 icon-3d-float" style={{ color: 'var(--theme-accent)' }} />
             </div>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 leading-tight" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
+          <h1 className="text-4xl font-black text-white mb-2 leading-tight" style={{ textShadow: '0 4px 28px rgba(0,0,0,0.85)' }}>
             منصة <span className="neon-text-cyan">الاختبارات</span>
           </h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+          <p className="text-sm tracking-wide" style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
             مدرسة الخيرات للتعليم الأساسي
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-modal rounded-3xl p-8"
+        <div className="glass-modal rounded-3xl p-8 relative login-stagger login-stagger-2 login-card-shimmer"
           style={{
-            background: 'rgba(11,17,32,0.55)',
-            backdropFilter: 'blur(28px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+            background: 'rgba(11,17,32,0.58)',
+            backdropFilter: 'blur(30px) saturate(170%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(170%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            boxShadow: '0 30px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
           <div className="flex items-center gap-3 mb-7">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
