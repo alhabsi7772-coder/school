@@ -101,3 +101,105 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  المستخدم جلب المشروع من GitHub (https://github.com/alhabsi7772-coder/school.git)
+  وأبلغ بأن المعاينة (Preview) لا تفتح. السبب: ملفات .env مفقودة (مُستبعدة من Git
+  عبر .gitignore)، مما تسبب في فشل تشغيل الـ Backend برسالة KeyError: 'MONGO_URL'.
+
+backend:
+  - task: "إنشاء ملف backend/.env واستعادة تشغيل الـ Backend"
+    implemented: true
+    working: true
+    file: "/app/backend/.env"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          تم إنشاء /app/backend/.env بمتغيرات MONGO_URL=mongodb://localhost:27017,
+          DB_NAME=school_db, JWT_SECRET, CORS_ORIGINS. بعد إعادة تشغيل supervisor
+          أصبح Backend يستجيب على :8001 (HTTP 404 على / و401 على /api/auth/login
+          بكلمة مرور خاطئة — سلوك صحيح). يحتاج اختبار شامل لمسارات الـ API الأساسية:
+          auth/login, auth/me, quizzes, projects, gradebooks, rubrics, admin/teachers.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ تم اختبار جميع مسارات الـ API الأساسية بنجاح (9/9 اختبارات نجحت):
+          1. POST /api/auth/login (admin) - نجح وأرجع token
+          2. GET /api/auth/profile (admin) - نجح وأرجع بيانات المستخدم
+          3. POST /api/auth/login (teacher1) - نجح وأرجع token
+          4. POST /api/auth/login (كلمة مرور خاطئة) - رفض بشكل صحيح مع 401
+          5. GET /api/quizzes - نجح وأرجع قائمة
+          6. GET /api/projects - نجح وأرجع قائمة
+          7. GET /api/gradebooks - نجح وأرجع قائمة
+          8. GET /api/rubrics - نجح وأرجع قائمة
+          9. GET /api/admin/teachers - نجح وأرجع 4 حسابات معلمين
+          
+          Supervisor status: backend RUNNING (pid 787), mongodb RUNNING.
+          Backend logs: لا توجد أخطاء، التطبيق يعمل بشكل صحيح.
+          Bug fix verified: ملفات .env تم إنشاؤها بنجاح والـ Backend يعمل بدون مشاكل.
+
+frontend:
+  - task: "إنشاء ملف frontend/.env"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/.env"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          تم إنشاء /app/frontend/.env بـ REACT_APP_BACKEND_URL يشير إلى عنوان المعاينة
+          الخارجي. Frontend يستجيب على :3000 بـ HTTP 200. لن يتم اختبار الـ Frontend
+          إلا بعد إذن المستخدم.
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 2
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "إنشاء ملف backend/.env واستعادة تشغيل الـ Backend"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      مشكلة "المعاينة لا تفتح" سببها ملفات .env مفقودة بعد جلب المشروع من GitHub.
+      تم إنشاء:
+        - /app/backend/.env (MONGO_URL, DB_NAME, JWT_SECRET, CORS_ORIGINS)
+        - /app/frontend/.env (REACT_APP_BACKEND_URL)
+      وأعدت تشغيل supervisor. الخدمات الآن: backend RUNNING على 8001،
+      frontend RUNNING على 3000، mongodb RUNNING.
+      بيانات الاختبار في /app/memory/test_credentials.md:
+        admin / teacher123
+        teacher1 / khairat1
+      يُرجى التحقق من صحة مسارات API الأساسية: POST /api/auth/login,
+      GET /api/auth/me, GET /api/quizzes, GET /api/projects, GET /api/gradebooks,
+      GET /api/rubrics. لا تختبر الفرونت إند.
+  - agent: "testing"
+    message: |
+      ✅ تم التحقق من إصلاح المشكلة بنجاح - جميع اختبارات الـ Backend نجحت (9/9).
+      
+      تم اختبار:
+      - تسجيل الدخول (admin و teacher) - يعمل بشكل صحيح
+      - رفض تسجيل الدخول بكلمة مرور خاطئة - يعمل بشكل صحيح
+      - جميع مسارات API الأساسية (quizzes, projects, gradebooks, rubrics) - تعمل
+      - مسار admin/teachers - يعمل ويرجع 4 حسابات
+      
+      الخدمات تعمل بشكل صحيح:
+      - Backend: RUNNING (pid 787)
+      - Frontend: RUNNING (pid 791)
+      - MongoDB: RUNNING (pid 50)
+      
+      لا توجد أخطاء في backend logs. المشكلة تم حلها بالكامل.
+      الـ Backend جاهز للاستخدام. Frontend لم يتم اختباره (حسب التعليمات).
