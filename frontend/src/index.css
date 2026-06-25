@@ -1272,7 +1272,7 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
 .lib-status-badge {
   position: absolute;
   top: 0.75rem;
-  right: 0.75rem;
+  left: 0.75rem;
   font-size: 10px;
   padding: 2px 0.5rem;
   border-radius: 9999px;

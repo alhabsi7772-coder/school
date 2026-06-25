@@ -360,7 +360,7 @@ export default function LibraryResources() {
 
                 {/* Selection checkbox */}
                 {selectMode && (
-                  <div className="absolute top-3 left-3 w-6 h-6 rounded-lg flex items-center justify-center transition"
+                  <div className="absolute top-3 right-3 w-6 h-6 rounded-lg flex items-center justify-center transition z-10"
                     style={isSelected
                       ? { background: '#D500F9', border: '1px solid #D500F9' }
                       : { background: 'rgba(0,0,0,0.4)', border: '1.5px solid rgba(255,255,255,0.25)' }}>
@@ -368,10 +368,12 @@ export default function LibraryResources() {
                   </div>
                 )}
 
-                {/* Status badge */}
-                <span className={`lib-status-badge ${r.is_active ? 'is-active' : 'is-closed'}`}>
-                  {r.is_active ? '● مُتاح' : '○ مُغلق'}
-                </span>
+                {/* Status badge (hidden in select mode) */}
+                {!selectMode && (
+                  <span className={`lib-status-badge ${r.is_active ? 'is-active' : 'is-closed'}`}>
+                    {r.is_active ? '● مُتاح' : '○ مُغلق'}
+                  </span>
+                )}
 
                 <div className="flex items-start gap-3 mt-1">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"

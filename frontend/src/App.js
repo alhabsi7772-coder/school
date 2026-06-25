@@ -29,8 +29,7 @@ import StudentProject from './components/student/StudentProject';
 import StudentGrades from './components/student/StudentGrades';
 import StudentJoinGrade from './components/student/StudentJoinGrade';
 import StudentLibrary from './components/student/StudentLibrary';
-import StudentVideoLibrary from './components/student/StudentVideoLibrary';
-import StudentVideoPlay from './components/student/StudentVideoPlay';
+import StudentVideoWatch from './components/student/StudentVideoWatch';
 import LibraryResources from './components/teacher/LibraryResources';
 import LibraryVideos from './components/teacher/LibraryVideos';
 import LibraryVideoDetail from './components/teacher/LibraryVideoDetail';
@@ -64,8 +63,7 @@ function App() {
             <Route path="/g/:code" element={<StudentJoinGrade />} />
             <Route path="/library/:code" element={<StudentLibrary />} />
             <Route path="/b/:code" element={<StudentLibrary />} />
-            <Route path="/v/:code" element={<StudentVideoLibrary />} />
-            <Route path="/v/:code/:videoId" element={<StudentVideoPlay />} />
+            <Route path="/watch/:code" element={<StudentVideoWatch />} />
             <Route path="/quiz/:quizId/lobby" element={<StudentLobby />} />
             <Route path="/quiz/:quizId/exam" element={<StudentExam />} />
             <Route path="/quiz/:quizId/result/:submissionId" element={<StudentResult />} />

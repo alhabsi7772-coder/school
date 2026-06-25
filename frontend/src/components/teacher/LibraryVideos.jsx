@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   Library, Video, Trash2, Copy, Eye, Edit3, X, Upload, Youtube,
-  MessageCircle, RefreshCw, Plus, Users, PlayCircle, Sparkles
+  MessageCircle, Plus, Users, PlayCircle, Link2, Info
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
@@ -13,7 +13,6 @@ const GRADES_ALL = ['الخامس', 'السادس', 'السابع', 'الثام�
 
 export default function LibraryVideos() {
   const navigate = useNavigate();
-  const [info, setInfo] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -28,27 +27,10 @@ export default function LibraryVideos() {
 
   const load = async () => {
     try {
-      const [a, b] = await Promise.all([
-        axios.get(`${API}/library/me`, getAuthHeaders()),
-        axios.get(`${API}/videos`, getAuthHeaders()),
-      ]);
-      setInfo(a.data); setItems(b.data);
+      const r = await axios.get(`${API}/videos`, getAuthHeaders());
+      setItems(r.data);
     } catch { toast.error('فشل التحميل'); }
     finally { setLoading(false); }
-  };
-
-  const regenerate = async () => {
-    if (!window.confirm('سيتم توليد رمز جديد وإبطال الرمز الحالي. متابعة؟')) return;
-    try {
-      const r = await axios.post(`${API}/library/regenerate`, { kind: 'videos' }, getAuthHeaders());
-      setInfo(p => ({ ...p, videos_code: r.data.code }));
-      toast.success('تم توليد رمز جديد');
-    } catch { toast.error('فشل التوليد'); }
-  };
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/v/${info.videos_code}`);
-    toast.success('تم نسخ رابط مكتبة الفيديوهات');
   };
 
   const onSelectFile = (e) => {
@@ -125,52 +107,41 @@ export default function LibraryVideos() {
     } catch { toast.error('فشل الحذف'); }
   };
 
+  const copyShareLink = (v) => {
+    if (!v.share_code) return toast.error('الرمز غير متوفر');
+    navigator.clipboard.writeText(`${window.location.origin}/watch/${v.share_code}`);
+    toast.success('تم نسخ رابط الفيديو');
+  };
+
   return (
     <TeacherLayout title="مكتبة الفيديوهات">
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <Link to="/teacher/library"
-          className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105"
-          style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <Library className="w-4 h-4 inline ml-1.5" />الموارد
-        </Link>
-        <button className="px-4 py-2 rounded-2xl font-bold text-sm transition-all"
-          style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.18), rgba(213,0,249,0.08))', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.35)', boxShadow: '0 4px 16px rgba(213,0,249,0.10)' }}>
-          <Video className="w-4 h-4 inline ml-1.5" />الفيديوهات
+      {/* Tabs + Add button */}
+      <div className="flex flex-wrap gap-2 mb-6 items-center justify-between">
+        <div className="flex gap-2">
+          <Link to="/teacher/library"
+            className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105"
+            style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Library className="w-4 h-4 inline ml-1.5" />الموارد
+          </Link>
+          <button className="px-4 py-2 rounded-2xl font-bold text-sm transition-all"
+            style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.18), rgba(213,0,249,0.08))', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.35)', boxShadow: '0 4px 16px rgba(213,0,249,0.10)' }}>
+            <Video className="w-4 h-4 inline ml-1.5" />الفيديوهات
+          </button>
+        </div>
+        <button onClick={() => setShowNew(true)} className="btn-primary rounded-2xl flex items-center gap-1.5 px-4 py-2 text-sm font-bold">
+          <Plus className="w-4 h-4" />إضافة فيديو
         </button>
       </div>
 
-      {/* Library Code Card */}
-      {info && (
-        <div className="lib-hero-card is-fuchsia mb-6">
-          <div className="lib-hero-orb-1" />
-          <div className="lib-hero-orb-2" />
-          <div className="relative flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black tracking-widest uppercase mb-2 flex items-center gap-1.5"
-                style={{ color: 'rgba(213,0,249,0.75)' }}>
-                <Sparkles className="w-3 h-3" />رمز مكتبة الفيديوهات
-              </p>
-              <div className="flex items-center gap-3">
-                <code className="lib-hero-code">{info.videos_code}</code>
-                <button onClick={() => { navigator.clipboard.writeText(info.videos_code); toast.success('تم نسخ الرمز'); }}
-                  className="p-2 rounded-xl hover:bg-white/5 transition" title="نسخ الرمز">
-                  <Copy className="w-4 h-4" style={{ color: '#F0ABFC' }} />
-                </button>
-              </div>
-              <p className="text-xs mt-2 text-slate-400">
-                <span className="opacity-70">شارك الرابط:</span>
-                <span dir="ltr" className="mx-2 break-all font-mono text-[11px]" style={{ color: '#F0ABFC' }}>{window.location.origin}/v/{info.videos_code}</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={copyLink} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm"><Copy className="w-4 h-4" />نسخ الرابط</button>
-              <button onClick={regenerate} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm"><RefreshCw className="w-4 h-4" />رمز جديد</button>
-              <button onClick={() => setShowNew(true)} className="btn-primary rounded-2xl flex items-center gap-1.5 px-4 py-2 text-sm font-bold"><Plus className="w-4 h-4" />إضافة فيديو</button>
-            </div>
-          </div>
+      {/* Help banner */}
+      <div className="rounded-2xl p-4 mb-6 flex items-start gap-3"
+        style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.18)' }}>
+        <Info className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#A78BFA' }} />
+        <div className="text-sm" style={{ color: '#CBD5E1' }}>
+          <p className="font-bold text-slate-200 mb-0.5">لكل فيديو رابط مستقل</p>
+          <p className="text-xs text-slate-400">اضغط على زر «نسخ الرابط» في أي فيديو لمشاركته مع الطلاب. سيُطلب من الطالب تسجيل اسمه وصفه وشعبته قبل المشاهدة.</p>
         </div>
-      )}
+      </div>
 
       {loading ? (
         <p className="text-center text-slate-500 py-12">جارٍ التحميل...</p>
@@ -222,7 +193,14 @@ export default function LibraryVideos() {
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-1">
+              {/* Share code + grades */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {v.share_code && (
+                  <code className="text-[11px] px-2 py-0.5 rounded-md font-bold tracking-widest"
+                    style={{ background: 'rgba(213,0,249,0.10)', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.25)', letterSpacing: '0.15em' }}>
+                    {v.share_code}
+                  </code>
+                )}
                 {(v.grades || []).length === 0 ? (
                   <span className="text-[10px] px-2.5 py-1 rounded-full font-bold"
                     style={{ background: 'rgba(213,0,249,0.10)', color: '#E879F9', border: '1px solid rgba(213,0,249,0.2)' }}>الجميع</span>
@@ -233,6 +211,13 @@ export default function LibraryVideos() {
                   ))
                 )}
               </div>
+
+              {/* Share link button (full width) */}
+              <button onClick={() => copyShareLink(v)}
+                className="w-full py-2 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.16), rgba(167,139,250,0.10))', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.30)' }}>
+                <Link2 className="w-3.5 h-3.5" />نسخ رابط الفيديو
+              </button>
 
               <div className="flex items-center justify-between pt-3 mt-1 border-t border-white/5">
                 <div className="flex items-center gap-3 text-xs text-slate-400">

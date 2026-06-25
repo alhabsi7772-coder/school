@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Trash2, MessageCircle, Users, PlayCircle } from 'lucide-react';
+import { Trash2, MessageCircle, Users, PlayCircle, Copy, Link2 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 
@@ -42,6 +42,12 @@ export default function LibraryVideoDetail() {
     } catch { toast.error('فشل الحذف'); }
   };
 
+  const copyShareLink = () => {
+    if (!video?.share_code) return toast.error('الرمز غير متوفر');
+    navigator.clipboard.writeText(`${window.location.origin}/watch/${video.share_code}`);
+    toast.success('تم نسخ رابط الفيديو');
+  };
+
   if (loading) return <TeacherLayout title="تفاصيل الفيديو" backTo="/teacher/library/videos"><p className="text-center text-slate-500 py-12">جارٍ التحميل...</p></TeacherLayout>;
   if (!video) return <TeacherLayout title="تفاصيل الفيديو" backTo="/teacher/library/videos"><p className="text-center text-slate-500 py-12">الفيديو غير موجود</p></TeacherLayout>;
 
@@ -71,6 +77,24 @@ export default function LibraryVideoDetail() {
         </div>
         {/* Sidebar */}
         <div className="space-y-3">
+          {video.share_code && (
+            <div className="lib-card">
+              <p className="text-xs font-black tracking-widest uppercase mb-2 flex items-center gap-1.5"
+                style={{ color: 'rgba(213,0,249,0.75)' }}>
+                <Link2 className="w-3 h-3" />رابط الفيديو
+              </p>
+              <code className="text-2xl font-black tracking-widest block mb-2" style={{ color: '#F0ABFC', letterSpacing: '0.2em' }}>{video.share_code}</code>
+              <div className="rounded-xl p-2 text-[11px] font-mono break-all mb-2"
+                style={{ background: 'rgba(0,0,0,0.3)', color: '#E879F9', border: '1px solid rgba(213,0,249,0.2)' }} dir="ltr">
+                {window.location.origin}/watch/{video.share_code}
+              </div>
+              <button onClick={copyShareLink}
+                className="w-full py-2 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5"
+                style={{ background: 'rgba(213,0,249,0.14)', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.35)' }}>
+                <Copy className="w-3.5 h-3.5" />نسخ الرابط
+              </button>
+            </div>
+          )}
           <div className="lib-card">
             <div className="flex justify-around text-center">
               <div>

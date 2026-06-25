@@ -3050,7 +3050,15 @@ async def list_videos(t=Depends(get_teacher)):
         {"owner_id": t["teacher_id"]},
         {"_id": 0, "storage_filename": 0}
     ).to_list(1000)
+    # Lazy migration: ensure every video has a share_code
     for it in items:
+        if not it.get("share_code"):
+            for _ in range(15):
+                c = lib_random_code(6)
+                if not await db.videos.find_one({"share_code": c}):
+                    await db.videos.update_one({"id": it["id"]}, {"$set": {"share_code": c}})
+                    it["share_code"] = c
+                    break
         it["view_count"] = await db.video_views.count_documents({"video_id": it["id"]})
         it["comment_count"] = await db.video_comments.count_documents({"video_id": it["id"]})
     return sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
@@ -3063,10 +3071,20 @@ async def create_video_youtube(body: VideoCreateYouTube, t=Depends(get_teacher))
     if not yt_id:
         raise HTTPException(400, "رابط YouTube غير صالح")
     vid = str(uuid.uuid4())
+    # توليد share_code فريد لهذا الفيديو
+    share_code = None
+    for _ in range(15):
+        c = lib_random_code(6)
+        if not await db.videos.find_one({"share_code": c}):
+            share_code = c
+            break
+    if not share_code:
+        raise HTTPException(500, "تعذر توليد رمز للفيديو")
     grades_list = [g for g in body.grades if g in ALLOWED_GRADES_LIB]
     doc = {
         "id": vid,
         "owner_id": t["teacher_id"],
+        "share_code": share_code,
         "title": body.title.strip(),
         "description": body.description.strip(),
         "source_type": "youtube",
@@ -3115,6 +3133,15 @@ async def upload_video_file(
         ct = guessed
 
     vid = str(uuid.uuid4())
+    # توليد share_code فريد
+    share_code = None
+    for _ in range(15):
+        c = lib_random_code(6)
+        if not await db.videos.find_one({"share_code": c}):
+            share_code = c
+            break
+    if not share_code:
+        raise HTTPException(500, "تعذر توليد رمز للفيديو")
     orig_name = safe_filename(file.filename or "video.mp4")
     ext = Path(orig_name).suffix or ".mp4"
     storage_name = f"{vid}{ext}"
@@ -3126,6 +3153,7 @@ async def upload_video_file(
     doc = {
         "id": vid,
         "owner_id": t["teacher_id"],
+        "share_code": share_code,
         "title": title.strip(),
         "description": (description or "").strip(),
         "source_type": "upload",
@@ -3481,6 +3509,143 @@ async def vlib_add_comment(code: str, vid: str, body: CommentCreateReq):
 
 # =================================================================
 # انتهت إضافة مكتبة الموارد
+# =================================================================
+
+
+# =================================================================
+# ============ مشاركة فيديو فردية (Per-Video Share Link) ===========
+# =================================================================
+
+@api_router.get("/video-share/check/{code}")
+async def video_share_check(code: str):
+    v = await db.videos.find_one({"share_code": code.upper(), "is_active": True}, {"_id": 0, "storage_filename": 0})
+    if not v:
+        raise HTTPException(404, "رابط الفيديو غير صحيح أو الفيديو غير متاح")
+    owner = await db.teachers.find_one({"id": v["owner_id"]}, {"_id": 0})
+    return {
+        "title": v.get("title", ""),
+        "description": v.get("description", ""),
+        "grades": v.get("grades") or [],
+        "owner_name": (owner or {}).get("teacher_name", "المعلم"),
+        "school_name": (owner or {}).get("school_name", ""),
+    }
+
+
+@api_router.post("/video-share/{code}/access")
+async def video_share_access(code: str, body: LibraryStudentJoinReq):
+    v = await db.videos.find_one({"share_code": code.upper(), "is_active": True}, {"_id": 0, "storage_filename": 0})
+    if not v:
+        raise HTTPException(404, "رابط الفيديو غير صحيح")
+    if not body.student_name.strip() or not body.grade or not body.section:
+        raise HTTPException(400, "بيانات ناقصة")
+    if body.grade not in ALLOWED_GRADES_LIB:
+        raise HTTPException(400, "الصف غير معتمد")
+    grades = v.get("grades") or []
+    if grades and body.grade not in grades:
+        raise HTTPException(403, "هذا الفيديو ليس مخصصاً لصفك")
+    access_id = str(uuid.uuid4())
+    rec = {
+        "id": access_id,
+        "owner_id": v["owner_id"],
+        "code": code.upper(),
+        "video_id": v["id"],
+        "kind": "video",
+        "student_name": body.student_name.strip(),
+        "grade": body.grade,
+        "section": str(body.section),
+        "created_at": now_iso(),
+    }
+    await db.library_access.insert_one(rec)
+    return {
+        "access_id": access_id,
+        "student_name": rec["student_name"],
+        "grade": rec["grade"],
+        "section": rec["section"],
+    }
+
+
+async def _video_access_for(code: str, access_id: str):
+    v = await db.videos.find_one({"share_code": code.upper(), "is_active": True}, {"_id": 0, "storage_filename": 0})
+    if not v:
+        raise HTTPException(404, "غير متاح")
+    a = await db.library_access.find_one({"id": access_id, "kind": "video"}, {"_id": 0})
+    if not a or a.get("video_id") != v["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    return v, a
+
+
+@api_router.get("/video-share/{code}")
+async def video_share_get(code: str, access_id: str):
+    v, a = await _video_access_for(code, access_id)
+    # تسجيل المشاهدة مرة واحدة
+    exists = await db.video_views.find_one({
+        "video_id": v["id"], "student_name": a["student_name"],
+        "grade": a["grade"], "section": a["section"]
+    })
+    if not exists:
+        await db.video_views.insert_one({
+            "id": str(uuid.uuid4()),
+            "video_id": v["id"],
+            "owner_id": v["owner_id"],
+            "student_name": a["student_name"],
+            "grade": a["grade"],
+            "section": a["section"],
+            "created_at": now_iso(),
+        })
+    return v
+
+
+@api_router.get("/video-share/{code}/stream")
+async def video_share_stream(code: str, access_id: str):
+    v, _ = await _video_access_for(code, access_id)
+    if v.get("source_type") != "upload":
+        raise HTTPException(404, "غير متاح")
+    # نحتاج storage_filename هنا (تم استبعاده أعلاه)
+    full = await db.videos.find_one({"id": v["id"]})
+    fpath = VIDEOS_DIR / full["storage_filename"]
+    if not fpath.exists():
+        raise HTTPException(404, "الملف مفقود")
+    return FileResponse(str(fpath), media_type=full.get("content_type") or "video/mp4")
+
+
+@api_router.get("/video-share/{code}/comments")
+async def video_share_comments(code: str, access_id: str):
+    v, _ = await _video_access_for(code, access_id)
+    rows = await db.video_comments.find({"video_id": v["id"]}, {"_id": 0}).sort("created_at", 1).to_list(5000)
+    return rows
+
+
+@api_router.post("/video-share/{code}/comments")
+async def video_share_add_comment(code: str, body: CommentCreateReq):
+    v = await db.videos.find_one({"share_code": code.upper(), "is_active": True})
+    if not v:
+        raise HTTPException(404, "غير متاح")
+    a = await db.library_access.find_one({"id": body.access_id, "kind": "video"}, {"_id": 0})
+    if not a or a.get("video_id") != v["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    if not v.get("allow_comments", True):
+        raise HTTPException(403, "التعليقات غير مفعّلة")
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(400, "التعليق فارغ")
+    if len(text) > 1000:
+        raise HTTPException(400, "التعليق طويل جداً (1000 حرف كحد أقصى)")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "video_id": v["id"],
+        "owner_id": v["owner_id"],
+        "student_name": a["student_name"],
+        "grade": a["grade"],
+        "section": a["section"],
+        "text": text,
+        "created_at": now_iso(),
+    }
+    await db.video_comments.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+# =================================================================
+# انتهت مشاركة الفيديو الفردية
 # =================================================================
 
 

@@ -249,6 +249,118 @@ backend:
           
           لا توجد مشاكل حرجة. التطبيق جاهز للإنتاج.
 
+  - task: "Per-Video Share Links (مشاركة فيديو فردية) — Backend"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Major architecture change: replaced unified videos library with per-video share codes.
+          Each video now has unique 6-char share_code (uppercase A-Z0-9).
+          
+          NEW endpoints:
+          - GET  /api/video-share/check/{code} — public; returns {title, grades, owner_name, school_name}
+          - POST /api/video-share/{code}/access {student_name, grade, section} → access_id; enforces grade restriction
+          - GET  /api/video-share/{code}?access_id=... — returns video data, logs view (deduplicated)
+          - GET  /api/video-share/{code}/stream?access_id=... — for uploaded videos
+          - GET  /api/video-share/{code}/comments?access_id=...
+          - POST /api/video-share/{code}/comments {access_id, text}
+          
+          Video creation:
+          - POST /api/videos/youtube now returns share_code
+          - POST /api/videos/upload now returns share_code
+          - GET /api/videos includes lazy migration (backfills share_code for old videos)
+          
+          Features:
+          - Grade restriction: 403 if student grade not in video.grades
+          - allow_comments toggle
+          - is_active toggle (filters in all public endpoints)
+          - Cross-kind isolation (kind='video' vs kind='library')
+          - Case-insensitive code handling (backend uppercases)
+          
+          Needs comprehensive testing.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ اختبار شامل ناجح - جميع الاختبارات نجحت (32/32 tests, 100% pass rate)
+          
+          تم اختبار جميع المسارات بنجاح:
+          
+          [1] Setup & Video Creation ✅
+          - Login admin/teacher123 → token received
+          - POST /api/videos/youtube (grades=["الخامس"]) → share_code (6 chars uppercase)
+          - POST /api/videos/youtube (grades=[]) → different share_code
+          - GET /api/videos → all videos have share_code (lazy migration verified)
+          
+          [2] Public Endpoints - Check ✅
+          - GET /api/video-share/check/{code} → 200 with {title, grades, owner_name, school_name}
+          - Verified NO storage_filename or owner_id leaked
+          - GET /api/video-share/check/INVALID → 404
+          - GET /api/video-share/check/{code.lower()} → 200 (uppercase handling works)
+          
+          [3] Student Access & Grade Restriction ✅
+          - POST /api/video-share/{code}/access (student="أحمد علي", grade="الخامس") → access_id
+          - POST access with grade="الثامن" on restricted video → 403 (grade not allowed)
+          - POST access with missing fields → 422
+          - POST access with invalid grade (not in approved list) → 400
+          - POST access to open video (grades=[]) with any grade → 200
+          
+          [4] Video Access & View Logs ✅
+          - GET /api/video-share/{code}?access_id=... → 200 with video data
+          - Called same endpoint twice → view NOT duplicated (deduplication works)
+          - GET /api/videos/{vid}/views (teacher) → contains "أحمد علي"
+          - GET /api/video-share/{code} without access_id → 422
+          - GET /api/video-share/{code}?access_id=BOGUS → 401
+          
+          [5] Comments ✅
+          - POST /api/video-share/{code}/comments {access_id, text:"شكراً للشرح"} → 200
+          - GET /api/video-share/{code}/comments → contains posted comment
+          - POST second comment → 200
+          - POST empty text → 400
+          - POST text > 1000 chars → 400
+          
+          [6] Toggle allow_comments ✅
+          - PUT /api/videos/{vid} {allow_comments:false} → 200
+          - POST comment after disable → 403
+          
+          [7] Toggle is_active ✅
+          - PUT /api/videos/{vid} {is_active:false} → 200
+          - GET /api/video-share/check/{code} → 404 (filters is_active:true)
+          - POST /api/video-share/{code}/access → 404
+          - PUT /api/videos/{vid} {is_active:true, allow_comments:true} → 200
+          - GET /api/video-share/check/{code} → 200 again
+          
+          [8] Cross-kind Isolation ✅
+          - Used video access_id (kind='video') on /api/library/{code}/resources → 401
+          - Created library access_id (kind='library') and used on /api/video-share/{code} → 401
+          
+          [9] Stream Test (Optional - Uploaded Video) ✅
+          - POST /api/videos/upload with small mp4 → share_code generated
+          - POST /api/video-share/{code}/access → access_id
+          - GET /api/video-share/{code}/stream?access_id=... → 200 with binary content
+          
+          [10] Cleanup ✅
+          - DELETE /api/videos/{vid} × 2 → 200 each
+          
+          جميع الوظائف تعمل بشكل صحيح:
+          - توليد share_code فريد لكل فيديو (6 أحرف uppercase)
+          - Lazy migration للفيديوهات القديمة
+          - التحقق من الرموز (check endpoint)
+          - انضمام الطلاب مع فلتر الصفوف
+          - مشاهدة الفيديوهات وتسجيل المشاهدات (مع deduplication)
+          - نظام التعليقات
+          - تفعيل/تعطيل التعليقات والفيديوهات
+          - عزل الأنواع (video vs library access)
+          - تشغيل الفيديوهات المرفوعة (stream)
+          - معالجة الرموز case-insensitive
+          
+          لا توجد مشاكل حرجة. ميزة Per-Video Share Links جاهزة للإنتاج.
+
 frontend:
   - task: "إنشاء ملف frontend/.env"
     implemented: true
@@ -388,7 +500,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 4
+  test_sequence: 5
   run_ui: false
 
 test_plan:
@@ -400,9 +512,44 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      Added Resource Bundles feature: teacher can select multiple resources and
-      create a "custom share link" with its own 6-char code that the student
-      opens at /b/{code}. Bundle ignores grade filter (teacher explicitly picked).
+      Major redesign: per-video share codes replace the unified videos library.
+      Each video gets its own 6-char share_code; student opens /watch/{code}.
+      
+      NEW backend endpoints (test these):
+      - GET  /api/video-share/check/{code} → public; returns {title, grades, ...} or 404
+      - POST /api/video-share/{code}/access {student_name, grade, section}
+        → access_id; enforces grade restriction (403 if not in allowed grades)
+      - GET  /api/video-share/{code}?access_id=... → returns video, logs view
+      - GET  /api/video-share/{code}/stream?access_id=... (uploaded only)
+      - GET  /api/video-share/{code}/comments?access_id=...
+      - POST /api/video-share/{code}/comments {access_id, text}
+      
+      Also: every new video gets share_code on creation (both /videos/youtube
+      and /videos/upload). Lazy migration runs in GET /api/videos to backfill.
+      
+      Test sequence:
+      1. Login admin/teacher123.
+      2. POST /api/videos/youtube {title:"درس 1", youtube_url:"https://www.youtube.com/watch?v=dQw4w9WgXcQ", grades:["الخامس"], allow_comments:true, is_active:true} → returns share_code (6 chars).
+      3. POST /api/videos/youtube {title:"درس عام", youtube_url:"https://www.youtube.com/watch?v=dQw4w9WgXcQ", grades:[], allow_comments:true, is_active:true} → another share_code.
+      4. GET /api/videos → both videos have share_code field.
+      5. GET /api/video-share/check/{share_code1} (no auth) → 200 with grades=["الخامس"].
+      6. GET /api/video-share/check/INVALID → 404.
+      7. POST /api/video-share/{code1}/access {student_name:"أحمد", grade:"الخامس", section:"1"} → access_id.
+      8. POST /api/video-share/{code1}/access {student_name:"ب", grade:"الثامن", section:"2"} → 403 (grade not allowed).
+      9. POST /api/video-share/{code2}/access {student_name:"خ", grade:"الثامن", section:"1"} → 200 (no grade restriction).
+      10. GET /api/video-share/{code1}?access_id=<accAhmed> → returns video. View logged once.
+      11. Call same again → view NOT duplicated (same student+grade+section).
+      12. GET /api/videos/{vid1}/views (teacher) → contains "أحمد".
+      13. POST /api/video-share/{code1}/comments {access_id:<accAhmed>, text:"شكراً"} → 200.
+      14. GET /api/video-share/{code1}/comments?access_id=<accAhmed> → contains it.
+      15. PUT /api/videos/{vid1} {allow_comments:false} → ok.
+      16. POST same comment → 403.
+      17. PUT /api/videos/{vid1} {is_active:false} → ok. GET /api/video-share/check/{code1} → 404.
+      18. Cross-kind: try using accAhmed (kind='video') on /api/library/{anylib}/resources → 401.
+      
+      Also for code uppercasing: send lowercase code → should still work.
+      
+      DO NOT test frontend. Credentials in /app/memory/test_credentials.md.
       
       Test plan for the NEW endpoints only (don't retest other library APIs):
       
@@ -518,3 +665,64 @@ agent_communication:
       
       جميع الـ APIs تعمل بشكل صحيح. لا توجد مشاكل حرجة.
       التطبيق جاهز للإنتاج.
+
+  - agent: "testing"
+    message: |
+      ✅ Per-Video Share Links Backend Testing Complete - 100% Success (32/32 tests passed)
+      
+      Comprehensive testing completed for all NEW per-video share endpoints:
+      
+      ✅ Setup & Video Creation (4 tests)
+         - Login and token generation
+         - Create videos with/without grade restrictions
+         - Verify share_code generation (6 chars uppercase)
+         - Lazy migration verification
+      
+      ✅ Public Endpoints - Check (3 tests)
+         - Valid code check with metadata
+         - Invalid code rejection
+         - Case-insensitive code handling
+      
+      ✅ Student Access & Grade Restriction (5 tests)
+         - Access with allowed grade
+         - Access rejection for forbidden grade (403)
+         - Missing fields validation (422)
+         - Invalid grade validation (400)
+         - Open video access (no restrictions)
+      
+      ✅ Video Access & View Logs (5 tests)
+         - Get video with valid access_id
+         - View deduplication (same student not counted twice)
+         - Teacher view logs verification
+         - Missing access_id rejection (422)
+         - Invalid access_id rejection (401)
+      
+      ✅ Comments (5 tests)
+         - Post and retrieve comments
+         - Multiple comments support
+         - Empty comment rejection (400)
+         - Long comment rejection (400)
+      
+      ✅ Toggle allow_comments (2 tests)
+         - Disable comments
+         - Comment rejection when disabled (403)
+      
+      ✅ Toggle is_active (4 tests)
+         - Disable video
+         - Check/access rejection for inactive video (404)
+         - Re-enable video
+      
+      ✅ Cross-kind Isolation (2 tests)
+         - Video access_id on library endpoint → 401
+         - Library access_id on video endpoint → 401
+      
+      ✅ Stream Test (1 test)
+         - Upload video and stream endpoint
+      
+      ✅ Cleanup (1 test)
+         - Delete test videos
+      
+      All endpoints working correctly. No critical issues found.
+      Feature is production-ready.
+      
+      Main agent: Please summarize and finish. All backend testing is complete.
