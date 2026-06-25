@@ -78,7 +78,7 @@ export default function StudentVideoPlay() {
         </button>
 
         {/* Player */}
-        <div className="rounded-2xl overflow-hidden mb-4" style={{ background: 'rgba(11,17,32,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="lib-card !p-0 mb-4 overflow-hidden">
           <div className="aspect-video bg-black">
             {video.source_type === 'youtube' && video.youtube_id ? (
               <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${video.youtube_id}?rel=0`}
@@ -90,14 +90,14 @@ export default function StudentVideoPlay() {
             )}
           </div>
           <div className="p-4">
-            <h1 className="text-lg md:text-xl font-bold text-white mb-1">{video.title}</h1>
-            {video.description && <p className="text-sm text-slate-400 whitespace-pre-wrap">{video.description}</p>}
+            <h1 className="text-lg md:text-xl font-black text-white mb-1">{video.title}</h1>
+            {video.description && <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{video.description}</p>}
           </div>
         </div>
 
         {/* Comments */}
-        <div className="rounded-2xl p-4" style={{ background: 'rgba(11,17,32,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <h2 className="flex items-center gap-2 font-bold text-white mb-3">
+        <div className="lib-card">
+          <h2 className="flex items-center gap-2 font-black text-white mb-3">
             <MessageCircle className="w-5 h-5 text-cyan-400" />التعليقات ({comments.length})
           </h2>
 

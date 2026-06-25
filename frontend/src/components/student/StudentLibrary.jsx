@@ -195,14 +195,8 @@ export default function StudentLibrary() {
                   const Icon = guessIcon(r.content_type, r.original_filename);
                   const ic = iconColor(r.content_type, r.original_filename);
                   return (
-                    <div key={r.id} className="rounded-3xl p-4 flex flex-col gap-3 transition-all hover:-translate-y-1 relative overflow-hidden"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(30,42,58,0.65), rgba(15,23,42,0.55))',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)',
-                        backdropFilter: 'blur(14px)',
-                      }}>
-                      <div className="absolute top-0 right-4 left-4 h-[2px] opacity-50 rounded-full"
+                    <div key={r.id} className="lib-card">
+                      <div className="lib-card-ribbon"
                         style={{ background: `linear-gradient(90deg, transparent, ${ic.fg}, transparent)` }} />
                       <div className="flex items-start gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"

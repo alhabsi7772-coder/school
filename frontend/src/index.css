@@ -560,6 +560,7 @@ select.input-field option { background: #1E2A3A; color: #F8FAFC; }
 html.mode-light {
   --theme-accent: #B8924A !important;
   --theme-accent-rgb: 184, 146, 74 !important;
+  --mode-bg: #F5EEDC !important;
 }
 
 html.mode-light body {
@@ -1145,3 +1146,268 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
     brightness(0.95);
   transition: filter 1.2s ease-in-out;
 }
+
+
+/* ============================================================
+   مكتبة الموارد — Resource & Video Library Cards
+   Dark mode (default) + Light mode overrides
+   ============================================================ */
+
+/* Base library card — used for both Resources and Videos */
+.lib-card {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(30, 42, 58, 0.65), rgba(15, 23, 42, 0.55));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+}
+.lib-card:hover {
+  transform: translateY(-3px);
+}
+.lib-card.is-selected {
+  background: linear-gradient(135deg, rgba(213, 0, 249, 0.10), rgba(213, 0, 249, 0.04));
+  border-color: rgba(213, 0, 249, 0.55);
+  box-shadow: 0 8px 32px rgba(213, 0, 249, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Accent ribbon (top thin gradient line) */
+.lib-card-ribbon {
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  left: 1rem;
+  height: 2px;
+  opacity: 0.5;
+  border-radius: 9999px;
+}
+
+/* Library code hero card (with neon code) */
+.lib-hero-card {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.12) 0%, rgba(213, 0, 249, 0.08) 60%, rgba(167, 139, 250, 0.06) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.lib-hero-card.is-fuchsia {
+  background: linear-gradient(135deg, rgba(213, 0, 249, 0.12) 0%, rgba(0, 229, 255, 0.06) 60%, rgba(167, 139, 250, 0.06) 100%);
+  border-color: rgba(213, 0, 249, 0.25);
+  box-shadow: 0 8px 32px rgba(213, 0, 249, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.lib-hero-orb-1 {
+  position: absolute;
+  top: -3rem;
+  left: -3rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.20) 0%, transparent 70%);
+  pointer-events: none;
+}
+.lib-hero-orb-2 {
+  position: absolute;
+  bottom: -3rem;
+  right: -3rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(213, 0, 249, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.lib-hero-card.is-fuchsia .lib-hero-orb-1 {
+  background: radial-gradient(circle, rgba(213, 0, 249, 0.20) 0%, transparent 70%);
+}
+.lib-hero-card.is-fuchsia .lib-hero-orb-2 {
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.12) 0%, transparent 70%);
+}
+
+.lib-hero-code {
+  font-size: 1.875rem;
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  color: #00E5FF;
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+  font-family: 'Courier New', monospace;
+}
+.lib-hero-card.is-fuchsia .lib-hero-code {
+  color: #F0ABFC;
+  text-shadow: 0 0 20px rgba(213, 0, 249, 0.5);
+}
+
+/* Video thumbnail wrapper */
+.video-thumb {
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #0B1120;
+}
+.video-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.video-thumb .video-thumb-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.4));
+}
+.video-source-badge {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  font-size: 10px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 800;
+}
+.video-source-badge.yt { background: rgba(239, 68, 68, 0.85); color: #fff; }
+.video-source-badge.up { background: rgba(0, 229, 255, 0.85); color: #0B1120; }
+
+/* Status badge */
+.lib-status-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 10px;
+  padding: 2px 0.5rem;
+  border-radius: 9999px;
+  font-weight: 900;
+  letter-spacing: 0.025em;
+}
+.lib-status-badge.is-active {
+  background: rgba(0, 230, 118, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(0, 230, 118, 0.30);
+}
+.lib-status-badge.is-closed {
+  background: rgba(148, 163, 184, 0.10);
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* ─────── LIGHT (DAY) MODE OVERRIDES ─────── */
+html.mode-light .lib-card {
+  background: rgba(253, 250, 241, 0.92) !important;
+  border-color: rgba(184, 146, 74, 0.22) !important;
+  box-shadow: 0 2px 12px rgba(120, 90, 30, 0.08) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.mode-light .lib-card:hover {
+  border-color: rgba(184, 146, 74, 0.45) !important;
+  box-shadow: 0 6px 22px rgba(120, 90, 30, 0.14) !important;
+}
+html.mode-light .lib-card.is-selected {
+  background: rgba(255, 251, 240, 0.95) !important;
+  border-color: rgba(184, 146, 74, 0.7) !important;
+  box-shadow: 0 6px 24px rgba(184, 146, 74, 0.22) !important;
+}
+html.mode-light .lib-card .text-white { color: #1a1a1a !important; }
+html.mode-light .lib-card .text-slate-200,
+html.mode-light .lib-card .text-slate-300,
+html.mode-light .lib-card .text-slate-400 { color: #4a4232 !important; }
+html.mode-light .lib-card .text-slate-500 { color: #6b6147 !important; }
+html.mode-light .lib-card-ribbon { display: none !important; }
+
+/* Hero card → soft gold gradient on cream */
+html.mode-light .lib-hero-card {
+  background: linear-gradient(135deg, rgba(184, 146, 74, 0.14) 0%, rgba(184, 146, 74, 0.06) 100%) !important;
+  border-color: rgba(184, 146, 74, 0.30) !important;
+  box-shadow: 0 4px 20px rgba(120, 90, 30, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+html.mode-light .lib-hero-card.is-fuchsia {
+  background: linear-gradient(135deg, rgba(184, 146, 74, 0.18) 0%, rgba(184, 146, 74, 0.06) 100%) !important;
+  border-color: rgba(184, 146, 74, 0.35) !important;
+}
+html.mode-light .lib-hero-orb-1,
+html.mode-light .lib-hero-orb-2 {
+  background: radial-gradient(circle, rgba(184, 146, 74, 0.16) 0%, transparent 70%) !important;
+}
+html.mode-light .lib-hero-code {
+  color: #8B6F2F !important;
+  text-shadow: 0 0 12px rgba(184, 146, 74, 0.3) !important;
+}
+html.mode-light .lib-hero-card.is-fuchsia .lib-hero-code {
+  color: #8B6F2F !important;
+}
+html.mode-light .lib-hero-card .text-white { color: #1a1a1a !important; }
+html.mode-light .lib-hero-card .text-slate-300,
+html.mode-light .lib-hero-card .text-slate-400 { color: #5a503c !important; }
+html.mode-light .lib-hero-card [style*="color: rgba(0,229,255"],
+html.mode-light .lib-hero-card [style*="color: #00E5FF"],
+html.mode-light .lib-hero-card [style*="color: rgb(0, 229, 255"] { color: #8B6F2F !important; }
+html.mode-light .lib-hero-card [style*="color: rgba(213,0,249"],
+html.mode-light .lib-hero-card [style*="color: #E879F9"] { color: #8B6F2F !important; }
+
+/* Status badges in light mode — softer tones */
+html.mode-light .lib-status-badge.is-active {
+  background: rgba(46, 125, 50, 0.12) !important;
+  color: #2E7D32 !important;
+  border-color: rgba(46, 125, 50, 0.35) !important;
+}
+html.mode-light .lib-status-badge.is-closed {
+  background: rgba(120, 110, 90, 0.10) !important;
+  color: #6b6147 !important;
+  border-color: rgba(120, 110, 90, 0.30) !important;
+}
+
+/* Modal — cream */
+html.mode-light .lib-modal {
+  background: rgba(253, 250, 241, 0.99) !important;
+  border-color: rgba(184, 146, 74, 0.28) !important;
+  box-shadow: 0 18px 48px rgba(120, 90, 30, 0.18) !important;
+}
+html.mode-light .lib-modal .text-white { color: #1a1a1a !important; }
+html.mode-light .lib-modal .text-slate-300,
+html.mode-light .lib-modal .text-slate-400 { color: #4a4232 !important; }
+html.mode-light .lib-modal .text-slate-500 { color: #6b6147 !important; }
+
+/* Override inline-styled accent text inside hero card → gold in light mode */
+html.mode-light .lib-hero-card span[dir="ltr"] {
+  color: #8B6F2F !important;
+  background: rgba(184, 146, 74, 0.10);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+html.mode-light .lib-hero-card .text-cyan-300,
+html.mode-light .lib-hero-card .text-cyan-400,
+html.mode-light .lib-hero-card .text-fuchsia-300 { color: #8B6F2F !important; }
+
+/* Particles hidden in light mode for a calmer day-mode look */
+html.mode-light canvas[data-particles] { display: none !important; }
+
+/* lib-status-badge with inline style override in light mode */
+html.mode-light .lib-card [class*="text-cyan-3"],
+html.mode-light .lib-card [class*="text-fuchsia-3"] { color: #8B6F2F !important; }
+
+/* Make sure the active tab text has decent contrast on cream */
+html.mode-light button[style*="rgba(0,229,255"],
+html.mode-light a[style*="rgba(0,229,255"] {
+  color: #0E7490 !important;
+}
+html.mode-light button[style*="rgba(213,0,249"],
+html.mode-light a[style*="rgba(213,0,249"] {
+  color: #7E22CE !important;
+}
+html.mode-light button[style*="rgba(239,68,68"] {
+  color: #B91C1C !important;
+}
+
+/* Bundle list card */
+html.mode-light .lib-card .text-fuchsia-300 { color: #7E22CE !important; }
+
+/* Strong override for inline-styled small text */
+html.mode-light p[style*="rgba(148,163,184"] { color: #6b6147 !important; }
+html.mode-light p[style*="rgba(0,229,255,0.6"],
+html.mode-light p[style*="rgba(0,229,255,0.7"],
+html.mode-light p[style*="rgba(213,0,249,0.7"],
+html.mode-light p[style*="rgba(213,0,249,0.75"] { color: #8B6F2F !important; }
+
+/* Modal already covered but ensure all child text */
+html.mode-light .lib-modal label { color: #4a4232 !important; }
+

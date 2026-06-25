@@ -229,16 +229,9 @@ export default function LibraryResources() {
 
       {/* Library Code Card — refined gradient */}
       {info && (
-        <div className="relative rounded-3xl p-5 md:p-6 mb-6 overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, rgba(0,229,255,0.12) 0%, rgba(213,0,249,0.08) 60%, rgba(167,139,250,0.06) 100%)',
-            border: '1px solid rgba(0,229,255,0.25)',
-            boxShadow: '0 8px 32px rgba(0,229,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}>
-          <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(0,229,255,0.20) 0%, transparent 70%)' }} />
-          <div className="absolute -bottom-12 -right-12 w-40 h-40 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(213,0,249,0.15) 0%, transparent 70%)' }} />
+        <div className="lib-hero-card mb-6">
+          <div className="lib-hero-orb-1" />
+          <div className="lib-hero-orb-2" />
           <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black tracking-widest uppercase mb-2 flex items-center gap-1.5"
@@ -246,13 +239,13 @@ export default function LibraryResources() {
                 <Sparkles className="w-3 h-3" />رابط المكتبة الموحّد
               </p>
               <div className="flex items-center gap-3">
-                <code className="text-3xl font-black tracking-widest" style={{ color: '#00E5FF', letterSpacing: '0.25em', textShadow: '0 0 20px rgba(0,229,255,0.5)' }}>{info.library_code}</code>
+                <code className="lib-hero-code">{info.library_code}</code>
                 <button onClick={() => { navigator.clipboard.writeText(info.library_code); toast.success('تم نسخ الرمز'); }}
                   className="p-2 rounded-xl hover:bg-white/5 transition" title="نسخ الرمز">
                   <Copy className="w-4 h-4 text-cyan-300" />
                 </button>
               </div>
-              <p className="text-xs mt-2" style={{ color: 'rgba(148,163,184,0.85)' }}>
+              <p className="text-xs mt-2 text-slate-400">
                 <span className="opacity-70">شارك الرابط:</span>
                 <span dir="ltr" className="text-cyan-300 mx-2 break-all font-mono text-[11px]">{window.location.origin}/library/{info.library_code}</span>
               </p>
@@ -358,21 +351,11 @@ export default function LibraryResources() {
             return (
               <div key={r.id}
                 onClick={() => selectMode && toggleSelect(r.id)}
-                className="resource-card group relative rounded-3xl p-4 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1"
-                style={{
-                  background: isSelected
-                    ? 'linear-gradient(135deg, rgba(213,0,249,0.10), rgba(213,0,249,0.04))'
-                    : 'linear-gradient(135deg, rgba(30,42,58,0.65), rgba(15,23,42,0.55))',
-                  border: isSelected ? '1.5px solid rgba(213,0,249,0.55)' : '1px solid rgba(255,255,255,0.06)',
-                  boxShadow: isSelected
-                    ? '0 8px 32px rgba(213,0,249,0.18), inset 0 1px 0 rgba(255,255,255,0.05)'
-                    : '0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)',
-                  backdropFilter: 'blur(14px)',
-                  cursor: selectMode ? 'pointer' : 'default',
-                }}>
+                className={`lib-card group ${isSelected ? 'is-selected' : ''}`}
+                style={{ cursor: selectMode ? 'pointer' : 'default' }}>
 
                 {/* Top gradient accent line */}
-                <div className="absolute top-0 right-4 left-4 h-[2px] opacity-50 rounded-full"
+                <div className="lib-card-ribbon"
                   style={{ background: `linear-gradient(90deg, transparent, ${ic.fg}, transparent)` }} />
 
                 {/* Selection checkbox */}
@@ -386,10 +369,7 @@ export default function LibraryResources() {
                 )}
 
                 {/* Status badge */}
-                <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full font-black tracking-wide"
-                  style={r.is_active
-                    ? { background: 'rgba(0,230,118,0.15)', color: '#34D399', border: '1px solid rgba(0,230,118,0.30)' }
-                    : { background: 'rgba(148,163,184,0.10)', color: '#94A3B8', border: '1px solid rgba(148,163,184,0.2)' }}>
+                <span className={`lib-status-badge ${r.is_active ? 'is-active' : 'is-closed'}`}>
                   {r.is_active ? '● مُتاح' : '○ مُغلق'}
                 </span>
 
@@ -580,7 +560,8 @@ export default function LibraryResources() {
 function Modal({ children, onClose, title }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-3xl p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}
+      <div className="lib-modal w-full max-w-lg rounded-3xl p-5 max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
         style={{ background: 'rgba(11,17,32,0.95)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-black text-white">{title}</h3>
