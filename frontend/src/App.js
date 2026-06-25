@@ -63,6 +63,7 @@ function App() {
             <Route path="/my-grades" element={<StudentGrades />} />
             <Route path="/g/:code" element={<StudentJoinGrade />} />
             <Route path="/library/:code" element={<StudentLibrary />} />
+            <Route path="/b/:code" element={<StudentLibrary />} />
             <Route path="/v/:code" element={<StudentVideoLibrary />} />
             <Route path="/v/:code/:videoId" element={<StudentVideoPlay />} />
             <Route path="/quiz/:quizId/lobby" element={<StudentLobby />} />

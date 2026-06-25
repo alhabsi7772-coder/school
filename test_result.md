@@ -273,21 +273,126 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: |
-          تم إضافة 6 صفحات React وتسجيل الـ routes:
-          - Teacher: /teacher/library (LibraryResources), /teacher/library/videos (LibraryVideos), /teacher/library/videos/:videoId (LibraryVideoDetail)
-          - Student: /library/:code (StudentLibrary), /v/:code (StudentVideoLibrary), /v/:code/:videoId (StudentVideoPlay)
-          - تم إضافة tab "مكتبة الموارد" في القائمة الجانبية مع أيقونة Library.
-          - لن يتم اختبار الـ Frontend إلا بعد إذن المستخدم.
+          Initial scaffold of 6 React pages + nav item added.
+      - working: "NA"
+        agent: "main"
+        comment: |
+          UI redesign + multi-select + bundle creation feature:
+          - Replaced square cards with rounded-3xl cards, gradient borders,
+            file-type colored icons (audio purple, image yellow, video red, etc.),
+            top accent line, hover -translate-y, glass blur effects.
+          - Added selection mode (checkbox per card), "Select All", and "Create
+            shared link" CTA.
+          - Added "Custom Links" panel with list of existing bundles, copy,
+            and delete.
+          - Library code card now has decorative radial gradients and rounded-3xl.
+          - StudentLibrary now also serves /b/:code (bundles) — auto-detected
+            by route; switches accent color to fuchsia and uses 'bundle' API.
+          - Added /b/:code route in App.js.
+          - All cards use rounded-3xl/rounded-2xl matching site language.
+
+  - task: "Resource Bundles (Custom Share Links) — Backend"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          New endpoints for sharing specific resources as a bundle with own code:
+          
+          Teacher (auth):
+          - GET    /api/bundles → list teacher's bundles with `actual_count`
+          - POST   /api/bundles { title, resource_ids } → creates bundle with unique 6-char code (uppercase letters+digits, deduped). Validates ownership of resource_ids.
+          - PUT    /api/bundles/{bid} { title?, resource_ids?, is_active? }
+          - DELETE /api/bundles/{bid}
+          
+          Public student:
+          - GET   /api/bundle/check/{code} → 200 {kind:'bundle', title, owner_name, school_name, resources_count} or 404
+          - POST  /api/bundle/{code}/access { student_name, grade, section } → access_id (stored in library_access with kind='bundle' and bundle_id)
+          - GET   /api/bundle/{code}/resources?access_id=... → returns bundle resources in saved order (no grade filtering — teacher explicitly chose them)
+          - GET   /api/bundle/{code}/download/{rid}?access_id=... → streams file and logs in resource_access with bundle_id
+          
+          - Bundle inactive or missing resource → handled with 404
+          - Resource not in bundle → 404
+          - access_id of different kind → 401
+          
+          Manual smoke tests: GET /bundles returns []; check INVALID returns 404. Needs full E2E test suite.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ اختبار شامل ناجح - جميع الاختبارات نجحت (31/31 test cases, 100% pass rate)
+          
+          تم اختبار جميع المسارات بنجاح:
+          
+          A) Teacher: Bundle Management ✅
+          - POST /api/bundles → إنشاء حزمة مع 3 موارد (رمز 6 أحرف، is_active=true)
+          - POST /api/bundles مع resource_ids فارغة → 400 ✅
+          - POST /api/bundles مع معرفات مختلطة (صالحة + غير صالحة) → يحتفظ بالصالحة فقط ✅
+          - POST /api/bundles مع معرفات غير صالحة فقط → 400 "لا توجد موارد صالحة" ✅
+          - GET /api/bundles → الحزمة موجودة مع actual_count=3 ✅
+          - PUT /api/bundles/{bid} → تحديث العنوان بنجاح ✅
+          - PUT /api/bundles/{bid} → تحديث resource_ids (إزالة R3، بقي R1+R2) ✅
+          - PUT /api/bundles/{fake-uuid} → 404 ✅
+          - DELETE /api/bundles/{bid} → حذف ناجح ✅
+          
+          B) Public Student: Bundle Check ✅
+          - GET /api/bundle/check/{code} → 200 {kind:'bundle', title, owner_name, school_name, resources_count:2} ✅
+          - GET /api/bundle/check/NOPE12 → 404 ✅
+          - GET /api/bundle/check/{code.lower()} → 200 (backend uppercases) ✅
+          
+          C) Public Student: Access & Resources ✅
+          - POST /api/bundle/{code}/access → طالب "خالد علي" (الثامن) انضم بنجاح ✅
+            (ملاحظة: الموارد كانت للخامس/السابع، لكن الحزمة تتجاوز فلتر الصفوف)
+          - POST /api/bundle/{code}/access بدون grade → 400/422 ✅
+          - POST /api/bundle/{code}/access مع grade غير معتمد → 400 ✅
+          - GET /api/bundle/{code}/resources → يعيد 2 موارد (R1, R2) بالترتيب الصحيح ✅
+          - التحقق من عدم وجود storage_filename في الاستجابة ✅
+          - GET /api/bundle/{code}/download/{R1} → 200 مع محتوى صحيح و Content-Disposition ✅
+          - GET /api/bundle/{code}/download/{R3} → 404 "ليس ضمن الحزمة" ✅
+          - GET /api/resources/{R1}/downloads → سجل التنزيل يحتوي على {student_name:"خالد علي", grade:"الثامن", section:"3", action:"download", bundle_id} ✅
+          
+          D) Cross-Kind Isolation ✅
+          - استخدام bundle access_id على /api/library/{code}/resources → 401 (kind mismatch) ✅
+          - استخدام library access_id على /api/bundle/{code}/resources → 401 (kind mismatch) ✅
+          
+          E) is_active Toggle ✅
+          - PUT /api/bundles/{bid} {is_active:false} → 200 ✅
+          - GET /api/bundle/check/{code} → 404 (bundle inactive) ✅
+          - GET /api/bundle/{code}/resources → 404 (bundle inactive) ✅
+          - PUT /api/bundles/{bid} {is_active:true} → 200 ✅
+          - GET /api/bundle/check/{code} → 200 (bundle active again) ✅
+          
+          F) Cleanup ✅
+          - DELETE /api/bundles/{bid} → 200 ✅
+          - GET /api/bundle/check/{code} → 404 ✅
+          - GET /api/bundles → الحزمة المحذوفة غير موجودة ✅
+          - DELETE /api/resources/{id} × 3 → حذف جميع الموارد ✅
+          
+          جميع الوظائف تعمل بشكل صحيح:
+          - إنشاء وإدارة الحزم (bundles)
+          - توليد رموز فريدة (6 أحرف uppercase)
+          - التحقق من ملكية الموارد
+          - انضمام الطلاب وتنزيل الموارد
+          - تجاوز فلتر الصفوف (bundle bypasses grade filter)
+          - تسجيل التنزيلات مع bundle_id
+          - عزل الأنواع (kind='bundle' vs kind='library')
+          - تفعيل/تعطيل الحزم
+          - حذف الحزم
+          
+          لا توجد مشاكل حرجة. ميزة Resource Bundles جاهزة للإنتاج.
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Resource Library (مكتبة الموارد) — Backend APIs"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -295,50 +400,66 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      تم إضافة ميزة جديدة: مكتبة الموارد (Resource Library) ومكتبة الفيديوهات.
+      Added Resource Bundles feature: teacher can select multiple resources and
+      create a "custom share link" with its own 6-char code that the student
+      opens at /b/{code}. Bundle ignores grade filter (teacher explicitly picked).
       
-      الفكرة العامة:
-      - كل معلم لديه رمز فريد library_code للموارد + رمز videos_code للفيديوهات.
-      - الطالب يفتح /library/{code} أو /v/{code} ويسجّل (اسم/صف/شعبة) ثم يحصل على access_id.
-      - الـ access_id محفوظ في DB collection: library_access (kind: 'library' أو 'videos').
-      - الطالب يرى الموارد/الفيديوهات النشطة (is_active=true) المخصصة لصفه (grades فارغة = للجميع).
-      - تنزيل المورد يُسجَّل في resource_access.
-      - فتح الفيديو يُسجَّل في video_views (مرة واحدة لكل طالب).
-      - الطلاب يضيفون تعليقات إذا allow_comments=true ويرونها جميعاً (نقاش جماعي).
-      - المعلم يحذف أي تعليق.
+      Test plan for the NEW endpoints only (don't retest other library APIs):
       
-      Storage filesystem:
-      - /app/backend/uploads/resources/
-      - /app/backend/uploads/videos/
-      - حد 30MB لكل ملف
+      1. Login admin/teacher123 → token.
+      2. Upload 3 resources via /api/resources/upload with different grades (one for الخامس only, one for السابع, one open to all).
+      3. POST /api/bundles {title:"مراجعة 1", resource_ids:[id1, id2, id3]} → returns id + code (6 chars) + resource_ids, is_active=true.
+      4. POST /api/bundles with empty resource_ids → 400.
+      5. POST /api/bundles with foreign resource_id (e.g. random uuid not owned) → only valid IDs kept; if none → 400.
+      6. GET /api/bundles → contains the new bundle with actual_count == 3.
+      7. PUT /api/bundles/{bid} {title:"مراجعة محدثة"} → ok; GET shows updated.
+      8. PUT /api/bundles/{bid} {resource_ids:[id1, id2]} → only those remain.
+      9. GET /api/bundle/check/{code} (no auth) → {kind:'bundle', title, resources_count:2}.
+      10. GET /api/bundle/check/INVALID → 404.
+      11. POST /api/bundle/{code}/access {student_name:"خالد", grade:"الثامن", section:"3"} → access_id. Note: student is الثامن but resources were originally for الخامس/السابع — bundle should still grant access.
+      12. GET /api/bundle/{code}/resources?access_id=... → returns 2 resources (in saved order).
+      13. GET /api/bundle/{code}/download/{id1}?access_id=... → 200 + file body.
+      14. GET /api/resources/{id1}/downloads (teacher) → row includes {student_name:"خالد", grade:"الثامن", section:"3", action:"download"} (and bundle_id present).
+      15. Try downloading a resource_id NOT in bundle via /api/bundle/{code}/download/{otherId} → 404.
+      16. Try the bundle access_id on /api/library/{anycode}/resources → 401 (kind mismatch).
+      17. Set bundle inactive via PUT {is_active:false} → check/access/resources/download return 404 (since query filters is_active:true).
+      18. DELETE /api/bundles/{bid} → 200; subsequent check → 404.
+      19. Code uppercasing: send lowercase code in check/access/resources → backend uppercases input, should work (we did .upper() everywhere).
       
-      Test plan:
-      1. login admin/teacher123 → احصل على token
-      2. GET /api/library/me → تأكد من library_code, videos_code, counts=0
-      3. POST /api/resources/upload (multipart) → رفع ملف نصي صغير (مثلاً .txt 1KB)، grades=الخامس,السادس
-      4. GET /api/resources → موجود
-      5. PUT /api/resources/{id} → غيّر title, is_active=false ثم true
-      6. GET /api/library/check/{library_code} → 200
-      7. POST /api/library/{code}/access {student_name: 'أحمد', grade: 'الخامس', section: '1'} → access_id
-      8. GET /api/library/{code}/resources?access_id=... → يحتوي المورد
-      9. GET /api/library/{code}/download/{rid}?access_id=... → 200 ويُرجع الملف
-      10. GET /api/resources/{id}/downloads (teacher token) → يحتوي الطالب 'أحمد'
-      11. POST /api/videos/youtube → فيديو يوتيوب
-      12. POST /api/videos/upload — رفع ملف فيديو صغير (اختياري إن أمكن، يمكن استخدام mp4 صغير)
-      13. GET /api/videos-library/check/{videos_code} → 200
-      14. POST /api/videos-library/{code}/access → access_id
-      15. GET /api/videos-library/{code}/videos → يحتوي الفيديوهات
-      16. GET /api/videos-library/{code}/video/{vid} → يسجل المشاهدة
-      17. POST comment → ينجح
-      18. GET comments → يحتوي التعليق
-      19. teacher: GET /api/videos/{vid}/views → يحتوي الطالب
-      20. teacher: GET /api/videos/{vid}/comments → يحتوي التعليق
-      21. teacher: DELETE comment → يُحذف
-      22. اختبار صحي: student صف الثامن لا يرى مورداً مخصصاً للخامس/السادس فقط
-      23. اختبار التحقق: رمز خاطئ → 404؛ access_id خاطئ → 401
+      Credentials in /app/memory/test_credentials.md.
+      DO NOT test frontend (will ask user separately).
+  - agent: "testing"
+    message: |
+      ✅ Resource Bundles Backend Testing Complete - 100% Success (31/31 tests passed)
       
-      لا تختبر الفرونت إند الآن.
-      Credentials في /app/memory/test_credentials.md.
+      Comprehensive testing completed for all Resource Bundles endpoints:
+      
+      ✅ Teacher Bundle Management (9 tests)
+         - Create, list, update, delete bundles
+         - Validation of resource ownership
+         - Error handling for invalid inputs
+      
+      ✅ Public Student Access (11 tests)
+         - Bundle check and access
+         - Resource listing and downloads
+         - Grade filter bypass (bundle-specific behavior)
+         - Download logging with bundle_id
+      
+      ✅ Security & Isolation (2 tests)
+         - Cross-kind access_id validation
+         - Library vs Bundle isolation
+      
+      ✅ State Management (5 tests)
+         - is_active toggle
+         - Inactive bundle access prevention
+      
+      ✅ Cleanup & Edge Cases (4 tests)
+         - Bundle deletion
+         - Resource cleanup
+         - Case-insensitive code handling
+      
+      All endpoints working correctly. No critical issues found.
+      Feature is production-ready.
   - agent: "testing"
     message: |
       ✅ تم التحقق من إصلاح المشكلة بنجاح - جميع اختبارات الـ Backend نجحت (9/9).

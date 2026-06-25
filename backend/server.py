@@ -3483,6 +3483,207 @@ async def vlib_add_comment(code: str, vid: str, body: CommentCreateReq):
 # انتهت إضافة مكتبة الموارد
 # =================================================================
 
+
+# =================================================================
+# ============ حزم الموارد (Resource Bundles) — Share Multiple =====
+# =================================================================
+
+class BundleCreateReq(BaseModel):
+    title: str
+    resource_ids: List[str]
+
+
+class BundleUpdateReq(BaseModel):
+    title: Optional[str] = None
+    resource_ids: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+
+@api_router.get("/bundles")
+async def list_bundles(t=Depends(get_teacher)):
+    items = await db.resource_bundles.find(
+        {"owner_id": t["teacher_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    # حساب عدد الموارد لكل حزمة
+    for it in items:
+        ids = it.get("resource_ids", [])
+        it["actual_count"] = await db.resources.count_documents({"id": {"$in": ids}, "owner_id": t["teacher_id"]})
+        it["view_count"] = await db.bundle_access_log.count_documents({"bundle_id": it["id"]}) if False else 0
+    return items
+
+
+@api_router.post("/bundles")
+async def create_bundle(body: BundleCreateReq, t=Depends(get_teacher)):
+    if not body.title.strip():
+        raise HTTPException(400, "العنوان مطلوب")
+    if not body.resource_ids:
+        raise HTTPException(400, "اختر موارد على الأقل")
+    # تحقق أن كل المعرفات تخص المعلم
+    existing = await db.resources.find(
+        {"id": {"$in": body.resource_ids}, "owner_id": t["teacher_id"]},
+        {"id": 1, "_id": 0}
+    ).to_list(500)
+    valid_ids = [r["id"] for r in existing]
+    if not valid_ids:
+        raise HTTPException(400, "لا توجد موارد صالحة")
+    # توليد رمز فريد 6 أحرف
+    code = None
+    for _ in range(15):
+        c = lib_random_code(6)
+        # نحفظ في مساحة منفصلة عن library_code للمعلمين
+        if not await db.resource_bundles.find_one({"code": c}):
+            code = c
+            break
+    if not code:
+        raise HTTPException(500, "تعذر توليد رمز")
+    bid = str(uuid.uuid4())
+    doc = {
+        "id": bid,
+        "owner_id": t["teacher_id"],
+        "code": code,
+        "title": body.title.strip(),
+        "resource_ids": valid_ids,
+        "is_active": True,
+        "created_at": now_iso(),
+    }
+    await db.resource_bundles.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/bundles/{bid}")
+async def update_bundle(bid: str, body: BundleUpdateReq, t=Depends(get_teacher)):
+    upd = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if "resource_ids" in upd:
+        if not upd["resource_ids"]:
+            raise HTTPException(400, "اختر موارد")
+        existing = await db.resources.find(
+            {"id": {"$in": upd["resource_ids"]}, "owner_id": t["teacher_id"]},
+            {"id": 1, "_id": 0}
+        ).to_list(500)
+        upd["resource_ids"] = [r["id"] for r in existing]
+    r = await db.resource_bundles.update_one({"id": bid, "owner_id": t["teacher_id"]}, {"$set": upd})
+    if r.matched_count == 0:
+        raise HTTPException(404, "غير موجودة")
+    return {"ok": True}
+
+
+@api_router.delete("/bundles/{bid}")
+async def delete_bundle(bid: str, t=Depends(get_teacher)):
+    r = await db.resource_bundles.delete_one({"id": bid, "owner_id": t["teacher_id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "غير موجودة")
+    return {"ok": True}
+
+
+# ===== Public Student Endpoints for Bundles =====
+
+@api_router.get("/bundle/check/{code}")
+async def bundle_check(code: str):
+    b = await db.resource_bundles.find_one({"code": code.upper(), "is_active": True}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "رمز الحزمة غير صحيح")
+    owner = await db.teachers.find_one({"id": b["owner_id"]}, {"_id": 0})
+    return {
+        "kind": "bundle",
+        "title": b.get("title", ""),
+        "owner_name": (owner or {}).get("teacher_name", "المعلم"),
+        "school_name": (owner or {}).get("school_name", ""),
+        "resources_count": len(b.get("resource_ids", [])),
+    }
+
+
+@api_router.post("/bundle/{code}/access")
+async def bundle_access(code: str, body: LibraryStudentJoinReq):
+    b = await db.resource_bundles.find_one({"code": code.upper(), "is_active": True}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "رمز الحزمة غير صحيح")
+    if not body.student_name.strip() or not body.grade or not body.section:
+        raise HTTPException(400, "بيانات ناقصة")
+    if body.grade not in ALLOWED_GRADES_LIB:
+        raise HTTPException(400, "الصف غير معتمد")
+    access_id = str(uuid.uuid4())
+    rec = {
+        "id": access_id,
+        "owner_id": b["owner_id"],
+        "code": code.upper(),
+        "bundle_id": b["id"],
+        "kind": "bundle",
+        "student_name": body.student_name.strip(),
+        "grade": body.grade,
+        "section": str(body.section),
+        "created_at": now_iso(),
+    }
+    await db.library_access.insert_one(rec)
+    return {
+        "access_id": access_id,
+        "student_name": rec["student_name"],
+        "grade": rec["grade"],
+        "section": rec["section"],
+        "title": b.get("title", ""),
+    }
+
+
+@api_router.get("/bundle/{code}/resources")
+async def bundle_resources(code: str, access_id: str):
+    b = await db.resource_bundles.find_one({"code": code.upper(), "is_active": True}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "رمز الحزمة غير صحيح")
+    a = await db.library_access.find_one({"id": access_id, "kind": "bundle"}, {"_id": 0})
+    if not a or a.get("bundle_id") != b["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    # الحزمة تتجاوز فلتر الصفوف لأن المعلم اختار الموارد صراحة
+    ids = b.get("resource_ids", [])
+    cur = db.resources.find({
+        "id": {"$in": ids},
+        "owner_id": b["owner_id"],
+        "is_active": True,
+    }, {"_id": 0, "storage_filename": 0})
+    items = await cur.to_list(1000)
+    # ترتيب حسب ترتيب الـ ids
+    order_map = {rid: i for i, rid in enumerate(ids)}
+    items.sort(key=lambda x: order_map.get(x["id"], 999))
+    return items
+
+
+@api_router.get("/bundle/{code}/download/{rid}")
+async def bundle_download(code: str, rid: str, access_id: str):
+    b = await db.resource_bundles.find_one({"code": code.upper(), "is_active": True}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "رمز الحزمة غير صحيح")
+    a = await db.library_access.find_one({"id": access_id, "kind": "bundle"}, {"_id": 0})
+    if not a or a.get("bundle_id") != b["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    if rid not in b.get("resource_ids", []):
+        raise HTTPException(404, "هذا المورد ليس ضمن الحزمة")
+    doc = await db.resources.find_one({"id": rid, "owner_id": b["owner_id"], "is_active": True})
+    if not doc:
+        raise HTTPException(404, "المورد غير متاح")
+    fpath = RESOURCES_DIR / doc["storage_filename"]
+    if not fpath.exists():
+        raise HTTPException(404, "الملف مفقود من الخادم")
+    await db.resource_access.insert_one({
+        "id": str(uuid.uuid4()),
+        "resource_id": rid,
+        "owner_id": b["owner_id"],
+        "bundle_id": b["id"],
+        "student_name": a["student_name"],
+        "grade": a["grade"],
+        "section": a["section"],
+        "action": "download",
+        "created_at": now_iso(),
+    })
+    return FileResponse(
+        path=str(fpath),
+        media_type=doc.get("content_type") or "application/octet-stream",
+        filename=doc.get("original_filename") or "file",
+    )
+
+
+# =================================================================
+# انتهت إضافة الحزم
+# =================================================================
+
 app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware, allow_credentials=True,
