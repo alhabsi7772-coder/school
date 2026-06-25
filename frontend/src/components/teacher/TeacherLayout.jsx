@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
   LayoutDashboard, Settings, LogOut, GraduationCap,
-  ChevronLeft, Menu, X, FolderOpen, BookOpen, Sparkles, Users, ShieldCheck, ClipboardList, ClipboardCheck, CalendarRange
+  ChevronLeft, Menu, X, FolderOpen, BookOpen, Sparkles, Users, ShieldCheck, ClipboardList, ClipboardCheck, CalendarRange, Library
 } from 'lucide-react';
 import Particles from '../Particles';
 import { API, getAuthHeaders } from '../../utils';
@@ -55,6 +55,7 @@ export default function TeacherLayout({ children, title, backTo }) {
     { path: '/teacher/question-bank', icon: BookOpen, label: 'بنك الأسئلة', color: '#00E676' },
     { path: '/teacher/gradebooks', icon: ClipboardList, label: 'سجل الدرجات', color: '#FF8A65' },
     { path: '/teacher/rubrics', icon: ClipboardCheck, label: 'التقييم السريع', color: '#64B5F6' },
+    { path: '/teacher/library', icon: Library, label: 'مكتبة الموارد', color: '#A78BFA' },
     ...(isAdmin ? [{ path: '/teacher/teachers', icon: Users, label: 'إدارة المعلمين', color: '#FF9100' }] : []),
     { path: '/teacher/settings', icon: Settings, label: 'الإعدادات', color: '#FFEA00' },
   ];

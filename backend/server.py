@@ -1,12 +1,17 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, File, UploadFile
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import FileResponse, StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
 import os
+import re
+import shutil
 import logging
 import json
+import asyncio
+import mimetypes
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -15,6 +20,7 @@ from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
 import random
+import string
 import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from openai import AsyncOpenAI
@@ -2783,6 +2789,699 @@ async def public_session_state(code: str, participant_id: str):
         "semester": sess["semester"],
     }
 
+
+# =================================================================
+# ======== مكتبة الموارد (Resource Library) — أُضيفت لاحقاً ========
+# =================================================================
+
+UPLOADS_DIR = Path("/app/backend/uploads")
+RESOURCES_DIR = UPLOADS_DIR / "resources"
+VIDEOS_DIR = UPLOADS_DIR / "videos"
+TMP_DIR = UPLOADS_DIR / ".tmp"
+for _d in (UPLOADS_DIR, RESOURCES_DIR, VIDEOS_DIR, TMP_DIR):
+    _d.mkdir(parents=True, exist_ok=True)
+
+MAX_RESOURCE_SIZE = 30 * 1024 * 1024  # 30 MB
+MAX_VIDEO_SIZE = 30 * 1024 * 1024     # 30 MB
+ALLOWED_GRADES_LIB = ["الخامس", "السادس", "السابع", "الثامن"]
+
+
+def lib_random_code(n: int = 6) -> str:
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=n))
+
+
+def safe_filename(name: str) -> str:
+    base = re.sub(r"[\\/:*?\"<>|]+", "_", name).strip()
+    base = base[:200] if base else "file"
+    return base
+
+
+def youtube_extract_id(url: str) -> Optional[str]:
+    if not url:
+        return None
+    patterns = [
+        r"youtu\.be/([A-Za-z0-9_-]{11})",
+        r"youtube\.com/watch\?[^ ]*v=([A-Za-z0-9_-]{11})",
+        r"youtube\.com/embed/([A-Za-z0-9_-]{11})",
+        r"youtube\.com/shorts/([A-Za-z0-9_-]{11})",
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return m.group(1)
+    return None
+
+
+async def ensure_teacher_lib_codes(t):
+    """يضمن وجود رمزَي مكتبة الموارد والفيديوهات للمعلم"""
+    teacher = t["teacher"]
+    tid = t["teacher_id"]
+    updates = {}
+    if not teacher.get("library_code"):
+        # رمز فريد للموارد
+        for _ in range(10):
+            c = lib_random_code(6)
+            if not await db.teachers.find_one({"library_code": c}):
+                updates["library_code"] = c
+                teacher["library_code"] = c
+                break
+    if not teacher.get("videos_code"):
+        for _ in range(10):
+            c = lib_random_code(6)
+            if not await db.teachers.find_one({"videos_code": c}):
+                updates["videos_code"] = c
+                teacher["videos_code"] = c
+                break
+    if updates:
+        await db.teachers.update_one({"id": tid}, {"$set": updates})
+    return teacher
+
+
+# -------------------- MODELS --------------------
+
+class LibraryInfoOut(BaseModel):
+    library_code: str
+    videos_code: str
+    resources_count: int
+    videos_count: int
+
+
+class ResourceCreateMeta(BaseModel):
+    title: str
+    description: str = ""
+    grades: List[str] = Field(default_factory=list)  # [] = للجميع
+    is_active: bool = True
+
+
+class ResourceUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    grades: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+
+class VideoCreateYouTube(BaseModel):
+    title: str
+    description: str = ""
+    youtube_url: str
+    grades: List[str] = Field(default_factory=list)
+    allow_comments: bool = True
+    is_active: bool = True
+
+
+class VideoUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    grades: Optional[List[str]] = None
+    allow_comments: Optional[bool] = None
+    is_active: Optional[bool] = None
+    youtube_url: Optional[str] = None
+
+
+class LibraryStudentJoinReq(BaseModel):
+    student_name: str
+    grade: str
+    section: str
+
+
+class CommentCreateReq(BaseModel):
+    access_id: str
+    text: str
+
+
+# -------------------- TEACHER: مكتبة الإعدادات والرموز --------------------
+
+@api_router.get("/library/me", response_model=LibraryInfoOut)
+async def lib_me(t=Depends(get_teacher)):
+    teacher = await ensure_teacher_lib_codes(t)
+    rc = await db.resources.count_documents({"owner_id": t["teacher_id"]})
+    vc = await db.videos.count_documents({"owner_id": t["teacher_id"]})
+    return LibraryInfoOut(
+        library_code=teacher["library_code"],
+        videos_code=teacher["videos_code"],
+        resources_count=rc,
+        videos_count=vc,
+    )
+
+
+@api_router.post("/library/regenerate")
+async def lib_regenerate(payload: dict, t=Depends(get_teacher)):
+    """نوع: 'library' أو 'videos'"""
+    kind = (payload or {}).get("kind", "library")
+    field = "library_code" if kind == "library" else "videos_code"
+    for _ in range(10):
+        c = lib_random_code(6)
+        if not await db.teachers.find_one({field: c}):
+            await db.teachers.update_one({"id": t["teacher_id"]}, {"$set": {field: c}})
+            return {"code": c}
+    raise HTTPException(500, "تعذر توليد رمز فريد")
+
+
+# -------------------- TEACHER: الموارد (Resources) --------------------
+
+@api_router.get("/resources")
+async def list_resources(t=Depends(get_teacher)):
+    items = await db.resources.find(
+        {"owner_id": t["teacher_id"]},
+        {"_id": 0, "storage_filename": 0}
+    ).to_list(1000)
+    # عدد المشاهدات/التحميلات لكل مورد
+    for it in items:
+        it["download_count"] = await db.resource_access.count_documents(
+            {"resource_id": it["id"], "action": "download"}
+        )
+        it["view_count"] = await db.resource_access.count_documents(
+            {"resource_id": it["id"]}
+        )
+    return sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+@api_router.post("/resources/upload")
+async def upload_resource(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    grades: str = Form(""),  # CSV "الخامس,السادس"
+    is_active: bool = Form(True),
+    t=Depends(get_teacher),
+):
+    teacher = await ensure_teacher_lib_codes(t)
+    # قراءة الحجم بأمان
+    contents = await file.read()
+    if len(contents) > MAX_RESOURCE_SIZE:
+        raise HTTPException(413, f"الملف يتجاوز الحد الأقصى ({MAX_RESOURCE_SIZE // 1024 // 1024}MB)")
+    if len(contents) == 0:
+        raise HTTPException(400, "الملف فارغ")
+
+    # حفظ الملف
+    rid = str(uuid.uuid4())
+    orig_name = safe_filename(file.filename or "file")
+    ext = Path(orig_name).suffix
+    storage_name = f"{rid}{ext}"
+    final_path = RESOURCES_DIR / storage_name
+    await asyncio.to_thread(final_path.write_bytes, contents)
+
+    grades_list = [g.strip() for g in (grades or "").split(",") if g.strip() in ALLOWED_GRADES_LIB]
+
+    doc = {
+        "id": rid,
+        "owner_id": t["teacher_id"],
+        "title": title.strip(),
+        "description": (description or "").strip(),
+        "original_filename": orig_name,
+        "storage_filename": storage_name,
+        "content_type": file.content_type or mimetypes.guess_type(orig_name)[0] or "application/octet-stream",
+        "size_bytes": len(contents),
+        "grades": grades_list,  # [] = للجميع
+        "is_active": bool(is_active),
+        "year": teacher.get("academic_year", DEFAULT_ACADEMIC_YEAR),
+        "semester": teacher.get("semester", DEFAULT_SEMESTER),
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    await db.resources.insert_one(doc)
+    doc.pop("_id", None)
+    doc.pop("storage_filename", None)
+    return doc
+
+
+@api_router.put("/resources/{rid}")
+async def update_resource(rid: str, body: ResourceUpdate, t=Depends(get_teacher)):
+    upd = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if "grades" in upd:
+        upd["grades"] = [g for g in upd["grades"] if g in ALLOWED_GRADES_LIB]
+    upd["updated_at"] = now_iso()
+    r = await db.resources.update_one({"id": rid, "owner_id": t["teacher_id"]}, {"$set": upd})
+    if r.matched_count == 0:
+        raise HTTPException(404, "المورد غير موجود")
+    return {"ok": True}
+
+
+@api_router.delete("/resources/{rid}")
+async def delete_resource(rid: str, t=Depends(get_teacher)):
+    doc = await db.resources.find_one({"id": rid, "owner_id": t["teacher_id"]})
+    if not doc:
+        raise HTTPException(404, "المورد غير موجود")
+    try:
+        (RESOURCES_DIR / doc["storage_filename"]).unlink(missing_ok=True)
+    except Exception:
+        pass
+    await db.resources.delete_one({"id": rid})
+    await db.resource_access.delete_many({"resource_id": rid})
+    return {"ok": True}
+
+
+@api_router.get("/resources/{rid}/downloads")
+async def resource_downloads(rid: str, t=Depends(get_teacher)):
+    r = await db.resources.find_one({"id": rid, "owner_id": t["teacher_id"]}, {"_id": 0, "id": 1})
+    if not r:
+        raise HTTPException(404, "غير موجود")
+    rows = await db.resource_access.find(
+        {"resource_id": rid}, {"_id": 0}
+    ).sort("created_at", -1).to_list(2000)
+    return rows
+
+
+# -------------------- TEACHER: الفيديوهات --------------------
+
+@api_router.get("/videos")
+async def list_videos(t=Depends(get_teacher)):
+    items = await db.videos.find(
+        {"owner_id": t["teacher_id"]},
+        {"_id": 0, "storage_filename": 0}
+    ).to_list(1000)
+    for it in items:
+        it["view_count"] = await db.video_views.count_documents({"video_id": it["id"]})
+        it["comment_count"] = await db.video_comments.count_documents({"video_id": it["id"]})
+    return sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+@api_router.post("/videos/youtube")
+async def create_video_youtube(body: VideoCreateYouTube, t=Depends(get_teacher)):
+    teacher = await ensure_teacher_lib_codes(t)
+    yt_id = youtube_extract_id(body.youtube_url)
+    if not yt_id:
+        raise HTTPException(400, "رابط YouTube غير صالح")
+    vid = str(uuid.uuid4())
+    grades_list = [g for g in body.grades if g in ALLOWED_GRADES_LIB]
+    doc = {
+        "id": vid,
+        "owner_id": t["teacher_id"],
+        "title": body.title.strip(),
+        "description": body.description.strip(),
+        "source_type": "youtube",
+        "youtube_url": body.youtube_url.strip(),
+        "youtube_id": yt_id,
+        "storage_filename": None,
+        "original_filename": None,
+        "content_type": None,
+        "size_bytes": 0,
+        "grades": grades_list,
+        "is_active": body.is_active,
+        "allow_comments": body.allow_comments,
+        "year": teacher.get("academic_year", DEFAULT_ACADEMIC_YEAR),
+        "semester": teacher.get("semester", DEFAULT_SEMESTER),
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    await db.videos.insert_one(doc)
+    doc.pop("_id", None)
+    doc.pop("storage_filename", None)
+    return doc
+
+
+@api_router.post("/videos/upload")
+async def upload_video_file(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    grades: str = Form(""),
+    is_active: bool = Form(True),
+    allow_comments: bool = Form(True),
+    t=Depends(get_teacher),
+):
+    teacher = await ensure_teacher_lib_codes(t)
+    contents = await file.read()
+    if len(contents) > MAX_VIDEO_SIZE:
+        raise HTTPException(413, f"الفيديو يتجاوز {MAX_VIDEO_SIZE // 1024 // 1024}MB")
+    if len(contents) == 0:
+        raise HTTPException(400, "الملف فارغ")
+    ct = file.content_type or ""
+    if not ct.startswith("video/"):
+        # نسمح بأي ملف لكن الأفضل تحذير عبر MIME
+        guessed = mimetypes.guess_type(file.filename or "")[0] or ""
+        if not guessed.startswith("video/"):
+            raise HTTPException(400, "يجب أن يكون الملف من نوع فيديو")
+        ct = guessed
+
+    vid = str(uuid.uuid4())
+    orig_name = safe_filename(file.filename or "video.mp4")
+    ext = Path(orig_name).suffix or ".mp4"
+    storage_name = f"{vid}{ext}"
+    final_path = VIDEOS_DIR / storage_name
+    await asyncio.to_thread(final_path.write_bytes, contents)
+
+    grades_list = [g.strip() for g in (grades or "").split(",") if g.strip() in ALLOWED_GRADES_LIB]
+
+    doc = {
+        "id": vid,
+        "owner_id": t["teacher_id"],
+        "title": title.strip(),
+        "description": (description or "").strip(),
+        "source_type": "upload",
+        "youtube_url": None,
+        "youtube_id": None,
+        "storage_filename": storage_name,
+        "original_filename": orig_name,
+        "content_type": ct,
+        "size_bytes": len(contents),
+        "grades": grades_list,
+        "is_active": bool(is_active),
+        "allow_comments": bool(allow_comments),
+        "year": teacher.get("academic_year", DEFAULT_ACADEMIC_YEAR),
+        "semester": teacher.get("semester", DEFAULT_SEMESTER),
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    await db.videos.insert_one(doc)
+    doc.pop("_id", None)
+    doc.pop("storage_filename", None)
+    return doc
+
+
+@api_router.put("/videos/{vid}")
+async def update_video(vid: str, body: VideoUpdate, t=Depends(get_teacher)):
+    upd = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if "grades" in upd:
+        upd["grades"] = [g for g in upd["grades"] if g in ALLOWED_GRADES_LIB]
+    if "youtube_url" in upd:
+        yt_id = youtube_extract_id(upd["youtube_url"])
+        if not yt_id:
+            raise HTTPException(400, "رابط YouTube غير صالح")
+        upd["youtube_id"] = yt_id
+    upd["updated_at"] = now_iso()
+    r = await db.videos.update_one({"id": vid, "owner_id": t["teacher_id"]}, {"$set": upd})
+    if r.matched_count == 0:
+        raise HTTPException(404, "الفيديو غير موجود")
+    return {"ok": True}
+
+
+@api_router.delete("/videos/{vid}")
+async def delete_video(vid: str, t=Depends(get_teacher)):
+    doc = await db.videos.find_one({"id": vid, "owner_id": t["teacher_id"]})
+    if not doc:
+        raise HTTPException(404, "الفيديو غير موجود")
+    if doc.get("storage_filename"):
+        try:
+            (VIDEOS_DIR / doc["storage_filename"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+    await db.videos.delete_one({"id": vid})
+    await db.video_views.delete_many({"video_id": vid})
+    await db.video_comments.delete_many({"video_id": vid})
+    return {"ok": True}
+
+
+@api_router.get("/videos/{vid}/views")
+async def video_views_list(vid: str, t=Depends(get_teacher)):
+    v = await db.videos.find_one({"id": vid, "owner_id": t["teacher_id"]}, {"_id": 0, "id": 1})
+    if not v:
+        raise HTTPException(404, "غير موجود")
+    rows = await db.video_views.find({"video_id": vid}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    return rows
+
+
+@api_router.get("/videos/{vid}/comments")
+async def video_comments_list(vid: str, t=Depends(get_teacher)):
+    v = await db.videos.find_one({"id": vid, "owner_id": t["teacher_id"]}, {"_id": 0, "id": 1})
+    if not v:
+        raise HTTPException(404, "غير موجود")
+    rows = await db.video_comments.find({"video_id": vid}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    return rows
+
+
+@api_router.delete("/videos/{vid}/comments/{cid}")
+async def delete_video_comment(vid: str, cid: str, t=Depends(get_teacher)):
+    v = await db.videos.find_one({"id": vid, "owner_id": t["teacher_id"]}, {"_id": 0, "id": 1})
+    if not v:
+        raise HTTPException(404, "غير موجود")
+    r = await db.video_comments.delete_one({"id": cid, "video_id": vid})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "التعليق غير موجود")
+    return {"ok": True}
+
+
+# ============= PUBLIC: مكتبة الطالب — الموارد =============
+
+async def _lib_owner_by_code(code: str, kind: str):
+    field = "library_code" if kind == "library" else "videos_code"
+    return await db.teachers.find_one({field: code.upper()}, {"_id": 0})
+
+
+@api_router.get("/library/check/{code}")
+async def lib_check(code: str):
+    owner = await _lib_owner_by_code(code, "library")
+    if not owner:
+        raise HTTPException(404, "رمز المكتبة غير صحيح")
+    return {
+        "kind": "library",
+        "owner_name": owner.get("teacher_name", "المعلم"),
+        "school_name": owner.get("school_name", ""),
+    }
+
+
+@api_router.post("/library/{code}/access")
+async def lib_access(code: str, body: LibraryStudentJoinReq):
+    owner = await _lib_owner_by_code(code, "library")
+    if not owner:
+        raise HTTPException(404, "رمز المكتبة غير صحيح")
+    if not body.student_name.strip() or not body.grade or not body.section:
+        raise HTTPException(400, "بيانات ناقصة")
+    if body.grade not in ALLOWED_GRADES_LIB:
+        raise HTTPException(400, "الصف غير معتمد")
+
+    access_id = str(uuid.uuid4())
+    rec = {
+        "id": access_id,
+        "owner_id": owner["id"],
+        "code": code.upper(),
+        "kind": "library",
+        "student_name": body.student_name.strip(),
+        "grade": body.grade,
+        "section": str(body.section),
+        "created_at": now_iso(),
+    }
+    await db.library_access.insert_one(rec)
+    return {"access_id": access_id, "student_name": rec["student_name"], "grade": rec["grade"], "section": rec["section"]}
+
+
+async def _get_access(access_id: str, kind: str):
+    a = await db.library_access.find_one({"id": access_id, "kind": kind}, {"_id": 0})
+    if not a:
+        raise HTTPException(401, "جلسة غير صالحة — سجّل الدخول من جديد")
+    return a
+
+
+@api_router.get("/library/{code}/resources")
+async def lib_resources_for_student(code: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "library")
+    if not owner:
+        raise HTTPException(404, "رمز المكتبة غير صحيح")
+    a = await _get_access(access_id, "library")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة لا تطابق هذه المكتبة")
+
+    # فلتر حسب الصف: مورد بدون grades يظهر للجميع، أو يحتوي صف الطالب
+    cur = db.resources.find({
+        "owner_id": owner["id"],
+        "is_active": True,
+        "$or": [
+            {"grades": {"$size": 0}},
+            {"grades": a["grade"]},
+            {"grades": {"$exists": False}},
+        ]
+    }, {"_id": 0, "storage_filename": 0})
+    items = await cur.to_list(1000)
+    return sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+@api_router.get("/library/{code}/download/{rid}")
+async def lib_download(code: str, rid: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "library")
+    if not owner:
+        raise HTTPException(404, "رمز المكتبة غير صحيح")
+    a = await _get_access(access_id, "library")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    doc = await db.resources.find_one({"id": rid, "owner_id": owner["id"], "is_active": True})
+    if not doc:
+        raise HTTPException(404, "المورد غير متاح")
+    grades = doc.get("grades") or []
+    if grades and a["grade"] not in grades:
+        raise HTTPException(403, "هذا المورد ليس متاحاً لصفك")
+    fpath = RESOURCES_DIR / doc["storage_filename"]
+    if not fpath.exists():
+        raise HTTPException(404, "الملف مفقود من الخادم")
+    # تسجيل التحميل
+    await db.resource_access.insert_one({
+        "id": str(uuid.uuid4()),
+        "resource_id": rid,
+        "owner_id": owner["id"],
+        "student_name": a["student_name"],
+        "grade": a["grade"],
+        "section": a["section"],
+        "action": "download",
+        "created_at": now_iso(),
+    })
+    return FileResponse(
+        path=str(fpath),
+        media_type=doc.get("content_type") or "application/octet-stream",
+        filename=doc.get("original_filename") or "file",
+    )
+
+
+# ============= PUBLIC: مكتبة الطالب — الفيديوهات =============
+
+@api_router.get("/videos-library/check/{code}")
+async def vlib_check(code: str):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز مكتبة الفيديو غير صحيح")
+    return {
+        "kind": "videos",
+        "owner_name": owner.get("teacher_name", "المعلم"),
+        "school_name": owner.get("school_name", ""),
+    }
+
+
+@api_router.post("/videos-library/{code}/access")
+async def vlib_access(code: str, body: LibraryStudentJoinReq):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز مكتبة الفيديو غير صحيح")
+    if not body.student_name.strip() or not body.grade or not body.section:
+        raise HTTPException(400, "بيانات ناقصة")
+    if body.grade not in ALLOWED_GRADES_LIB:
+        raise HTTPException(400, "الصف غير معتمد")
+    access_id = str(uuid.uuid4())
+    rec = {
+        "id": access_id,
+        "owner_id": owner["id"],
+        "code": code.upper(),
+        "kind": "videos",
+        "student_name": body.student_name.strip(),
+        "grade": body.grade,
+        "section": str(body.section),
+        "created_at": now_iso(),
+    }
+    await db.library_access.insert_one(rec)
+    return {"access_id": access_id, "student_name": rec["student_name"], "grade": rec["grade"], "section": rec["section"]}
+
+
+@api_router.get("/videos-library/{code}/videos")
+async def vlib_list_videos(code: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز غير صحيح")
+    a = await _get_access(access_id, "videos")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    cur = db.videos.find({
+        "owner_id": owner["id"],
+        "is_active": True,
+        "$or": [
+            {"grades": {"$size": 0}},
+            {"grades": a["grade"]},
+            {"grades": {"$exists": False}},
+        ]
+    }, {"_id": 0, "storage_filename": 0})
+    items = await cur.to_list(1000)
+    return sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+@api_router.get("/videos-library/{code}/video/{vid}")
+async def vlib_get_video(code: str, vid: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز غير صحيح")
+    a = await _get_access(access_id, "videos")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    doc = await db.videos.find_one({"id": vid, "owner_id": owner["id"], "is_active": True}, {"_id": 0, "storage_filename": 0})
+    if not doc:
+        raise HTTPException(404, "الفيديو غير متاح")
+    grades = doc.get("grades") or []
+    if grades and a["grade"] not in grades:
+        raise HTTPException(403, "هذا الفيديو ليس متاحاً لصفك")
+    # تسجيل المشاهدة (مرة واحدة لكل طالب)
+    exists = await db.video_views.find_one({
+        "video_id": vid, "student_name": a["student_name"],
+        "grade": a["grade"], "section": a["section"]
+    })
+    if not exists:
+        await db.video_views.insert_one({
+            "id": str(uuid.uuid4()),
+            "video_id": vid,
+            "owner_id": owner["id"],
+            "student_name": a["student_name"],
+            "grade": a["grade"],
+            "section": a["section"],
+            "created_at": now_iso(),
+        })
+    return doc
+
+
+@api_router.get("/videos-library/{code}/video/{vid}/stream")
+async def vlib_stream_video(code: str, vid: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز غير صحيح")
+    a = await _get_access(access_id, "videos")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    doc = await db.videos.find_one({"id": vid, "owner_id": owner["id"], "is_active": True})
+    if not doc or doc.get("source_type") != "upload":
+        raise HTTPException(404, "غير متاح")
+    grades = doc.get("grades") or []
+    if grades and a["grade"] not in grades:
+        raise HTTPException(403, "غير متاح لصفك")
+    fpath = VIDEOS_DIR / doc["storage_filename"]
+    if not fpath.exists():
+        raise HTTPException(404, "الملف مفقود")
+    return FileResponse(str(fpath), media_type=doc.get("content_type") or "video/mp4")
+
+
+@api_router.get("/videos-library/{code}/video/{vid}/comments")
+async def vlib_comments(code: str, vid: str, access_id: str):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز غير صحيح")
+    a = await _get_access(access_id, "videos")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    v = await db.videos.find_one({"id": vid, "owner_id": owner["id"], "is_active": True}, {"_id": 0, "id": 1})
+    if not v:
+        raise HTTPException(404, "غير متاح")
+    rows = await db.video_comments.find({"video_id": vid}, {"_id": 0}).sort("created_at", 1).to_list(5000)
+    return rows
+
+
+@api_router.post("/videos-library/{code}/video/{vid}/comments")
+async def vlib_add_comment(code: str, vid: str, body: CommentCreateReq):
+    owner = await _lib_owner_by_code(code, "videos")
+    if not owner:
+        raise HTTPException(404, "رمز غير صحيح")
+    a = await _get_access(body.access_id, "videos")
+    if a["owner_id"] != owner["id"]:
+        raise HTTPException(401, "جلسة غير صالحة")
+    v = await db.videos.find_one({"id": vid, "owner_id": owner["id"], "is_active": True})
+    if not v:
+        raise HTTPException(404, "غير متاح")
+    if not v.get("allow_comments", True):
+        raise HTTPException(403, "التعليقات غير مفعّلة على هذا الفيديو")
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(400, "التعليق فارغ")
+    if len(text) > 1000:
+        raise HTTPException(400, "التعليق طويل جداً (1000 حرف كحد أقصى)")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "video_id": vid,
+        "owner_id": owner["id"],
+        "student_name": a["student_name"],
+        "grade": a["grade"],
+        "section": a["section"],
+        "text": text,
+        "created_at": now_iso(),
+    }
+    await db.video_comments.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+# =================================================================
+# انتهت إضافة مكتبة الموارد
+# =================================================================
 
 app.include_router(api_router)
 app.add_middleware(

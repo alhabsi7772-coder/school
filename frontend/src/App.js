@@ -28,6 +28,12 @@ import StudentResult from './components/student/StudentResult';
 import StudentProject from './components/student/StudentProject';
 import StudentGrades from './components/student/StudentGrades';
 import StudentJoinGrade from './components/student/StudentJoinGrade';
+import StudentLibrary from './components/student/StudentLibrary';
+import StudentVideoLibrary from './components/student/StudentVideoLibrary';
+import StudentVideoPlay from './components/student/StudentVideoPlay';
+import LibraryResources from './components/teacher/LibraryResources';
+import LibraryVideos from './components/teacher/LibraryVideos';
+import LibraryVideoDetail from './components/teacher/LibraryVideoDetail';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -56,6 +62,9 @@ function App() {
             <Route path="/project/:code" element={<StudentProject />} />
             <Route path="/my-grades" element={<StudentGrades />} />
             <Route path="/g/:code" element={<StudentJoinGrade />} />
+            <Route path="/library/:code" element={<StudentLibrary />} />
+            <Route path="/v/:code" element={<StudentVideoLibrary />} />
+            <Route path="/v/:code/:videoId" element={<StudentVideoPlay />} />
             <Route path="/quiz/:quizId/lobby" element={<StudentLobby />} />
             <Route path="/quiz/:quizId/exam" element={<StudentExam />} />
             <Route path="/quiz/:quizId/result/:submissionId" element={<StudentResult />} />
@@ -71,6 +80,9 @@ function App() {
             <Route path="/teacher/rubrics/:rubricId/edit" element={<ProtectedRoute><RubricEditor /></ProtectedRoute>} />
             <Route path="/teacher/rubrics/:rubricId/evaluate" element={<ProtectedRoute><RubricEvaluate /></ProtectedRoute>} />
             <Route path="/teacher/rubrics/:rubricId/print" element={<ProtectedRoute><RubricPrint /></ProtectedRoute>} />
+            <Route path="/teacher/library" element={<ProtectedRoute><LibraryResources /></ProtectedRoute>} />
+            <Route path="/teacher/library/videos" element={<ProtectedRoute><LibraryVideos /></ProtectedRoute>} />
+            <Route path="/teacher/library/videos/:videoId" element={<ProtectedRoute><LibraryVideoDetail /></ProtectedRoute>} />
             <Route path="/teacher/teachers" element={<AdminRoute><TeacherManagement /></AdminRoute>} />
             <Route path="/teacher/quiz/new" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/edit" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
