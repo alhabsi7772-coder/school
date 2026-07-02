@@ -761,6 +761,9 @@ html.mode-light .glass-modal textarea {
 }
 html.mode-light .glass-modal input::placeholder,
 html.mode-light .glass-modal textarea::placeholder { color: #94a3b8 !important; }
+/* selects داخل النوافذ بالوضع النهاري: نفس لوحة الكريمي الموحدة */
+html.mode-light .glass-modal select.input-field { background-color: #FBF6E7 !important; }
+html.mode-light .glass-modal select.input-field:focus { background-color: #FFFDF5 !important; }
 
 /* ============================================================
    FIX: Result detail cards — dark backgrounds + light text

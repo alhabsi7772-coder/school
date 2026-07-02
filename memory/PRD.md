@@ -100,6 +100,7 @@
 - إصلاح `frontend/.env` (سطران ملتصقان ENABLE_HEALTH_CHECK/DISABLE_VISUAL_EDITS بعد سحب GitHub)
 - بقرار المستخدم: تم الإبقاء على الصفين التاسع والعاشر في قوائم المعلم
 - تم التحقق عبر وكيل الاختبار: `/app/test_reports/iteration_2.json` — كل الإصلاحات ناجحة
+- إصلاح مظهر القوائم على Safari/iOS (كانت تظهر رمادية بدون نص): فرض `appearance: none` على `select.input-field` + سهم SVG مخصص يسار (RTL) + ألوان الثيم، مع تخصيص للوضع النهاري (كريمي #FBF6E7) — تحقق وكيل الاختبار بنجاح 100% (`iteration_3.json`)
 
 ## Credentials
 ملف `/app/memory/test_credentials.md` — Admin: `admin` / `teacher123`
