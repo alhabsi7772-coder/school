@@ -336,7 +336,7 @@ export default function QuestionBank() {
                   data-testid="gen-grade-select"
                   value={genGrade}
                   onChange={e => { setGenGrade(e.target.value); setGenTopic(''); }}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="input-field"
                 >
                   <option value="">-- اختر الصف --</option>
                   <option value="5">الصف الخامس</option>
