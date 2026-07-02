@@ -101,6 +101,7 @@
 - بقرار المستخدم: تم الإبقاء على الصفين التاسع والعاشر في قوائم المعلم
 - تم التحقق عبر وكيل الاختبار: `/app/test_reports/iteration_2.json` — كل الإصلاحات ناجحة
 - إصلاح مظهر القوائم على Safari/iOS (كانت تظهر رمادية بدون نص): فرض `appearance: none` على `select.input-field` + سهم SVG مخصص يسار (RTL) + ألوان الثيم، مع تخصيص للوضع النهاري (كريمي #FBF6E7) — تحقق وكيل الاختبار بنجاح 100% (`iteration_3.json`)
+- **إصلاح جذري لمشكلة "الخيارات الفارغة" في القوائم**: أداة visual-edits كانت تحقن `<span>` داخل `<select>` (HTML غير صالح — Safari يُسقط الخيارات). الحل: `DISABLE_VISUAL_EDITS=true` + مسح `node_modules/.cache` وإعادة تشغيل الواجهة. ⚠️ تحذير: لا تُعِد تفعيل visual-edits وإلا ستعود المشكلة. تحقق وكيل الاختبار 100% (`iteration_4.json`)
 
 ## Credentials
 ملف `/app/memory/test_credentials.md` — Admin: `admin` / `teacher123`
