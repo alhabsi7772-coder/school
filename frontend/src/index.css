@@ -348,6 +348,25 @@
 
 select.input-field option { background: #1E2A3A; color: #F8FAFC; }
 
+/* ── القوائم المنسدلة: مظهر موحّد على كل المتصفحات (خاصة Safari/iOS) ──
+   بدون appearance:none تعرض iOS/Safari القائمة بشكل رمادي افتراضي
+   ويختفي النص المختار — لذلك نفرض المظهر المخصص + سهم SVG يسار (RTL) */
+select.input-field,
+select.input-field:focus {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-color: rgba(17, 24, 39, 0.7) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 0.85rem center !important;
+  background-size: 1rem !important;
+  padding-left: 2.4rem !important;
+  color: #F8FAFC !important;
+  cursor: pointer;
+}
+select.input-field:focus { background-color: rgba(17, 24, 39, 0.9) !important; }
+
 /* ============================================================
    CARD COMPONENTS
    ============================================================ */
@@ -627,6 +646,16 @@ html.mode-light .input-field:focus {
   border-color: rgba(184, 146, 74, 0.65) !important;
 }
 html.mode-light select.input-field option { background: #FFFDF5 !important; color: #1a1a1a !important; }
+html.mode-light select.input-field,
+html.mode-light select.input-field:focus {
+  background-color: #FBF6E7 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a7d5e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 0.85rem center !important;
+  background-size: 1rem !important;
+  color: #1a1a1a !important;
+}
+html.mode-light select.input-field:focus { background-color: #FFFDF5 !important; }
 
 /* ── Text: rich black on cream ── */
 html.mode-light .glass-card .text-white,
