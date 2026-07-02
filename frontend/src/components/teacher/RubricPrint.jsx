@@ -126,8 +126,8 @@ export default function RubricPrint() {
 
         {mode !== 'blank' && (
           <select value={gbId} onChange={e => setGbId(e.target.value)} data-testid="print-gb-select"
-            className="px-3 py-2 rounded-lg text-sm font-bold"
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+            className="input-field text-sm font-bold"
+            style={{ width: 'auto', maxWidth: '280px' }}>
             <option value="">— اختر الصف/الشعبة —</option>
             {gradebooks.map(g => (
               <option key={g.id} value={g.id}>الصف {g.grade}/{g.section} ({g.student_count} طالب)</option>

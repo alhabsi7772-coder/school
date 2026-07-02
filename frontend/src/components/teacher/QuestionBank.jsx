@@ -210,7 +210,8 @@ export default function QuestionBank() {
           data-testid="filter-grade"
           value={filterGrade}
           onChange={e => setFilterGrade(e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-violet-400"
+          className="input-field text-sm"
+          style={{ width: 'auto' }}
         >
           <option value="">كل الصفوف</option>
           <option value="5">الصف الخامس</option>
@@ -221,7 +222,8 @@ export default function QuestionBank() {
           data-testid="filter-difficulty"
           value={filterDiff}
           onChange={e => setFilterDiff(e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-violet-400"
+          className="input-field text-sm"
+          style={{ width: 'auto' }}
         >
           <option value="">كل المستويات</option>
           <option value="easy">سهل</option>
@@ -233,7 +235,8 @@ export default function QuestionBank() {
           data-testid="filter-type"
           value={filterType}
           onChange={e => setFilterType(e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-violet-400"
+          className="input-field text-sm"
+          style={{ width: 'auto' }}
         >
           <option value="">كل الأنواع</option>
           <option value="mcq">اختياري</option>
@@ -350,7 +353,7 @@ export default function QuestionBank() {
                     data-testid="gen-topic-select"
                     value={genTopic}
                     onChange={e => setGenTopic(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="input-field"
                   >
                     <option value="">اختيار عشوائي من المنهج</option>
                     {topicsForGrade.map(t => (

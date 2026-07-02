@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { ClipboardList, Plus, Trash2, Users, FileUp, X, AlertTriangle, ArrowLeft } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
-import { API, getAuthHeaders } from '../../utils';
+import { API, getAuthHeaders, sectionsOfGrade } from '../../utils';
 import { fileToBase64, GRADE_ORDER_NUM, themeOfGrade as themeOf } from '../../utils/gradebook';
 
 const GRADE_OPTIONS = ['الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
@@ -264,16 +264,19 @@ export default function Gradebooks() {
                 <div className="flex-1">
                   <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الصف</label>
                   <select className="input-field" value={form.grade}
-                    onChange={e => setForm(f => ({ ...f, grade: e.target.value }))}
+                    onChange={e => setForm(f => ({ ...f, grade: e.target.value, section: '' }))}
                     data-testid="gradebook-grade-select">
                     {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الشعبة</label>
-                  <input className="input-field" placeholder="مثال: 3" required value={form.section}
+                  <select className="input-field" required value={form.section}
                     onChange={e => setForm(f => ({ ...f, section: e.target.value }))}
-                    data-testid="gradebook-section-input" />
+                    data-testid="gradebook-section-select">
+                    <option value="">اختر الشعبة</option>
+                    {sectionsOfGrade(form.grade).map(s => <option key={s} value={String(s)}>{s}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="px-3 py-2 rounded-xl text-xs font-bold" data-testid="gradebook-template-hint"

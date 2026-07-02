@@ -6,10 +6,13 @@ export const getAuthHeaders = () => ({
 
 export const GRADES = {
   'الخامس': [1, 2, 3, 4, 5, 6, 7],
-  'السادس': [1, 2, 3, 4, 5, 6],
+  'السادس': [1, 2, 3, 4, 5, 6, 7],
   'السابع': [1, 2, 3, 4, 5, 6],
-  'الثامن': [1, 2, 3, 4, 5],
+  'الثامن': [1, 2, 3, 4, 5, 6],
 };
+
+// شعب أي صف — الصفوف غير المعرَّفة (التاسع/العاشر) تحصل على 7 شعب افتراضياً
+export const sectionsOfGrade = (grade) => GRADES[grade] || [1, 2, 3, 4, 5, 6, 7];
 
 export const QUESTION_TYPES = {
   mcq: { label: 'اختياري', color: 'bg-blue-900/40 text-cyan-300 border border-cyan-800/40' },
