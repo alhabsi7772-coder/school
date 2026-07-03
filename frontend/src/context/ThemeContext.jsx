@@ -89,7 +89,8 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--login-video-hue', `${delta}deg`);
     // Soft/realistic treatment for premium themes
     root.classList.toggle('theme-soft', !!t.soft);
-    // Lux AI OS theme class
+    // Lux AI OS theme class — ملاحظة: التفعيل البصري الفعلي داخل الموقع يتم عبر
+    // فئة 'in-app' التي يضيفها TeacherLayout (صفحات الدخول لا تتأثر رغم وجود theme-lux)
     root.classList.toggle('theme-lux', !!t.lux);
   }, [theme, mode]);
 
