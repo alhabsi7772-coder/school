@@ -1,0 +1,89 @@
+{
+  "theme_and_archetype": {
+    "theme": "Dark",
+    "archetype": "Archetype 5 (Luxury) mixed with AI OS",
+    "domain": "Education/SaaS (Arabic RTL)",
+    "mood": "Futuristic, premium, cinematic, minimal, alive"
+  },
+  "typography": {
+    "primary_font": "IBM Plex Sans Arabic",
+    "secondary_font": "Inter",
+    "font_strategy": "Elegant light weights (300, 400) for large text, readable weights for tables. Generous spacing.",
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');"
+    ]
+  },
+  "color_palette": {
+    "theme_class": ".theme-lux",
+    "background_primary": "#050505",
+    "background_secondary": "#0A0A0A",
+    "card_bg": "rgba(255, 255, 255, 0.03)",
+    "border_color": "rgba(255, 255, 255, 0.08)",
+    "primary_accent": "#16D67A",
+    "secondary_accent": "#28F5A7",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "rgba(255, 255, 255, 0.65)",
+    "text_muted": "rgba(255, 255, 255, 0.18)"
+  },
+  "surface_strategies": {
+    "glass_components": {
+      "background": "rgba(255, 255, 255, 0.03)",
+      "backdrop_filter": "blur(30px)",
+      "border": "1px solid rgba(255, 255, 255, 0.08)",
+      "border_radius": "1rem",
+      "box_shadow": "0 8px 32px 0 rgba(0, 0, 0, 0.37)"
+    },
+    "buttons": {
+      "primary": {
+        "bg": "#16D67A",
+        "color": "#050505",
+        "hover": "scale(1.03) with increased glow and shadow expansion",
+        "glow": "0 0 15px rgba(22, 214, 122, 0.4)"
+      },
+      "secondary": {
+        "bg": "transparent",
+        "border": "1px solid rgba(255, 255, 255, 0.08)",
+        "hover": "dark fill with smooth animation"
+      }
+    }
+  },
+  "animations": {
+    "particle_system": {
+      "type": "Canvas 2D (Performance optimized over Three.js)",
+      "shapes": "Tiny glowing squares (1.5px - 3px)",
+      "movement": "Organic, slow random drifting, flowing waves, digital rain (subtle)",
+      "depth": "Front (large, slight blur, fast), Middle (medium), Back (tiny, low opacity, slow)",
+      "interaction": "Radius 150px, particles gently move away, soft ripple",
+      "mobile_degradation": "Reduce particle count by 70%, disable backdrop blurs behind it if performance drops"
+    },
+    "components": {
+      "library": "Framer Motion",
+      "effects": "Fade in, slide up, scale, blur reveal, spring motion",
+      "hover": "Cards lift (-translate-y-1), buttons glow, links underline smoothly"
+    }
+  },
+  "layout_and_spacing": {
+    "direction": "RTL",
+    "sidebar": "Fixed on the right side, glassmorphism applied",
+    "tables": "Dense gradebook tables must use zebra striping with rgba(255,255,255,0.02) and rgba(255,255,255,0.00) for readability, keep borders minimal",
+    "mobile": "Fast Evaluation Rubrics must be mobile-first, sticky action buttons at the bottom"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "2px stroke, rounded, consistent sizing, pure white or secondary text color, NO colorful icons",
+    "hover": "Rotate 2deg, scale 1.05"
+  },
+  "instructions_to_main_agent": [
+    "DO NOT rebuild the website. Preserve all existing logic, routing, and state.",
+    "Add the new theme as a CSS class `.theme-lux` inside `index.css` or the main stylesheet, mapping to existing CSS variables.",
+    "Make `.theme-lux` the default theme in the theme provider/switcher context alongside the existing 20+ themes.",
+    "Create a new `ParticleBackground.js` component using Canvas API. Mount it inside `TeacherLayout` and `StudentLayout` (or internal routes), NOT on the root App if it affects login.",
+    "EXCLUDE the Teacher login page and Student join/login pages from this redesign completely. They must remain completely untouched.",
+    "Ensure the `html` or `body` tag retains `dir='rtl'` and layout uses `ms-` / `me-` (margin-start/end) or RTL specific Tailwind classes if rewriting any layout parts.",
+    "Add `@media print` rules to `index.css` to force pure white backgrounds, black text, and display:none for the particle system and sidebars, ensuring A4 rubric/gradebook printing works perfectly.",
+    "For the Fast Evaluation Rubrics (mobile-first), ensure the glass UI remains performant. If it lags, strip the backdrop-blur on mobile for those specific cards.",
+    "All interactive elements MUST include a `data-testid` attribute (kebab-case, role-based).",
+    "Apply Framer Motion selectively for page transitions and card entrances, keeping it buttery smooth (60fps)."
+  ],
+  "image_urls": []
+}
