@@ -1,5 +1,23 @@
 // 21 Tech Themes — each has accent colors, orb colors, and a CSS pattern style
 export const THEMES = [
+  // ── LUX AI OS (الافتراضي — أسود فاخر + زمردي) ────────────────────────
+  {
+    id: 'lux',
+    name: 'AI لوكس',
+    category: 'واقعي فاخر ✨',
+    accent: '#16D67A',
+    accentRgb: '22,214,122',
+    grad1: '#12B368',
+    grad2: '#065F41',
+    orb1: 'rgba(22,214,122,0.10)',
+    orb2: 'rgba(22,214,122,0.06)',
+    orb3: 'rgba(40,245,167,0.05)',
+    pattern: 'lux',
+    gridColor: 'rgba(22,214,122,0.03)',
+    soft: true,
+    lux: true,
+  },
+
   // ── REALISTIC AURORA (soft & smooth) ──────────────────────────────────
   {
     id: 'cyber-aurora',
@@ -308,7 +326,7 @@ export const THEMES = [
   },
 ];
 
-export const DEFAULT_THEME_ID = 'cyber-cyan';
+export const DEFAULT_THEME_ID = 'lux';
 
 export const getThemeById = (id) =>
   THEMES.find(t => t.id === id) || THEMES[0];

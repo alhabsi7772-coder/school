@@ -10,18 +10,26 @@ export default function MatrixBackground() {
   const [isLight, setIsLight] = useState(
     () => document.documentElement.classList.contains('mode-light')
   );
+  // داخل الموقع (TeacherLayout يضيف class in-app) — ثيم لوكس يستبدل الماتريكس بجسيماته
+  const [isInApp, setIsInApp] = useState(
+    () => document.documentElement.classList.contains('in-app')
+  );
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsLight(document.documentElement.classList.contains('mode-light'));
+      setIsInApp(document.documentElement.classList.contains('in-app'));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
 
+  const luxInternal = !!theme?.lux && isInApp;
+
   useEffect(() => {
     // Disable matrix entirely in light mode — replaced by BubblesBackground
-    if (isLight) return;
+    // وتعطيله داخل الموقع مع ثيم لوكس — تستبدله LuxParticles
+    if (isLight || luxInternal) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -84,10 +92,10 @@ export default function MatrixBackground() {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', init);
     };
-  }, [theme, isLight]);
+  }, [theme, isLight, luxInternal]);
 
-  // Hide matrix completely in light mode
-  if (isLight) return null;
+  // Hide matrix completely in light mode / lux internal pages
+  if (isLight || luxInternal) return null;
 
   return (
     <canvas

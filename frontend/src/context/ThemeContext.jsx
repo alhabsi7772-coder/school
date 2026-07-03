@@ -46,9 +46,15 @@ const hexToHue = (hex) => {
 const VIDEO_BASE_HUE = 190;
 
 export function ThemeProvider({ children }) {
-  const [themeId, setThemeId] = useState(
-    () => localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_THEME_ID
-  );
+  const [themeId, setThemeId] = useState(() => {
+    // ترحيل لمرة واحدة: جعل ثيم "AI لوكس" الافتراضي للجميع (يمكن التبديل بعدها من الإعدادات)
+    if (!localStorage.getItem('al_khairat_lux_v1')) {
+      localStorage.setItem('al_khairat_lux_v1', '1');
+      localStorage.setItem(THEME_STORAGE_KEY, DEFAULT_THEME_ID);
+      return DEFAULT_THEME_ID;
+    }
+    return localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_THEME_ID;
+  });
   const [mode, setMode] = useState(
     () => localStorage.getItem(MODE_STORAGE_KEY) || 'dark'
   );
@@ -83,11 +89,14 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--login-video-hue', `${delta}deg`);
     // Soft/realistic treatment for premium themes
     root.classList.toggle('theme-soft', !!t.soft);
+    // Lux AI OS theme class
+    root.classList.toggle('theme-lux', !!t.lux);
   }, [theme, mode]);
 
   // Apply light/dark mode
   useEffect(() => {
     const html = document.documentElement;
+    const lux = !!theme.lux;
     if (mode === 'light') {
       html.classList.add('mode-light');
       html.style.setProperty('--mode-bg', '#F5EEDC');                        /* warm parchment cream */
@@ -96,13 +105,13 @@ export function ThemeProvider({ children }) {
       html.style.setProperty('--text-hint',  'rgba(74, 66, 50, 0.85)');      /* warm dark brown */
     } else {
       html.classList.remove('mode-light');
-      html.style.setProperty('--mode-bg', '#0B1120');
-      html.style.setProperty('--mobile-header-bg', 'rgba(11,17,32,0.9)');
-      html.style.setProperty('--text-muted', 'rgba(226, 232, 240, 0.9)');
-      html.style.setProperty('--text-hint',  'rgba(203, 213, 225, 0.75)');
+      html.style.setProperty('--mode-bg', lux ? '#050505' : '#0B1120');
+      html.style.setProperty('--mobile-header-bg', lux ? 'rgba(5,5,5,0.92)' : 'rgba(11,17,32,0.9)');
+      html.style.setProperty('--text-muted', lux ? 'rgba(255,255,255,0.72)' : 'rgba(226, 232, 240, 0.9)');
+      html.style.setProperty('--text-hint',  lux ? 'rgba(255,255,255,0.45)' : 'rgba(203, 213, 225, 0.75)');
     }
     localStorage.setItem(MODE_STORAGE_KEY, mode);
-  }, [mode]);
+  }, [mode, theme]);
 
   const changeTheme = (id) => {
     setThemeId(id);

@@ -1,0 +1,68 @@
+{
+  "summary": "Frontend-only lux theme regression verified end-to-end. Default lux theme applies on internal teacher pages (html.theme-lux.in-app, --mode-bg=#050505, IBM Plex Sans Arabic, emerald accent #16D67A, animated data-lux-particles canvas). Login pages (/teacher/login, /) remain untouched (Tajawal font, no lux canvas, video/matrix background intact). Theme switcher works: switching to سايبر سيان removes theme-lux + swaps --mode-bg to #0B1120 + removes lux canvas; switching back restores lux. Light-mode+lux gracefully falls back to cream #F5EEDC and hides lux canvas. Dashboard/gradebooks/rubrics/question-bank all load with lux styling; gradebook detail table shows 33 student rows with 297 editable inputs; gradebook create modal selects populated correctly (السادس → 7 sections + placeholder); question-bank filters use OPTION-only children. Sidebar active item highlighted emerald rgb(22,214,122). Mobile 390x844: sidebar hidden behind hamburger, cards stack, no horizontal overflow, lux canvas fills viewport. Particle animation confirmed running (canvas frame diff over 1.2s). Zero JS errors on all tested routes (only React Router v7 future-flag warnings).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_5.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ThemeContext.jsx: theme-lux class is toggled on <html> in ALL modes (including on the login page) — the login page checks work only because LuxParticles is rendered inside TeacherLayout and MatrixBackground gates on 'in-app'. So html has 'theme-lux' on login too, but the actual visual (canvas + IBM Plex font body + #050505 bg on <body>) is scoped by 'html.theme-lux.in-app' in index.css, which correctly excludes login (no in-app class). This is intentional and works, but the class name alone on <html> on login can be confusing to debug — consider adding a small comment in ThemeContext.jsx explaining that 'in-app' (added by TeacherLayout) is the real activator.",
+    "themes.js: DEFAULT_THEME_ID='lux' and the one-time migration flag 'al_khairat_lux_v1' correctly forces existing users to see lux on next visit; migration is idempotent. Good.",
+    "No test-id gaps observed for the lux-related components; sidebar nav links, stat cards, and gradebook table cells are addressable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100%"},
+  "test_credentials": "admin / teacher123",
+  "seed_data_creation": "None — no destructive actions; gradebook create modal opened but closed via Escape without submitting.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Lux theme is the DEFAULT via a one-time localStorage migration flag 'al_khairat_lux_v1'. To reproduce a fresh-user default-theme test, clear localStorage before navigating to /teacher/dashboard. Login pages MUST NOT get IBM Plex/lux particles — they gate on the 'in-app' html class added by TeacherLayout, not on theme-lux. Route for question bank is /teacher/question-bank (with hyphen).",
+  "verification_details": {
+    "login_page_untouched": {
+      "bodyFont": "Tajawal, sans-serif",
+      "lux_canvas_present": false,
+      "video_bg_present": true
+    },
+    "default_lux_on_dashboard": {
+      "url": "/teacher/dashboard",
+      "html_classes": "theme-soft theme-lux in-app",
+      "mode_bg": "#050505",
+      "theme_accent": "#16D67A",
+      "body_font": "\"IBM Plex Sans Arabic\", Inter, Tajawal, sans-serif",
+      "lux_canvas_present": true,
+      "particle_animation_running": true
+    },
+    "theme_switcher": {
+      "lux_card_in_settings": true,
+      "category_واقعي_فاخر": true,
+      "switch_to_cyber_cyan": {"theme_lux_removed": true, "mode_bg": "#0B1120", "lux_canvas_hidden": true, "accent": "#00E5FF"},
+      "switch_back_to_lux": {"theme_lux_restored": true, "mode_bg": "#050505", "lux_canvas_visible": true},
+      "light_mode_lux_fallback": {"mode_light_class": true, "cream_bg": "#F5EEDC", "lux_canvas_hidden_visually": true}
+    },
+    "internal_pages": {
+      "gradebooks_list": {"heading": "سجل الدرجات", "lux_canvas": true, "list_items": 9},
+      "gradebook_create_modal": {"grade_options": 6, "section_options_after_السادس": 8, "all_children_OPTION": true},
+      "gradebook_detail": {"table_rows": 33, "editable_inputs": 297, "lux_canvas": true},
+      "rubrics": {"heading": "التقييم السريع", "lux_canvas": true},
+      "question_bank": {"heading": "بنك الأسئلة", "lux_canvas": true, "filter-grade_opts": 3, "filter-difficulty_opts": 4, "filter-type_opts": 5},
+      "sidebar_active_color": "rgb(22, 214, 122)"
+    },
+    "student_my_grades": {
+      "body_font": "Tajawal, sans-serif",
+      "lux_canvas": false,
+      "errors_on_page": 0,
+      "note": "Expected: student page uses Tajawal and no lux particles."
+    },
+    "mobile_390x844": {
+      "lux_canvas_present": true,
+      "canvas_covers_viewport": true,
+      "sidebar_visible": false,
+      "hamburger_present": true,
+      "horizontal_overflow": false
+    },
+    "console": {"js_errors": 0, "only_warnings": "React Router v7 future-flag warnings only"}
+  }
+}

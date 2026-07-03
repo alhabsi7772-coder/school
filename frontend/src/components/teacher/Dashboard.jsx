@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -7,7 +7,28 @@ import {
   Clock, FileQuestion, Copy, CopyPlus, Zap, CheckCircle2
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
+import { useTheme } from '../../context/ThemeContext';
 import { API, getAuthHeaders, STATUS_MAP } from '../../utils';
+
+// عدّاد أرقام متحرك (يصعد بسلاسة حتى القيمة)
+const CountUp = ({ value, duration = 800 }) => {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef(0);
+  useEffect(() => {
+    const target = Number(value) || 0;
+    const start = performance.now();
+    cancelAnimationFrame(rafRef.current);
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(target * eased));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value, duration]);
+  return <span dir="ltr">{display}</span>;
+};
 
 const STATUS_STYLE = {
   draft:   { label: 'مسودة',     cls: 'badge-draft' },
@@ -53,11 +74,14 @@ export default function Dashboard() {
     } catch { toast.error('تعذر نسخ الاختبار'); }
   };
 
+  const { theme, isDark } = useTheme();
+  const lux = !!theme?.lux && isDark;
+
   const stats = [
-    { label: 'إجمالي الاختبارات', value: quizzes.length, icon: FileQuestion, color: '#00E5FF', glow: 'rgba(0,229,255,0.3)' },
-    { label: 'جارٍ الآن', value: quizzes.filter(q => q.status === 'active').length, icon: PlayCircle, color: '#00E676', glow: 'rgba(0,230,118,0.3)' },
-    { label: 'في الانتظار', value: quizzes.filter(q => q.status === 'waiting').length, icon: Clock, color: '#FFEA00', glow: 'rgba(255,234,0,0.3)' },
-    { label: 'إجمالي الطلاب', value: quizzes.reduce((s, q) => s + (q.submission_count || 0), 0), icon: Users, color: '#D500F9', glow: 'rgba(213,0,249,0.3)' },
+    { label: 'إجمالي الاختبارات', value: quizzes.length, icon: FileQuestion, color: lux ? '#28F5A7' : '#00E5FF', glow: lux ? 'rgba(22,214,122,0.3)' : 'rgba(0,229,255,0.3)' },
+    { label: 'جارٍ الآن', value: quizzes.filter(q => q.status === 'active').length, icon: PlayCircle, color: lux ? '#16D67A' : '#00E676', glow: lux ? 'rgba(22,214,122,0.3)' : 'rgba(0,230,118,0.3)' },
+    { label: 'في الانتظار', value: quizzes.filter(q => q.status === 'waiting').length, icon: Clock, color: lux ? 'rgba(255,255,255,0.85)' : '#FFEA00', glow: lux ? 'rgba(255,255,255,0.25)' : 'rgba(255,234,0,0.3)' },
+    { label: 'إجمالي الطلاب', value: quizzes.reduce((s, q) => s + (q.submission_count || 0), 0), icon: Users, color: lux ? '#28F5A7' : '#D500F9', glow: lux ? 'rgba(22,214,122,0.3)' : 'rgba(213,0,249,0.3)' },
   ];
 
   return (
@@ -69,16 +93,18 @@ export default function Dashboard() {
             <div className="flex items-start justify-between mb-4">
               <div className="icon-3d-wrapper">
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center icon-3d"
-                  style={{
-                    background: `rgba(${s.color === '#00E5FF' ? '0,229,255' : s.color === '#00E676' ? '0,230,118' : s.color === '#FFEA00' ? '255,234,0' : '213,0,249'},0.1)`,
-                    border: `1px solid ${s.color}30`
-                  }}>
-                  <s.icon className="w-5 h-5" style={{ color: s.color }} strokeWidth={1.5} />
+                  style={lux
+                    ? { background: 'rgba(22,214,122,0.08)', border: '1px solid rgba(22,214,122,0.22)' }
+                    : {
+                      background: `rgba(${s.color === '#00E5FF' ? '0,229,255' : s.color === '#00E676' ? '0,230,118' : s.color === '#FFEA00' ? '255,234,0' : '213,0,249'},0.1)`,
+                      border: `1px solid ${s.color}30`
+                    }}>
+                  <s.icon className="w-5 h-5" style={{ color: s.color }} strokeWidth={lux ? 2 : 1.5} />
                 </div>
               </div>
               <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: s.color, boxShadow: `0 0 8px ${s.glow}` }} />
             </div>
-            <p className="text-3xl font-black text-white mb-1">{s.value}</p>
+            <p className="text-3xl font-black text-white mb-1"><CountUp value={s.value} /></p>
             <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
           </div>
         ))}

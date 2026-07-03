@@ -6,15 +6,25 @@ import {
   ChevronLeft, Menu, X, FolderOpen, BookOpen, Sparkles, Users, ShieldCheck, ClipboardList, ClipboardCheck, CalendarRange, Library
 } from 'lucide-react';
 import Particles from '../Particles';
+import LuxParticles from '../LuxParticles';
+import { useTheme } from '../../context/ThemeContext';
 import { API, getAuthHeaders } from '../../utils';
 
 export default function TeacherLayout({ children, title, backTo }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, isDark } = useTheme();
+  const lux = !!theme?.lux && isDark;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [academicYear, setAcademicYear] = useState(() => localStorage.getItem('academicYear') || '');
   const [semester, setSemester] = useState(() => localStorage.getItem('semester') || '1');
   const isAdmin = localStorage.getItem('teacherRole') === 'admin';
+
+  // علامة "داخل الموقع" — تستخدمها الخلفيات (MatrixBackground يتنحى لصالح LuxParticles)
+  useEffect(() => {
+    document.documentElement.classList.add('in-app');
+    return () => document.documentElement.classList.remove('in-app');
+  }, []);
 
   useEffect(() => {
     const sync = () => {
@@ -99,6 +109,7 @@ export default function TeacherLayout({ children, title, backTo }) {
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.map(item => {
           const active = isActive(item.path);
+          const itemColor = lux ? '#16D67A' : item.color;
           return (
             <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
               className={`nav-item ${active ? 'active' : ''}`}
@@ -107,13 +118,13 @@ export default function TeacherLayout({ children, title, backTo }) {
                 <item.icon
                   className="w-5 h-5 flex-shrink-0 icon-3d"
                   strokeWidth={active ? 2 : 1.5}
-                  style={{ color: active ? item.color : undefined }}
+                  style={{ color: active ? itemColor : undefined }}
                 />
               </div>
               <span>{item.label}</span>
               {active && (
                 <span className="mr-auto w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse"
-                  style={{ background: item.color, boxShadow: `0 0 6px ${item.color}` }} />
+                  style={{ background: itemColor, boxShadow: `0 0 6px ${itemColor}` }} />
               )}
             </Link>
           );
@@ -133,10 +144,13 @@ export default function TeacherLayout({ children, title, backTo }) {
       </div>
 
       {/* AI Badge */}
-      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
+      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl"
+        style={lux
+          ? { background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.16)' }
+          : { background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
         <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#D500F9' }} />
-          <p className="text-xs font-medium" style={{ color: 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
+          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: lux ? '#28F5A7' : '#D500F9' }} />
+          <p className="text-xs font-medium" style={{ color: lux ? 'rgba(40,245,167,0.9)' : 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
         </div>
       </div>
 
@@ -164,10 +178,16 @@ export default function TeacherLayout({ children, title, backTo }) {
 
   return (
     <div className="flex min-h-screen font-tajawal" style={{ background: 'var(--mode-bg)' }}>
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-      <Particles />
+      {lux ? (
+        <LuxParticles />
+      ) : (
+        <>
+          <div className="orb orb-1" />
+          <div className="orb orb-2" />
+          <div className="orb orb-3" />
+          <Particles />
+        </>
+      )}
 
       {/* Mobile Overlay */}
       {sidebarOpen && (

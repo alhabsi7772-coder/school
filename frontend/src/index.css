@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1443,3 +1444,194 @@ html.mode-light p[style*="rgba(213,0,249,0.75"] { color: #8B6F2F !important; }
 /* Modal already covered but ensure all child text */
 html.mode-light .lib-modal label { color: #4a4232 !important; }
 
+
+/* ============================================================
+   LUX THEME — AI OS فاخر (html.theme-lux) — الوضع الداكن فقط
+   أسود شبه نقي + زجاج + زمردي #16D67A — بدون تدرجات ملونة
+   ============================================================ */
+
+/* الخط: IBM Plex Sans Arabic للعربية + Inter للأرقام واللاتينية */
+html.theme-lux.in-app body,
+html.theme-lux.in-app .font-tajawal,
+html.theme-lux.in-app button,
+html.theme-lux.in-app input,
+html.theme-lux.in-app select,
+html.theme-lux.in-app textarea {
+  font-family: 'IBM Plex Sans Arabic', 'Inter', 'Tajawal', sans-serif;
+}
+
+/* ── الأسطح الزجاجية الفاخرة ── */
+html.theme-lux.in-app:not(.mode-light) .glass-card,
+html.theme-lux.in-app:not(.mode-light) .quiz-card,
+html.theme-lux.in-app:not(.mode-light) .stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html.theme-lux.in-app:not(.mode-light) .quiz-card:hover,
+html.theme-lux.in-app:not(.mode-light) .glass-card-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(22, 214, 122, 0.22);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 26px rgba(22, 214, 122, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+html.theme-lux.in-app:not(.mode-light) .glass-sidebar {
+  background: rgba(7, 7, 7, 0.80);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.65);
+}
+
+html.theme-lux.in-app:not(.mode-light) .glass-modal {
+  background: rgba(10, 10, 10, 0.90);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+  border-radius: 1.5rem;
+}
+
+/* ── الأزرار ── */
+html.theme-lux.in-app:not(.mode-light) .btn-primary {
+  background: linear-gradient(135deg, #16D67A 0%, #0E9D5B 100%);
+  color: #04160D;
+  border-radius: 0.9rem;
+  box-shadow: 0 0 15px rgba(22, 214, 122, 0.25), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+html.theme-lux.in-app:not(.mode-light) .btn-primary::before {
+  background: linear-gradient(135deg, #28F5A7 0%, #12B368 100%);
+}
+html.theme-lux.in-app:not(.mode-light) .btn-primary:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 28px rgba(22, 214, 122, 0.45), 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+html.theme-lux.in-app:not(.mode-light) .btn-primary:active { transform: scale(0.99); }
+
+html.theme-lux.in-app:not(.mode-light) .btn-secondary {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+html.theme-lux.in-app:not(.mode-light) .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(22, 214, 122, 0.35);
+  color: #28F5A7;
+}
+html.theme-lux.in-app:not(.mode-light) .btn-ghost { border-radius: 0.9rem; }
+html.theme-lux.in-app:not(.mode-light) .btn-ghost:hover { background: rgba(255, 255, 255, 0.05); }
+
+/* ── الحقول ── */
+html.theme-lux.in-app:not(.mode-light) .input-field {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.9rem;
+}
+html.theme-lux.in-app:not(.mode-light) .input-field:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(22, 214, 122, 0.45);
+  box-shadow: 0 0 0 3px rgba(22, 214, 122, 0.10), 0 0 18px rgba(22, 214, 122, 0.10);
+}
+html.theme-lux.in-app:not(.mode-light) select.input-field,
+html.theme-lux.in-app:not(.mode-light) select.input-field:focus {
+  background-color: rgba(14, 14, 14, 0.92) !important;
+}
+html.theme-lux.in-app:not(.mode-light) select.input-field option { background: #0A0A0A; color: #FFFFFF; }
+html.theme-lux.in-app:not(.mode-light) .glass-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html.theme-lux.in-app:not(.mode-light) .glass-modal select,
+html.theme-lux.in-app:not(.mode-light) .glass-modal textarea {
+  background-color: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* ── التنقل الجانبي ── */
+html.theme-lux.in-app:not(.mode-light) .nav-item { border-radius: 0.9rem; }
+html.theme-lux.in-app:not(.mode-light) .nav-item:hover svg {
+  transform: rotate(2deg) scale(1.05);
+}
+html.theme-lux.in-app:not(.mode-light) .nav-item svg { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ── الجداول: توهج عند المرور + خطوط خفيفة ── */
+html.theme-lux.in-app:not(.mode-light) tbody tr { transition: background-color 0.25s ease; }
+html.theme-lux.in-app:not(.mode-light) tbody tr:hover { background-color: rgba(22, 214, 122, 0.045); }
+html.theme-lux.in-app:not(.mode-light) thead th { border-color: rgba(255, 255, 255, 0.08) !important; }
+
+/* ── أنيميشن دخول متدرج (ظهور + انزلاق + إزالة ضبابية) ── */
+@keyframes lux-rise {
+  from { opacity: 0; transform: translateY(16px); filter: blur(5px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+html.theme-lux.in-app:not(.mode-light) .quiz-card,
+html.theme-lux.in-app:not(.mode-light) .stat-card,
+html.theme-lux.in-app:not(.mode-light) .glass-card {
+  animation: lux-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(1),  html.theme-lux.in-app:not(.mode-light) .stat-card:nth-child(1)  { animation-delay: 0.04s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(2),  html.theme-lux.in-app:not(.mode-light) .stat-card:nth-child(2)  { animation-delay: 0.10s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(3),  html.theme-lux.in-app:not(.mode-light) .stat-card:nth-child(3)  { animation-delay: 0.16s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(4),  html.theme-lux.in-app:not(.mode-light) .stat-card:nth-child(4)  { animation-delay: 0.22s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(5)  { animation-delay: 0.28s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(6)  { animation-delay: 0.34s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(7)  { animation-delay: 0.40s; }
+html.theme-lux.in-app:not(.mode-light) .quiz-card:nth-child(8)  { animation-delay: 0.46s; }
+html.theme-lux.in-app:not(.mode-light) .glass-modal { animation: lux-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* ── الروابط: خط سفلي ناعم ── */
+html.theme-lux.in-app a { text-underline-offset: 3px; transition: color 0.25s ease; }
+
+/* ── شريط التمرير ── */
+html.theme-lux.in-app:not(.mode-light) ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+}
+html.theme-lux.in-app:not(.mode-light) ::-webkit-scrollbar-thumb:hover { background: rgba(22, 214, 122, 0.35); }
+
+/* ── تحديد النص ── */
+html.theme-lux.in-app ::selection { background: rgba(22, 214, 122, 0.30); color: #fff; }
+
+/* ── تخفيف تأثيرات النيون القديمة داخل لوكس (بلا ألوان صاخبة) ── */
+html.theme-lux.in-app:not(.mode-light) .neon-text-fuchsia {
+  color: #28F5A7;
+  text-shadow: 0 0 10px rgba(22, 214, 122, 0.4), 0 0 30px rgba(22, 214, 122, 0.2);
+}
+html.theme-lux.in-app:not(.mode-light) .neon-border-fuchsia {
+  border-color: rgba(22, 214, 122, 0.4);
+  box-shadow: 0 0 12px rgba(22, 214, 122, 0.25);
+}
+
+/* ── العناوين: أوزان أخف بمظهر أرقى ── */
+html.theme-lux.in-app:not(.mode-light) h1 { font-weight: 600; }
+html.theme-lux.in-app:not(.mode-light) h2, html.theme-lux.in-app:not(.mode-light) h3 { font-weight: 500; }
+
+/* ── الجوال: تخفيف الضبابية للأداء ── */
+@media (max-width: 768px) {
+  html.theme-lux.in-app:not(.mode-light) .glass-card,
+  html.theme-lux.in-app:not(.mode-light) .quiz-card,
+  html.theme-lux.in-app:not(.mode-light) .stat-card {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  html.theme-lux.in-app:not(.mode-light) .glass-modal,
+  html.theme-lux.in-app:not(.mode-light) .glass-sidebar {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+
+/* ── احترام تفضيل تقليل الحركة ── */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-lux.in-app .quiz-card, html.theme-lux.in-app .stat-card, html.theme-lux.in-app .glass-card, html.theme-lux.in-app .glass-modal {
+    animation: none !important;
+  }
+}
+
+/* ── الطباعة: إخفاء الخلفيات الفاخرة تماماً (أبيض نقي A4) ── */
+@media print {
+  html.theme-lux [data-lux-particles],
+  html.theme-lux [data-lux-glow] { display: none !important; }
+}
