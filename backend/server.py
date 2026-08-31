@@ -1020,33 +1020,33 @@ def build_generation_prompt(grade: str, topic: str) -> str:
 
 @api_router.post("/question-bank/generate")
 async def generate_questions(req: GenerateQuestionsReq, t=Depends(get_teacher)):
-    if req.grade not in ["5", "8"]:
-        raise HTTPException(400, "الصف يجب أن يكون 5 أو 8")
+    if req.grade not in ["5", "6", "7", "8"]:
+        raise HTTPException(400, "الصف يجب أن يكون من 5 إلى 8")
 
-    topics_list = GRADE5_TOPICS if req.grade == "5" else GRADE8_TOPICS
-    topic = req.topic if req.topic else random.choice(topics_list)
+    topic = req.topic
+    if not topic:
+        # درس عشوائي من أسئلة الكتاب المتوفرة لهذا الصف، أو من القوائم الافتراضية
+        lessons = await db.question_bank.distinct("lesson", {"scope": "global", "grade": req.grade})
+        lessons = [l for l in lessons if l]
+        if lessons:
+            topic = random.choice(lessons)
+        else:
+            topic = random.choice(GRADE5_TOPICS if req.grade == "5" else GRADE8_TOPICS)
 
-    # مزوّد الذكاء الاصطناعي: ZAI (واجهة متوافقة مع OpenAI) — يستخدم نموذج GLM-5.2
-    zai_key = os.environ.get('ZAI_API_KEY')
-    if not zai_key:
-        raise HTTPException(500, "مفتاح ZAI غير مهيأ — أضف ZAI_API_KEY إلى /app/backend/.env")
-    zai_base_url = os.environ.get('ZAI_BASE_URL', 'https://api.z.ai/api/paas/v4')
-    zai_model = os.environ.get('ZAI_MODEL', 'GLM-5.2')
-    client = AsyncOpenAI(api_key=zai_key, base_url=zai_base_url)
+    llm_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not llm_key:
+        raise HTTPException(500, "مفتاح الذكاء الاصطناعي غير مهيأ")
 
     prompt = build_generation_prompt(req.grade, topic)
     try:
-        completion = await client.chat.completions.create(
-            model=zai_model,
-            messages=[
-                {"role": "system", "content": "أنت أستاذ متخصص في تقنية المعلومات. تُنشئ أسئلة امتحانية بصيغة JSON فقط."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.7,
-        )
-        response_text = completion.choices[0].message.content or ""
+        chat = LlmChat(
+            api_key=llm_key,
+            session_id=f"qbgen-{uuid.uuid4()}",
+            system_message="أنت أستاذ متخصص في تقنية المعلومات. تُنشئ أسئلة امتحانية بصيغة JSON فقط.",
+        ).with_model("gemini", "gemini-3-flash-preview")
+        response_text = await chat.send_message(UserMessage(text=prompt)) or ""
     except Exception as e:
-        raise HTTPException(500, f"خطأ في توليد الأسئلة عبر ZAI: {str(e)}")
+        raise HTTPException(500, f"خطأ في توليد الأسئلة: {str(e)}")
 
     # استخراج JSON من الاستجابة
     try:
@@ -1083,30 +1083,98 @@ async def generate_questions(req: GenerateQuestionsReq, t=Depends(get_teacher)):
     return {"questions": saved, "count": len(saved), "topic": topic}
 
 
+@api_router.get("/question-bank/meta")
+async def question_bank_meta(grade: Optional[str] = None, t=Depends(get_teacher)):
+    """فلاتر بنك الأسئلة: الوحدات والدروس والإحصاءات"""
+    match = {"$or": [{"owner_id": t["teacher_id"]}, {"scope": "global"}]}
+    if grade:
+        match["grade"] = grade
+    pipeline = [
+        {"$match": match},
+        {"$facet": {
+            "lessons": [
+                {"$group": {"_id": {"unit": {"$ifNull": ["$unit", "أخرى"]}, "lesson": {"$ifNull": ["$lesson", "$topic"]}}, "count": {"$sum": 1}}},
+                {"$sort": {"_id.unit": 1, "_id.lesson": 1}},
+            ],
+            "types": [{"$group": {"_id": "$type", "count": {"$sum": 1}}}],
+            "difficulty": [{"$group": {"_id": "$difficulty", "count": {"$sum": 1}}}],
+            "cognitive": [{"$group": {"_id": "$cognitive_level", "count": {"$sum": 1}}}],
+            "total": [{"$count": "n"}],
+        }},
+    ]
+    res = (await db.question_bank.aggregate(pipeline).to_list(1))[0]
+    units = {}
+    for row in res["lessons"]:
+        u = row["_id"]["unit"] or "أخرى"
+        lesson_name = row["_id"]["lesson"]
+        if not lesson_name:
+            continue
+        units.setdefault(u, []).append({"lesson": lesson_name, "count": row["count"]})
+    return {
+        "units": [{"unit": u, "lessons": ls} for u, ls in units.items()],
+        "types": {r["_id"]: r["count"] for r in res["types"] if r["_id"]},
+        "difficulty": {r["_id"]: r["count"] for r in res["difficulty"] if r["_id"]},
+        "cognitive": {r["_id"]: r["count"] for r in res["cognitive"] if r["_id"]},
+        "total": res["total"][0]["n"] if res["total"] else 0,
+    }
+
+
 @api_router.get("/question-bank")
 async def list_question_bank(
     grade: Optional[str] = None,
     difficulty: Optional[str] = None,
     type: Optional[str] = None,
+    lesson: Optional[str] = None,
+    unit: Optional[str] = None,
+    cognitive_level: Optional[str] = None,
+    q: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
     t=Depends(get_teacher)
 ):
-    query = {"owner_id": t["teacher_id"]}
+    conditions = [{"$or": [{"owner_id": t["teacher_id"]}, {"scope": "global"}]}]
     if grade:
-        query["grade"] = grade
+        conditions.append({"grade": grade})
     if difficulty:
-        query["difficulty"] = difficulty
+        conditions.append({"difficulty": difficulty})
     if type:
-        query["type"] = type
+        conditions.append({"type": type})
+    if unit:
+        conditions.append({"unit": unit})
+    if lesson:
+        conditions.append({"$or": [{"lesson": lesson}, {"topic": lesson}]})
+    if cognitive_level:
+        # analysis (قديم) ≡ reasoning (استدلال)
+        levels = ["reasoning", "analysis"] if cognitive_level in ("reasoning", "analysis") else [cognitive_level]
+        conditions.append({"cognitive_level": {"$in": levels}})
+    if q and q.strip():
+        conditions.append({"text": {"$regex": re.escape(q.strip()), "$options": "i"}})
 
-    questions = await db.question_bank.find(query, {"_id": 0}).to_list(2000)
-    return sorted(questions, key=lambda x: x.get("created_at", ""), reverse=True)
+    query = {"$and": conditions}
+    total = await db.question_bank.count_documents(query)
+    page = max(1, page)
+    limit = min(max(5, limit), 100)
+    questions = await db.question_bank.find(query, {"_id": 0}) \
+        .sort("created_at", -1).skip((page - 1) * limit).limit(limit).to_list(limit)
+    return {
+        "questions": questions,
+        "total": total,
+        "page": page,
+        "pages": max(1, -(-total // limit)),
+    }
 
 
 @api_router.delete("/question-bank/{qid}")
 async def delete_bank_question(qid: str, t=Depends(get_teacher)):
-    result = await db.question_bank.delete_one({"id": qid, "owner_id": t["teacher_id"]})
-    if result.deleted_count == 0:
+    qdoc = await db.question_bank.find_one({"id": qid}, {"_id": 0})
+    if not qdoc:
         raise HTTPException(404, "السؤال غير موجود")
+    if qdoc.get("scope") == "global":
+        if t["role"] != "admin":
+            raise HTTPException(403, "حذف أسئلة الكتاب متاح لمدير المنصة فقط")
+    elif qdoc.get("owner_id") != t["teacher_id"]:
+        raise HTTPException(403, "لا تملك صلاحية حذف هذا السؤال")
+    await db.question_bank.delete_one({"id": qid})
     return {"message": "تم الحذف"}
 
 
@@ -1116,7 +1184,7 @@ async def create_quiz_from_bank(data: CreateQuizFromBankReq, t=Depends(get_teach
         raise HTTPException(400, "يجب اختيار سؤال واحد على الأقل")
 
     questions_cursor = await db.question_bank.find(
-        {"id": {"$in": data.question_ids}, "owner_id": t["teacher_id"]}, {"_id": 0}
+        {"id": {"$in": data.question_ids}, "$or": [{"owner_id": t["teacher_id"]}, {"scope": "global"}]}, {"_id": 0}
     ).to_list(1000)
 
     if not questions_cursor:
@@ -1127,16 +1195,20 @@ async def create_quiz_from_bank(data: CreateQuizFromBankReq, t=Depends(get_teach
 
     quiz_questions = []
     for i, bq in enumerate(questions_cursor):
+        if bq.get("type") == "match":
+            continue  # أسئلة التوصيل غير مدعومة في الاختبارات التفاعلية
         quiz_questions.append({
             "id": str(uuid.uuid4()),
             "type": bq["type"],
             "text": bq["text"],
-            "image_url": None,
+            "image_url": bq.get("image_url"),
             "options": bq.get("options"),
             "correct_answer": bq.get("correct_answer"),
             "points": bq.get("points", 1.0),
             "order": i
         })
+    if not quiz_questions:
+        raise HTTPException(400, "الأسئلة المختارة كلها من نوع التوصيل — غير مدعومة في الاختبارات")
 
     quiz = {
         "id": str(uuid.uuid4()),
@@ -3850,6 +3922,12 @@ async def bundle_download(code: str, rid: str, access_id: str):
 # =================================================================
 
 app.include_router(api_router)
+
+# ملفات ثابتة (صور بنك الأسئلة المستخرجة من الكتب) — تحت /api لتمر عبر الـ ingress
+from fastapi.staticfiles import StaticFiles
+STATIC_ROOT = ROOT_DIR / "static"
+(STATIC_ROOT / "bank").mkdir(parents=True, exist_ok=True)
+app.mount("/api/static", StaticFiles(directory=str(STATIC_ROOT)), name="static")
 app.add_middleware(
     CORSMiddleware, allow_credentials=True,
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]

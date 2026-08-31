@@ -1,588 +1,448 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import TeacherLayout from './TeacherLayout';
 import {
-  Sparkles, Trash2, CheckSquare, Square, BookOpen,
-  Filter, ChevronDown, PlusCircle, X, Loader2, AlertCircle, RefreshCw
+  Sparkles, Trash2, Search, CheckCircle2, ChevronRight, ChevronLeft,
+  BookOpen, Layers, Brain, Gauge, FilePlus2, X, Loader2, Eye, EyeOff,
+  ListChecks, GitCompareArrows, AlignLeft, AlignJustify, ToggleLeft, Image as ImageIcon
 } from 'lucide-react';
+import { API, getAuthHeaders } from '../../utils';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = API.replace(/\/api$/, '');
 
-const GRADE5_TOPICS = [
-  "الجداول الإلكترونية (Microsoft Excel) - إدخال البيانات والصيغ الحسابية",
-  "الجداول الإلكترونية - دوال SUM وAVERAGE وMAX وMIN وCOUNT وIF",
-  "الجداول الإلكترونية - التحقق من صحة البيانات والتنسيق الشرطي",
-  "الجداول الإلكترونية - الرسوم البيانية وأنواعها",
-  "الشبكات والإنترنت - أنواع الشبكات LAN وWAN",
-  "خدمات الإنترنت والبريد الإلكتروني",
-  "الأمن المعلوماتي وحماية الخصوصية"
-];
-
-const GRADE8_TOPICS = [
-  "قواعد البيانات - المفاهيم الأساسية: الجداول والحقول والسجلات",
-  "Microsoft Access - إنشاء الجداول والعلاقات بين الجداول",
-  "Microsoft Access - الاستعلامات (Queries) وأنواعها",
-  "Microsoft Access - النماذج (Forms) والتقارير (Reports)",
-  "تطوير الويب - بنية صفحة HTML والعلامات الأساسية",
-  "تطوير الويب - تنسيق CSS والعناصر الأساسية",
-  "الأمن المعلوماتي - التهديدات الإلكترونية وأساليب الحماية"
-];
-
-const TYPE_LABELS = { mcq: 'اختياري', true_false: 'صح/خطأ', short: 'قصير', long: 'طويل' };
-const DIFF_LABELS = { easy: 'سهل', medium: 'متوسط', hard: 'صعب' };
-const DIFF_COLORS = {
-  easy: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  medium: 'bg-amber-50 text-amber-700 border-amber-200',
-  hard: 'bg-red-50 text-red-700 border-red-200'
+const TYPE_META = {
+  mcq: { label: 'اختيار من متعدد', icon: ListChecks, color: '#16D67A' },
+  true_false: { label: 'صح وخطأ', icon: ToggleLeft, color: '#38BDF8' },
+  short: { label: 'إجابة قصيرة', icon: AlignLeft, color: '#FBBF24' },
+  long: { label: 'إجابة طويلة', icon: AlignJustify, color: '#F472B6' },
+  match: { label: 'توصيل', icon: GitCompareArrows, color: '#A78BFA' },
 };
-const TYPE_COLORS = {
-  mcq: 'bg-blue-50 text-blue-700 border-blue-200',
-  true_false: 'bg-purple-50 text-purple-700 border-purple-200',
-  short: 'bg-teal-50 text-teal-700 border-teal-200',
-  long: 'bg-orange-50 text-orange-700 border-orange-200'
+const COG_META = { recall: 'تذكر', understanding: 'فهم', application: 'تطبيق', reasoning: 'استدلال', analysis: 'استدلال' };
+const DIFF_META = {
+  easy: { label: 'سهل', color: '#16D67A' },
+  medium: { label: 'متوسط', color: '#FBBF24' },
+  hard: { label: 'صعب', color: '#F87171' },
 };
+const GRADES = ['5', '6', '7', '8'];
+const GRADE_LABELS = { '5': 'الخامس', '6': 'السادس', '7': 'السابع', '8': 'الثامن' };
+
+const Badge = ({ children, color, testId }) => (
+  <span data-testid={testId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold"
+    style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}>
+    {children}
+  </span>
+);
+
+function QuestionCard({ q, selected, onToggle, onDelete, canDelete }) {
+  const [showAnswer, setShowAnswer] = useState(false);
+  const tm = TYPE_META[q.type] || TYPE_META.mcq;
+  const dm = DIFF_META[q.difficulty] || DIFF_META.medium;
+  const selectable = q.type !== 'match';
+  const imgSrc = q.image_url ? (q.image_url.startsWith('http') ? q.image_url : `${BACKEND}${q.image_url}`) : null;
+
+  return (
+    <div data-testid="qb-question-card"
+      className={`quiz-card p-4 sm:p-5 transition-all ${selected ? 'ring-2 ring-emerald-400/60' : ''}`}>
+      <div className="flex items-start gap-3">
+        {selectable ? (
+          <input type="checkbox" checked={selected} onChange={onToggle} data-testid="qb-select-checkbox"
+            className="mt-1.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0" />
+        ) : (
+          <span className="mt-1.5 w-4 h-4 flex-shrink-0 opacity-30" title="التوصيل غير مدعوم في الاختبارات التفاعلية">
+            <GitCompareArrows className="w-4 h-4" />
+          </span>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            <Badge color={tm.color} testId="qb-type-badge"><tm.icon className="w-3 h-3" />{tm.label}</Badge>
+            <Badge color={dm.color}>{dm.label}</Badge>
+            <Badge color="#94A3B8"><Brain className="w-3 h-3" />{COG_META[q.cognitive_level] || 'فهم'}</Badge>
+            {q.lesson && <Badge color="#60A5FA"><BookOpen className="w-3 h-3" />{q.lesson}</Badge>}
+            <span className="text-[11px] font-bold mr-auto" style={{ color: 'var(--text-hint)' }}>{q.points} درجة</span>
+          </div>
+
+          <p className="font-bold text-[15px] leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>{q.text}</p>
+
+          {imgSrc && (
+            <a href={imgSrc} target="_blank" rel="noreferrer" className="block mb-3">
+              <img src={imgSrc} alt="صورة السؤال" loading="lazy"
+                className="max-h-44 rounded-xl border object-contain"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+            </a>
+          )}
+
+          {q.type === 'mcq' && q.options && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-1">
+              {q.options.map((opt, i) => {
+                const correct = opt === q.correct_answer;
+                return (
+                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+                    style={correct
+                      ? { background: 'rgba(22,214,122,0.10)', border: '1px solid rgba(22,214,122,0.35)', color: '#28F5A7', fontWeight: 700 }
+                      : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-muted)' }}>
+                    {correct && <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />}
+                    <span className="truncate">{opt}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {q.type === 'true_false' && (
+            <Badge color={q.correct_answer === 'صح' ? '#16D67A' : '#F87171'}>
+              <CheckCircle2 className="w-3 h-3" /> الإجابة: {q.correct_answer}
+            </Badge>
+          )}
+
+          {(q.type === 'short' || q.type === 'long') && q.correct_answer && (
+            <div>
+              <button onClick={() => setShowAnswer(v => !v)} data-testid="qb-toggle-answer"
+                className="flex items-center gap-1.5 text-xs font-bold mb-1.5 transition-colors"
+                style={{ color: '#28F5A7' }}>
+                {showAnswer ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showAnswer ? 'إخفاء الإجابة النموذجية' : 'عرض الإجابة النموذجية'}
+              </button>
+              {showAnswer && (
+                <p className="text-sm leading-relaxed px-3 py-2 rounded-lg"
+                  style={{ background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.18)', color: 'var(--text-muted)' }}>
+                  {q.correct_answer}
+                </p>
+              )}
+            </div>
+          )}
+
+          {q.type === 'match' && q.pairs && (
+            <div className="space-y-1">
+              {q.pairs.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 px-3 py-1.5 rounded-lg truncate"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>{p.left}</span>
+                  <ChevronLeft className="w-4 h-4 flex-shrink-0" style={{ color: '#28F5A7' }} />
+                  <span className="flex-1 px-3 py-1.5 rounded-lg truncate"
+                    style={{ background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.18)', color: 'var(--text-muted)' }}>{p.right}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {canDelete && (
+          <button onClick={onDelete} data-testid="qb-delete-btn"
+            className="p-1.5 rounded-lg transition-colors flex-shrink-0 hover:bg-red-500/10 text-red-400/70 hover:text-red-400">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function QuestionBank() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('teacherToken');
+  const isAdmin = localStorage.getItem('teacherRole') === 'admin';
 
-  const [questions, setQuestions] = useState([]);
+  const [grade, setGrade] = useState('5');
+  const [lesson, setLesson] = useState('');
+  const [fType, setFType] = useState('');
+  const [fDiff, setFDiff] = useState('');
+  const [fCog, setFCog] = useState('');
+  const [search, setSearch] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [page, setPage] = useState(1);
+
+  const [meta, setMeta] = useState(null);
+  const [data, setData] = useState({ questions: [], total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [filterGrade, setFilterGrade] = useState('');
-  const [filterDiff, setFilterDiff] = useState('');
-  const [filterType, setFilterType] = useState('');
+  const [selected, setSelected] = useState(new Set());
 
-  // Generate dialog state
-  const [showGenDialog, setShowGenDialog] = useState(false);
-  const [genGrade, setGenGrade] = useState('');
+  const [genOpen, setGenOpen] = useState(false);
+  const [genGrade, setGenGrade] = useState('5');
   const [genTopic, setGenTopic] = useState('');
-  const [generating, setGenerating] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genMeta, setGenMeta] = useState(null);
 
-  // Create quiz dialog state
-  const [showQuizDialog, setShowQuizDialog] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
   const [quizTitle, setQuizTitle] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(false);
 
-  // Delete confirmation
-  const [deletingId, setDeletingId] = useState(null);
+  const searchTimer = useRef(null);
+
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => { setDebounced(search); setPage(1); }, 400);
+    return () => clearTimeout(searchTimer.current);
+  }, [search]);
+
+  const fetchMeta = useCallback(async (g) => {
+    try {
+      const res = await axios.get(`${API}/question-bank/meta?grade=${g}`, getAuthHeaders());
+      return res.data;
+    } catch { return null; }
+  }, []);
+
+  useEffect(() => { fetchMeta(grade).then(setMeta); }, [grade, fetchMeta]);
+  useEffect(() => { if (genOpen) fetchMeta(genGrade).then(setGenMeta); }, [genOpen, genGrade, fetchMeta]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {};
-      if (filterGrade) params.grade = filterGrade;
-      if (filterDiff) params.difficulty = filterDiff;
-      if (filterType) params.type = filterType;
-      const res = await axios.get(`${API}/api/question-bank`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params
-      });
-      setQuestions(res.data);
-    } catch {
-      toast.error('خطأ في جلب الأسئلة');
-    } finally {
-      setLoading(false);
-    }
-  }, [token, filterGrade, filterDiff, filterType]);
+      const params = new URLSearchParams({ grade, page: String(page), limit: '20' });
+      if (lesson) params.set('lesson', lesson);
+      if (fType) params.set('type', fType);
+      if (fDiff) params.set('difficulty', fDiff);
+      if (fCog) params.set('cognitive_level', fCog);
+      if (debounced) params.set('q', debounced);
+      const res = await axios.get(`${API}/question-bank?${params}`, getAuthHeaders());
+      setData(res.data);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'فشل تحميل الأسئلة');
+    } finally { setLoading(false); }
+  }, [grade, lesson, fType, fDiff, fCog, debounced, page]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
-  const handleGenerate = async () => {
-    if (!genGrade) { toast.error('يجب اختيار الصف أولاً'); return; }
-    setGenerating(true);
+  const changeGrade = (g) => { setGrade(g); setLesson(''); setPage(1); setSelected(new Set()); };
+  const clearFilters = () => { setLesson(''); setFType(''); setFDiff(''); setFCog(''); setSearch(''); setPage(1); };
+  const hasFilters = lesson || fType || fDiff || fCog || search;
+
+  const toggleSelect = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const deleteQuestion = async (id) => {
+    if (!window.confirm('حذف هذا السؤال نهائياً؟')) return;
     try {
-      const res = await axios.post(
-        `${API}/api/question-bank/generate`,
-        { grade: genGrade, topic: genTopic || null },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(`تم توليد ${res.data.count} سؤال بنجاح`);
-      setShowGenDialog(false);
-      setGenGrade('');
-      setGenTopic('');
+      await axios.delete(`${API}/question-bank/${id}`, getAuthHeaders());
+      toast.success('تم الحذف');
       fetchQuestions();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'خطأ في توليد الأسئلة');
-    } finally {
-      setGenerating(false);
-    }
+      fetchMeta(grade).then(setMeta);
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل الحذف'); }
   };
 
-  const handleDelete = async (id) => {
+  const generate = async () => {
+    setGenLoading(true);
     try {
-      await axios.delete(`${API}/api/question-bank/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSelectedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-      toast.success('تم حذف السؤال');
-      fetchQuestions();
-    } catch {
-      toast.error('خطأ في الحذف');
-    } finally {
-      setDeletingId(null);
-    }
+      const res = await axios.post(`${API}/question-bank/generate`,
+        { grade: genGrade, topic: genTopic || null }, getAuthHeaders());
+      toast.success(`تم توليد ${res.data.count} سؤالاً في «${res.data.topic}»`);
+      setGenOpen(false);
+      if (genGrade === grade) { setPage(1); fetchQuestions(); }
+      fetchMeta(grade).then(setMeta);
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل التوليد'); }
+    finally { setGenLoading(false); }
   };
 
-  const handleCreateQuiz = async () => {
-    if (!quizTitle.trim()) { toast.error('يجب إدخال عنوان الاختبار'); return; }
-    if (selectedIds.size === 0) { toast.error('لم تختر أي أسئلة'); return; }
-    setCreating(true);
+  const createQuiz = async () => {
+    if (!quizTitle.trim()) return toast.error('أدخل عنوان الاختبار');
+    setQuizLoading(true);
     try {
-      const res = await axios.post(
-        `${API}/api/question-bank/create-quiz`,
-        { title: quizTitle, question_ids: Array.from(selectedIds) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await axios.post(`${API}/question-bank/create-quiz`,
+        { question_ids: [...selected], title: quizTitle.trim() }, getAuthHeaders());
       toast.success('تم إنشاء الاختبار بنجاح');
-      setShowQuizDialog(false);
-      setQuizTitle('');
-      setSelectedIds(new Set());
-      navigate(`/teacher/quiz/${res.data.id}/edit`);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'خطأ في إنشاء الاختبار');
-    } finally {
-      setCreating(false);
-    }
+      setQuizOpen(false); setSelected(new Set());
+      navigate(`/teacher/quiz/${res.data.quiz_id || res.data.id}/edit`);
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل إنشاء الاختبار'); }
+    finally { setQuizLoading(false); }
   };
 
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => {
-      const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
-      return s;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === questions.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(questions.map(q => q.id)));
-    }
-  };
-
-  const topicsForGrade = genGrade === '5' ? GRADE5_TOPICS : genGrade === '8' ? GRADE8_TOPICS : [];
+  const typeCounts = meta?.types || {};
+  const total = meta?.total || 0;
 
   return (
     <TeacherLayout title="بنك الأسئلة">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <button
-          data-testid="generate-questions-btn"
-          onClick={() => setShowGenDialog(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors shadow-sm"
-        >
-          <Sparkles className="w-4 h-4" />
-          توليد أسئلة بالذكاء الاصطناعي
-        </button>
-
-        {selectedIds.size > 0 && (
-          <button
-            data-testid="create-quiz-from-bank-btn"
-            onClick={() => setShowQuizDialog(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4" />
-            إنشاء اختبار ({selectedIds.size} سؤال)
-          </button>
-        )}
-
-        <button
-          onClick={fetchQuestions}
-          className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50 transition-colors ml-auto"
-        >
-          <RefreshCw className="w-4 h-4" />
-          تحديث
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2 text-slate-500">
-          <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">تصفية:</span>
+      {/* إحصاءات سريعة */}
+      <div className="flex flex-wrap items-center gap-2 mb-5" data-testid="qb-stats-bar">
+        <div className="glass-card px-4 py-2.5 flex items-center gap-2">
+          <Layers className="w-4 h-4" style={{ color: '#28F5A7' }} />
+          <span className="text-sm font-black text-white">{total}</span>
+          <span className="text-xs" style={{ color: 'var(--text-hint)' }}>سؤال للصف {GRADE_LABELS[grade]}</span>
         </div>
-
-        <select
-          data-testid="filter-grade"
-          value={filterGrade}
-          onChange={e => setFilterGrade(e.target.value)}
-          className="input-field text-sm"
-          style={{ width: 'auto' }}
-        >
-          <option value="">كل الصفوف</option>
-          <option value="5">الصف الخامس</option>
-          <option value="8">الصف الثامن</option>
-        </select>
-
-        <select
-          data-testid="filter-difficulty"
-          value={filterDiff}
-          onChange={e => setFilterDiff(e.target.value)}
-          className="input-field text-sm"
-          style={{ width: 'auto' }}
-        >
-          <option value="">كل المستويات</option>
-          <option value="easy">سهل</option>
-          <option value="medium">متوسط</option>
-          <option value="hard">صعب</option>
-        </select>
-
-        <select
-          data-testid="filter-type"
-          value={filterType}
-          onChange={e => setFilterType(e.target.value)}
-          className="input-field text-sm"
-          style={{ width: 'auto' }}
-        >
-          <option value="">كل الأنواع</option>
-          <option value="mcq">اختياري</option>
-          <option value="true_false">صح/خطأ</option>
-          <option value="short">قصير</option>
-          <option value="long">طويل</option>
-        </select>
-
-        {(filterGrade || filterDiff || filterType) && (
-          <button
-            onClick={() => { setFilterGrade(''); setFilterDiff(''); setFilterType(''); }}
-            className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
-          >
-            <X className="w-3.5 h-3.5" />
-            مسح الفلاتر
-          </button>
-        )}
-
-        <span className="mr-auto text-sm text-slate-400">{questions.length} سؤال</span>
-      </div>
-
-      {/* Select All bar */}
-      {questions.length > 0 && (
-        <div className="flex items-center gap-3 mb-3 px-1">
-          <button
-            onClick={toggleSelectAll}
-            className="flex items-center gap-2 text-sm text-slate-600 hover:text-violet-600 transition-colors"
-            data-testid="select-all-btn"
-          >
-            {selectedIds.size === questions.length
-              ? <CheckSquare className="w-4 h-4 text-violet-600" />
-              : <Square className="w-4 h-4" />
-            }
-            {selectedIds.size === questions.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
-          </button>
-          {selectedIds.size > 0 && (
-            <span className="text-sm text-violet-600 font-medium">
-              {selectedIds.size} محدد
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Questions List */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin mb-3" />
-          <p>جاري التحميل...</p>
-        </div>
-      ) : questions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-          <BookOpen className="w-12 h-12 mb-4 opacity-40" />
-          <p className="text-lg font-medium text-slate-500">بنك الأسئلة فارغ</p>
-          <p className="text-sm mt-1">استخدم زر "توليد أسئلة" لإضافة أسئلة جديدة</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {questions.map((q, idx) => (
-            <QuestionCard
-              key={q.id}
-              q={q}
-              idx={idx}
-              selected={selectedIds.has(q.id)}
-              onToggle={() => toggleSelect(q.id)}
-              onDelete={() => setDeletingId(q.id)}
-              deletingId={deletingId}
-              onConfirmDelete={() => handleDelete(q.id)}
-              onCancelDelete={() => setDeletingId(null)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Generate Dialog */}
-      {showGenDialog && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="gen-dialog">
-          <div className="glass-modal rounded-2xl w-full max-w-md p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-violet-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">توليد أسئلة بالذكاء الاصطناعي</h2>
-                <p className="text-sm text-slate-500">سيتم توليد 15 سؤالاً متنوعاً</p>
-              </div>
-              <button onClick={() => setShowGenDialog(false)} className="mr-auto p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  الصف الدراسي <span className="text-red-500">*</span>
-                </label>
-                <select
-                  data-testid="gen-grade-select"
-                  value={genGrade}
-                  onChange={e => { setGenGrade(e.target.value); setGenTopic(''); }}
-                  className="input-field"
-                >
-                  <option value="">-- اختر الصف --</option>
-                  <option value="5">الصف الخامس</option>
-                  <option value="8">الصف الثامن</option>
-                </select>
-              </div>
-
-              {genGrade && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    الموضوع (اختياري)
-                  </label>
-                  <select
-                    data-testid="gen-topic-select"
-                    value={genTopic}
-                    onChange={e => setGenTopic(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">اختيار عشوائي من المنهج</option>
-                    {topicsForGrade.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-400 mt-1">إذا لم تختر موضوعاً سيتم اختياره عشوائياً من منهج الفصل الثاني</p>
-                </div>
-              )}
-
-              {!genGrade && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-700">يجب اختيار الصف الدراسي أولاً لعرض المواضيع</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowGenDialog(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50 transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                data-testid="confirm-generate-btn"
-                onClick={handleGenerate}
-                disabled={!genGrade || generating}
-                className="flex-1 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {generating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    جاري التوليد...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    توليد 15 سؤال
-                  </>
-                )}
-              </button>
-            </div>
+        {Object.entries(TYPE_META).map(([k, v]) => typeCounts[k] ? (
+          <div key={k} className="glass-card px-3 py-2.5 flex items-center gap-1.5">
+            <v.icon className="w-3.5 h-3.5" style={{ color: v.color }} />
+            <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{typeCounts[k]}</span>
+            <span className="text-[11px]" style={{ color: 'var(--text-hint)' }}>{v.label}</span>
           </div>
-        </div>
-      )}
-
-      {/* Create Quiz Dialog */}
-      {showQuizDialog && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="quiz-dialog">
-          <div className="glass-modal rounded-2xl w-full max-w-md p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                <PlusCircle className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">إنشاء اختبار من البنك</h2>
-                <p className="text-sm text-slate-500">{selectedIds.size} سؤال محدد</p>
-              </div>
-              <button onClick={() => setShowQuizDialog(false)} className="mr-auto p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                عنوان الاختبار <span className="text-red-500">*</span>
-              </label>
-              <input
-                data-testid="quiz-title-input"
-                value={quizTitle}
-                onChange={e => setQuizTitle(e.target.value)}
-                placeholder="مثال: اختبار الجداول الإلكترونية - الصف الخامس"
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                سيتم إنشاء الاختبار في حالة "مسودة" ويمكنك تعديل الأسئلة بعد ذلك
-              </p>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowQuizDialog(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50 transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                data-testid="confirm-create-quiz-btn"
-                onClick={handleCreateQuiz}
-                disabled={!quizTitle.trim() || creating}
-                className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {creating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    جاري الإنشاء...
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4" />
-                    إنشاء الاختبار
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </TeacherLayout>
-  );
-}
-
-function QuestionCard({ q, idx, selected, onToggle, onDelete, deletingId, onConfirmDelete, onCancelDelete }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div
-      data-testid={`question-card-${q.id}`}
-      className={`bg-white border rounded-2xl transition-all duration-200 ${
-        selected ? 'border-violet-300 shadow-md shadow-violet-50' : 'border-slate-200 hover:border-slate-300'
-      }`}
-    >
-      <div className="flex items-start gap-3 p-4">
-        {/* Checkbox */}
-        <button onClick={onToggle} className="flex-shrink-0 mt-0.5" data-testid={`select-q-${q.id}`}>
-          {selected
-            ? <CheckSquare className="w-5 h-5 text-violet-600" />
-            : <Square className="w-5 h-5 text-slate-300 hover:text-slate-500" />
-          }
-        </button>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${TYPE_COLORS[q.type] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-              {TYPE_LABELS[q.type] || q.type}
-            </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${DIFF_COLORS[q.difficulty] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-              {DIFF_LABELS[q.difficulty] || q.difficulty}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-200">
-              صف {q.grade}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-200">
-              {q.points} درجة
-            </span>
-          </div>
-
-          <p className="text-sm text-slate-800 font-medium leading-relaxed">{q.text}</p>
-
-          {/* Topic */}
-          {q.topic && (
-            <p className="text-xs text-slate-400 mt-1 truncate">{q.topic}</p>
-          )}
-
-          {/* Expanded details */}
-          {expanded && (
-            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-              {q.type === 'mcq' && q.options && (
-                <div className="space-y-1">
-                  {q.options.map((opt, i) => (
-                    <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${opt === q.correct_answer ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600'}`}>
-                      <span className="font-medium flex-shrink-0">{['أ', 'ب', 'ج', 'د'][i]}.</span>
-                      <span>{opt}</span>
-                      {opt === q.correct_answer && <span className="mr-auto text-xs bg-emerald-100 px-1.5 py-0.5 rounded">صحيح</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {q.type === 'true_false' && (
-                <div className="text-sm">
-                  <span className="text-slate-500">الإجابة الصحيحة: </span>
-                  <span className={`font-medium ${q.correct_answer === 'صح' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {q.correct_answer}
-                  </span>
-                </div>
-              )}
-              {q.type === 'short' && q.correct_answer && (
-                <div className="text-sm">
-                  <span className="text-slate-500">الإجابة النموذجية: </span>
-                  <span className="text-slate-700">{q.correct_answer}</span>
-                </div>
-              )}
-              {q.cognitive_level && (
-                <p className="text-xs text-slate-400">المستوى المعرفي: {q.cognitive_level}</p>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="flex items-center gap-1 text-xs text-violet-500 hover:text-violet-700 mt-2 transition-colors"
-          >
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-            {expanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+        ) : null)}
+        <div className="mr-auto flex gap-2">
+          <button onClick={() => { setGenGrade(grade === '7' ? '5' : grade); setGenTopic(''); setGenOpen(true); }}
+            className="btn-primary flex items-center gap-2 text-sm" data-testid="qb-open-generate">
+            <Sparkles className="w-4 h-4" /> توليد بالذكاء الاصطناعي
           </button>
-        </div>
-
-        {/* Delete button */}
-        <div className="flex-shrink-0">
-          {deletingId === q.id ? (
-            <div className="flex gap-1">
-              <button
-                onClick={onCancelDelete}
-                className="text-xs px-2 py-1 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={onConfirmDelete}
-                className="text-xs px-2 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                data-testid={`confirm-delete-${q.id}`}
-              >
-                حذف
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onDelete}
-              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              data-testid={`delete-q-${q.id}`}
-            >
-              <Trash2 className="w-4 h-4" />
+          {selected.size > 0 && (
+            <button onClick={() => { setQuizTitle(''); setQuizOpen(true); }}
+              className="btn-secondary flex items-center gap-2 text-sm" data-testid="qb-create-quiz-btn">
+              <FilePlus2 className="w-4 h-4" /> إنشاء اختبار ({selected.size})
             </button>
           )}
         </div>
       </div>
-    </div>
+
+      {/* اختيار الصف */}
+      <div className="flex gap-2 mb-4" data-testid="qb-grade-tabs">
+        {GRADES.map(g => (
+          <button key={g} onClick={() => changeGrade(g)} data-testid={`qb-grade-${g}`}
+            className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+            style={grade === g
+              ? { background: 'rgba(22,214,122,0.12)', border: '1px solid rgba(22,214,122,0.4)', color: '#28F5A7' }
+              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
+            الصف {GRADE_LABELS[g]}
+          </button>
+        ))}
+      </div>
+
+      {/* الفلاتر */}
+      <div className="glass-card p-3 sm:p-4 mb-5">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-hint)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} data-testid="qb-search-input"
+              placeholder="ابحث في نص الأسئلة..." className="input-field !pr-9 text-sm" />
+          </div>
+          <select value={lesson} onChange={e => { setLesson(e.target.value); setPage(1); }}
+            className="input-field text-sm" style={{ width: 'auto', maxWidth: '250px' }} data-testid="qb-lesson-select">
+            <option value="">كل الدروس</option>
+            {(meta?.units || []).map(u => (
+              <optgroup key={u.unit} label={`وحدة: ${u.unit}`}>
+                {u.lessons.map(l => <option key={l.lesson} value={l.lesson}>{l.lesson} ({l.count})</option>)}
+              </optgroup>
+            ))}
+          </select>
+          <select value={fType} onChange={e => { setFType(e.target.value); setPage(1); }}
+            className="input-field text-sm" style={{ width: 'auto' }} data-testid="qb-type-select">
+            <option value="">كل الأنواع</option>
+            {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <select value={fCog} onChange={e => { setFCog(e.target.value); setPage(1); }}
+            className="input-field text-sm" style={{ width: 'auto' }} data-testid="qb-cog-select">
+            <option value="">كل المستويات المعرفية</option>
+            <option value="recall">تذكر</option>
+            <option value="understanding">فهم</option>
+            <option value="application">تطبيق</option>
+            <option value="reasoning">استدلال</option>
+          </select>
+          <select value={fDiff} onChange={e => { setFDiff(e.target.value); setPage(1); }}
+            className="input-field text-sm" style={{ width: 'auto' }} data-testid="qb-diff-select">
+            <option value="">كل الصعوبات</option>
+            <option value="easy">سهل</option>
+            <option value="medium">متوسط</option>
+            <option value="hard">صعب</option>
+          </select>
+          {hasFilters && (
+            <button onClick={clearFilters} data-testid="qb-clear-filters"
+              className="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors hover:bg-white/5"
+              style={{ color: '#F87171' }}>
+              <X className="w-3.5 h-3.5" /> مسح الفلاتر
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* القائمة */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#28F5A7' }} />
+        </div>
+      ) : data.questions.length === 0 ? (
+        <div className="glass-card p-10 text-center" data-testid="qb-empty-state">
+          <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--text-hint)' }} />
+          <p className="font-bold mb-1" style={{ color: 'var(--text-muted)' }}>
+            {grade === '7' ? 'أسئلة الصف السابع ستُضاف فور إرفاق كتاب الصف السابع' : 'لا توجد أسئلة مطابقة'}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--text-hint)' }}>
+            {grade === '7' ? 'أرفق الكتاب وسيتم توليد 200 سؤال تلقائياً' : hasFilters ? 'جرّب تعديل الفلاتر أو مسحها' : 'استخدم زر التوليد بالذكاء الاصطناعي'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 mb-6">
+            {data.questions.map(q => (
+              <QuestionCard key={q.id} q={q}
+                selected={selected.has(q.id)}
+                onToggle={() => toggleSelect(q.id)}
+                onDelete={() => deleteQuestion(q.id)}
+                canDelete={q.scope === 'global' ? isAdmin : true} />
+            ))}
+          </div>
+
+          {/* ترقيم الصفحات */}
+          {data.pages > 1 && (
+            <div className="flex items-center justify-center gap-3 pb-8" data-testid="qb-pagination">
+              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} data-testid="qb-prev-page"
+                className="btn-secondary flex items-center gap-1 text-sm disabled:opacity-30">
+                <ChevronRight className="w-4 h-4" /> السابق
+              </button>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                صفحة {page} من {data.pages} <span style={{ color: 'var(--text-hint)' }}>({data.total} سؤال)</span>
+              </span>
+              <button disabled={page >= data.pages} onClick={() => setPage(p => p + 1)} data-testid="qb-next-page"
+                className="btn-secondary flex items-center gap-1 text-sm disabled:opacity-30">
+                التالي <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* نافذة التوليد */}
+      {genOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => !genLoading && setGenOpen(false)}>
+          <div className="glass-modal w-full max-w-md p-6" onClick={e => e.stopPropagation()} data-testid="qb-generate-modal">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5" style={{ color: '#28F5A7' }} /> توليد أسئلة بالذكاء الاصطناعي
+              </h3>
+              <button onClick={() => setGenOpen(false)} disabled={genLoading}><X className="w-5 h-5" style={{ color: 'var(--text-hint)' }} /></button>
+            </div>
+            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الصف الدراسي</label>
+            <select value={genGrade} onChange={e => { setGenGrade(e.target.value); setGenTopic(''); }}
+              className="input-field mb-4" data-testid="gen-grade-select">
+              {GRADES.filter(g => g !== '7').map(g => <option key={g} value={g}>الصف {GRADE_LABELS[g]}</option>)}
+            </select>
+            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الدرس (اختياري — فارغ = عشوائي)</label>
+            <select value={genTopic} onChange={e => setGenTopic(e.target.value)}
+              className="input-field mb-5" data-testid="gen-topic-select">
+              <option value="">درس عشوائي</option>
+              {(genMeta?.units || []).map(u => (
+                <optgroup key={u.unit} label={`وحدة: ${u.unit}`}>
+                  {u.lessons.map(l => <option key={l.lesson} value={l.lesson}>{l.lesson}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            <button onClick={generate} disabled={genLoading} data-testid="gen-submit-btn"
+              className="btn-primary w-full flex items-center justify-center gap-2">
+              {genLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> جارٍ التوليد (15 سؤالاً)...</> : <><Sparkles className="w-4 h-4" /> توليد 15 سؤالاً</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة إنشاء اختبار */}
+      {quizOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => !quizLoading && setQuizOpen(false)}>
+          <div className="glass-modal w-full max-w-md p-6" onClick={e => e.stopPropagation()} data-testid="qb-quiz-modal">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <FilePlus2 className="w-5 h-5" style={{ color: '#28F5A7' }} /> إنشاء اختبار من {selected.size} سؤالاً
+              </h3>
+              <button onClick={() => setQuizOpen(false)} disabled={quizLoading}><X className="w-5 h-5" style={{ color: 'var(--text-hint)' }} /></button>
+            </div>
+            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>عنوان الاختبار</label>
+            <input value={quizTitle} onChange={e => setQuizTitle(e.target.value)} data-testid="quiz-title-input"
+              placeholder="مثال: اختبار الوحدة الأولى — الصف الخامس" className="input-field mb-5" />
+            <button onClick={createQuiz} disabled={quizLoading} data-testid="quiz-submit-btn"
+              className="btn-primary w-full flex items-center justify-center gap-2">
+              {quizLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> جارٍ الإنشاء...</> : 'إنشاء الاختبار'}
+            </button>
+          </div>
+        </div>
+      )}
+    </TeacherLayout>
   );
 }
