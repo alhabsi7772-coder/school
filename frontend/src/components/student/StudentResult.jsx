@@ -91,7 +91,7 @@ export default function StudentResult() {
     setGenCert(true);
     const templateId = localStorage.getItem('certTemplate') || 'classic_blue';
     try {
-      await downloadCertificate(result, { title: result.quiz_title }, templateId);
+      await downloadCertificate(result, { title: result.quiz_title }, templateId, result.school_name);
     } catch { }
     finally { setGenCert(false); }
   };

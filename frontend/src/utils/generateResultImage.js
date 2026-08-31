@@ -53,7 +53,7 @@ function calcHeight(student, qMap) {
   return Math.max(h + 60, 500);
 }
 
-export async function generateStudentResultCanvas(student, quiz) {
+export async function generateStudentResultCanvas(student, quiz, schoolName) {
   const qMap = {};
   (quiz.questions || []).forEach(q => { qMap[q.id] = q; });
 
@@ -87,7 +87,7 @@ export async function generateStudentResultCanvas(student, quiz) {
   // School name
   ctx.fillStyle = COLORS.white;
   ctx.font = 'bold 22px Tajawal, Arial';
-  ctx.fillText('مدرسة الخيرات للتعليم الأساسي', W - 30, 62);
+  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين', W - 30, 62);
 
   // Quiz title
   ctx.fillStyle = 'rgba(255,255,255,0.82)';

@@ -245,7 +245,7 @@ export default function TeacherManagement() {
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
                   <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5" /> اسم المدرسة</span>
                 </label>
-                <input className="input-field" placeholder="مثال: مدرسة الخيرات للتعليم الأساسي"
+                <input className="input-field" placeholder="مثال: مدرسة الخيرات للبنين"
                   value={form.school_name} onChange={e => setForm(f => ({ ...f, school_name: e.target.value }))}
                   data-testid="new-teacher-school-input" />
               </div>
@@ -290,7 +290,7 @@ export default function TeacherManagement() {
                 <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
                   <span className="flex items-center gap-1.5"><School className="w-3.5 h-3.5" /> اسم المدرسة</span>
                 </label>
-                <input className="input-field" placeholder="مثال: مدرسة الخيرات للتعليم الأساسي"
+                <input className="input-field" placeholder="مثال: مدرسة الخيرات للبنين"
                   value={form.school_name} onChange={e => setForm(f => ({ ...f, school_name: e.target.value }))}
                   data-testid="edit-teacher-school-input" />
               </div>

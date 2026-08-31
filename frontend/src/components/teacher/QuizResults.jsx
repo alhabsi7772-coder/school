@@ -83,7 +83,7 @@ export default function QuizResults() {
   const downloadStudentImage = async (student) => {
     setDownloadingId(student.id);
     try {
-      const canvas = await generateStudentResultCanvas(student, data.quiz);
+      const canvas = await generateStudentResultCanvas(student, data.quiz, data.quiz?.school_name);
       const blob = await canvasToBlob(canvas);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -103,7 +103,7 @@ export default function QuizResults() {
     try {
       const zip = new JSZip();
       for (const student of submissions) {
-        const canvas = await generateStudentResultCanvas(student, data.quiz);
+        const canvas = await generateStudentResultCanvas(student, data.quiz, data.quiz?.school_name);
         const blob = await canvasToBlob(canvas);
         zip.file(buildFileName(student), blob);
       }
@@ -165,7 +165,7 @@ export default function QuizResults() {
     setDownloadingId('cert-' + student.id);
     const templateId = localStorage.getItem('certTemplate') || 'classic_blue';
     try {
-      const canvas = await generateCertificate(student, data.quiz, templateId);
+      const canvas = await generateCertificate(student, data.quiz, templateId, data.quiz?.school_name);
       const blob = await canvasToBlob(canvas);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -184,7 +184,7 @@ export default function QuizResults() {
     try {
       const zip = new JSZip();
       for (const s of submissions) {
-        const canvas = await generateCertificate(s, data.quiz, templateId);
+        const canvas = await generateCertificate(s, data.quiz, templateId, data.quiz?.school_name);
         const blob = await canvasToBlob(canvas);
         zip.file(certFileName(s), blob);
       }

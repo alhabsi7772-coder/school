@@ -203,7 +203,7 @@ function drawDivider(ctx, W, y, color, accent, dashed = false) {
 
 // ─── CONTENT RENDERER (SAME FOR ALL TEMPLATES) ────────────────────────────
 
-function drawContent(ctx, W, H, t, student, quiz) {
+function drawContent(ctx, W, H, t, student, quiz, schoolName) {
   ctx.direction = 'rtl';
 
   // Emblem
@@ -218,7 +218,7 @@ function drawContent(ctx, W, H, t, student, quiz) {
   ctx.font = '14px Tajawal, Arial';
   ctx.fillText('وزارة التعليم', W - 58, 100);
   ctx.fillText('المديرية العامة بشمال الشرقية', W - 58, 120);
-  ctx.fillText('مدرسة الخيرات للتعليم الأساسي', W - 58, 140);
+  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين', W - 58, 140);
   ctx.fillStyle = t.school3;
   ctx.font = '12px Tajawal, Arial';
   ctx.fillText('العام الدراسي ٢٠٢٥ / ٢٠٢٦', W - 58, 162);
@@ -323,7 +323,7 @@ function drawContent(ctx, W, H, t, student, quiz) {
 
 // ─── MAIN GENERATOR ────────────────────────────────────────────────────────
 
-export async function generateCertificate(student, quiz, templateId = 'classic_blue') {
+export async function generateCertificate(student, quiz, templateId = 'classic_blue', schoolName) {
   const t = TEMPLATES[templateId] || TEMPLATES.classic_blue;
   const W = 1123, H = 794;
   const canvas = document.createElement('canvas');
@@ -375,7 +375,7 @@ export async function generateCertificate(student, quiz, templateId = 'classic_b
   if (CORNER_FNS[t.cornerStyle]) CORNER_FNS[t.cornerStyle](ctx, W, H, t.cornerColor);
 
   // ── All text content
-  drawContent(ctx, W, H, t, student, quiz);
+  drawContent(ctx, W, H, t, student, quiz, schoolName);
 
   return canvas;
 }
@@ -384,8 +384,8 @@ export function certFileName(student) {
   return `شهادة_${student.student_name}_${student.grade}-${student.section}.png`;
 }
 
-export async function downloadCertificate(student, quiz, templateId) {
-  const canvas = await generateCertificate(student, quiz, templateId);
+export async function downloadCertificate(student, quiz, templateId, schoolName) {
+  const canvas = await generateCertificate(student, quiz, templateId, schoolName);
   return new Promise(resolve => {
     canvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);

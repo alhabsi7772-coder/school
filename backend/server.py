@@ -109,7 +109,7 @@ async def init_db():
             "id": str(uuid.uuid4()),
             "username": "admin",
             "password_hash": hash_password("teacher123"),
-            "school_name": "مدرسة الخيرات للتعليم الأساسي",
+            "school_name": "مدرسة الخيرات للبنين",
             "teacher_name": "أستاذ تقنية المعلومات",
             "role": "admin",
             "is_active": True,
@@ -130,7 +130,7 @@ async def init_db():
                 "id": str(uuid.uuid4()),
                 "username": username,
                 "password_hash": hash_password(pwd),
-                "school_name": "مدرسة الخيرات للتعليم الأساسي",
+                "school_name": "مدرسة الخيرات للبنين",
                 "teacher_name": name,
                 "role": "teacher",
                 "is_active": True,
@@ -744,12 +744,15 @@ async def get_result(qid: str, sub_id: str):
             "points": qq.get('points', 1)
         })
 
+    owner = await db.teachers.find_one({"id": q.get("owner_id")}, {"_id": 0, "school_name": 1})
+
     return {
         "show_results": True, "submitted": True,
         "student_name": sub['student_name'], "grade": sub['grade'],
         "section": sub['section'], "total_score": sub['total_score'],
         "max_score": sub['max_score'], "percentage": sub['percentage'],
-        "is_graded": sub['is_graded'], "answers": enriched, "quiz_title": q['title']
+        "is_graded": sub['is_graded'], "answers": enriched, "quiz_title": q['title'],
+        "school_name": (owner or {}).get("school_name") or "مدرسة الخيرات للبنين"
     }
 
 
@@ -772,6 +775,8 @@ async def quiz_results(qid: str, t=Depends(get_teacher)):
     q = await db.quizzes.find_one({"id": qid, "owner_id": t["teacher_id"]}, {"_id": 0})
     if not q:
         raise HTTPException(404, "الاختبار غير موجود")
+    owner = await db.teachers.find_one({"id": t["teacher_id"]}, {"_id": 0, "school_name": 1})
+    q["school_name"] = (owner or {}).get("school_name") or "مدرسة الخيرات للبنين"
     subs = await db.submissions.find(
         {"quiz_id": qid, "submitted_at": {"$ne": None}}, {"_id": 0}
     ).to_list(1000)
@@ -1950,7 +1955,7 @@ async def admin_create_teacher(req: TeacherCreateReq, _=Depends(require_admin)):
         "username": username,
         "password_hash": hash_password(req.password),
         "teacher_name": req.teacher_name.strip() or "معلم جديد",
-        "school_name": (req.school_name or "").strip() or "مدرسة الخيرات للتعليم الأساسي",
+        "school_name": (req.school_name or "").strip() or "مدرسة الخيرات للبنين",
         "role": "teacher",
         "is_active": True,
         "created_at": now_iso()
@@ -1982,7 +1987,7 @@ async def admin_update_teacher(tid: str, req: TeacherUpdateReq, _=Depends(requir
     if req.teacher_name is not None and req.teacher_name.strip():
         upd["teacher_name"] = req.teacher_name.strip()
     if req.school_name is not None:
-        upd["school_name"] = req.school_name.strip() or "مدرسة الخيرات للتعليم الأساسي"
+        upd["school_name"] = req.school_name.strip() or "مدرسة الخيرات للبنين"
     if req.new_password:
         if len(req.new_password) < 6:
             raise HTTPException(400, "كلمة المرور يجب أن تكون 6 أحرف على الأقل")

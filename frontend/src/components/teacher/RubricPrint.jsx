@@ -20,12 +20,14 @@ export default function RubricPrint() {
   const [evals, setEvals] = useState({});
   const [mode, setMode] = useState('filled'); // 'filled' | 'blank'
   const [loading, setLoading] = useState(true);
+  const [schoolName, setSchoolName] = useState('');
 
   useEffect(() => {
     Promise.all([
       axios.get(`${API}/rubrics/${rubricId}`, getAuthHeaders()),
       axios.get(`${API}/gradebooks`, getAuthHeaders()),
-    ]).then(([r, g]) => { setRubric(r.data); setGradebooks(g.data); })
+      axios.get(`${API}/auth/profile`, getAuthHeaders()),
+    ]).then(([r, g, p]) => { setRubric(r.data); setGradebooks(g.data); setSchoolName(p.data?.school_name || ''); })
       .catch(() => toast.error('تعذر التحميل'))
       .finally(() => setLoading(false));
   }, [rubricId]);
@@ -152,26 +154,26 @@ export default function RubricPrint() {
         )}
 
         {mode === 'blank' && (
-          <PrintCard rubric={rubric} student={null} evaluation={null} isBlank />
+          <PrintCard rubric={rubric} student={null} evaluation={null} isBlank schoolName={schoolName} />
         )}
 
         {mode === 'filled' && gb && (gb.students || []).map(st => (
           <PrintCard key={st.id} rubric={rubric} student={st} evaluation={evals[st.id]}
-            grade={gb.grade} section={gb.section} />
+            grade={gb.grade} section={gb.section} schoolName={schoolName} />
         ))}
       </div>
     </>
   );
 }
 
-function PrintCard({ rubric, student, evaluation, isBlank, grade, section }) {
+function PrintCard({ rubric, student, evaluation, isBlank, grade, section, schoolName }) {
   const scores = evaluation?.scores || {};
   const studentName = isBlank ? '' : (student?.name || '');
   const gradeStr = isBlank ? '' : `${grade || ''}/${section || ''}`;
 
   return (
     <div className="print-page">
-      <Header />
+      <Header schoolName={schoolName} />
       <div className="print-divider" />
       <div className="print-title">{rubric.title}</div>
 
@@ -226,12 +228,12 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section }) {
   );
 }
 
-function Header() {
+function Header({ schoolName }) {
   return (
     <div className="print-header">
       <div className="line-1">سلطنة عمان</div>
       <div className="line-2">وزارة التعليم</div>
-      <div className="line-3">مدرسة الخيرات للبنين للصفوف ٥-٨</div>
+      <div className="line-3">{schoolName || 'مدرسة الخيرات للبنين للصفوف ٥-٨'}</div>
     </div>
   );
 }

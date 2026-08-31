@@ -90,7 +90,7 @@ export default function StudentJoin() {
           <h1 className="text-3xl font-black text-white mb-1" style={{ textShadow: '0 4px 28px rgba(0,0,0,0.85)' }}>
             منصة <span className="neon-text-fuchsia">الاختبارات</span>
           </h1>
-          <p className="text-sm tracking-wide" style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>مدرسة الخيرات للتعليم الأساسي</p>
+          <p className="text-sm tracking-wide" style={{ color: 'rgba(255,255,255,0.78)', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>مدرسة الخيرات للبنين</p>
         </div>
 
         {/* Card */}
