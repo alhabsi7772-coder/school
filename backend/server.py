@@ -22,7 +22,6 @@ import jwt
 import random
 import string
 import base64
-from emergentintegrations.llm.chat import LlmChat, UserMessage
 from openai import AsyncOpenAI
 
 ROOT_DIR = Path(__file__).parent
@@ -960,128 +959,12 @@ async def download_project_file(file_id: str, _=Depends(get_teacher)):
 
 # =================== QUESTION BANK MODELS ===================
 
-class GenerateQuestionsReq(BaseModel):
-    grade: str  # "5" or "8"
-    topic: Optional[str] = None
-
 class CreateQuizFromBankReq(BaseModel):
     title: str
     question_ids: List[str]
 
 
 # =================== QUESTION BANK ROUTES ===================
-
-GRADE5_TOPICS = [
-    "الجداول الإلكترونية (Microsoft Excel) - إدخال البيانات والصيغ الحسابية",
-    "الجداول الإلكترونية - دوال SUM وAVERAGE وMAX وMIN وCOUNT وIF",
-    "الجداول الإلكترونية - التحقق من صحة البيانات والتنسيق الشرطي",
-    "الجداول الإلكترونية - الرسوم البيانية وأنواعها",
-    "الشبكات والإنترنت - أنواع الشبكات LAN وWAN",
-    "خدمات الإنترنت والبريد الإلكتروني",
-    "الأمن المعلوماتي وحماية الخصوصية"
-]
-
-GRADE8_TOPICS = [
-    "قواعد البيانات - المفاهيم الأساسية: الجداول والحقول والسجلات",
-    "Microsoft Access - إنشاء الجداول والعلاقات بين الجداول",
-    "Microsoft Access - الاستعلامات (Queries) وأنواعها",
-    "Microsoft Access - النماذج (Forms) والتقارير (Reports)",
-    "تطوير الويب - بنية صفحة HTML والعلامات الأساسية",
-    "تطوير الويب - تنسيق CSS والعناصر الأساسية",
-    "الأمن المعلوماتي - التهديدات الإلكترونية وأساليب الحماية"
-]
-
-def build_generation_prompt(grade: str, topic: str) -> str:
-    return f"""أنت أستاذ متخصص في تقنية المعلومات في سلطنة عُمان. مهمتك هي إنشاء أسئلة امتحانية دقيقة وصحيحة لمادة تقنية المعلومات.
-
-قم بإنشاء بالضبط 15 سؤالاً للصف {grade} - الفصل الثاني حول الموضوع التالي:
-{topic}
-
-المتطلبات:
-- الأسئلة باللغة العربية فقط (يُسمح بالمصطلحات التقنية الإنجليزية مثل: Excel, Access, HTML, CSS)
-- التنوع في الأنواع: 6 أسئلة اختيارية (mcq) + 4 صح/خطأ (true_false) + 3 إجابة قصيرة (short) + 2 إجابة طويلة (long)
-- التنوع في الصعوبة: 5 سهلة (easy) + 6 متوسطة (medium) + 4 صعبة (hard)
-- كل سؤال يجب أن يكون صحيحاً علمياً ومناسباً لمستوى الصف {grade}
-
-أعد الإجابة بصيغة JSON فقط كمصفوفة من 15 سؤالاً. كل سؤال له الشكل التالي:
-{{
-  "text": "نص السؤال",
-  "type": "mcq|true_false|short|long",
-  "options": ["خيار أ", "خيار ب", "خيار ج", "خيار د"],  // للأسئلة الاختيارية فقط، null لغيرها
-  "correct_answer": "الإجابة الصحيحة",  // للاختيارية: نص الخيار الصحيح، للصح/خطأ: "صح" أو "خطأ"، للقصيرة: الإجابة النموذجية، للطويلة: null
-  "points": 1,  // الاختيارية: 1، الصح/خطأ: 1، القصيرة: 2، الطويلة: 3
-  "difficulty": "easy|medium|hard",
-  "topic": "{topic}",
-  "cognitive_level": "recall|understanding|application|analysis"
-}}
-
-مهم جداً: أعد JSON فقط بدون أي شرح أو نص إضافي."""
-
-
-@api_router.post("/question-bank/generate")
-async def generate_questions(req: GenerateQuestionsReq, t=Depends(get_teacher)):
-    if req.grade not in ["5", "6", "7", "8"]:
-        raise HTTPException(400, "الصف يجب أن يكون من 5 إلى 8")
-
-    topic = req.topic
-    if not topic:
-        # درس عشوائي من أسئلة الكتاب المتوفرة لهذا الصف، أو من القوائم الافتراضية
-        lessons = await db.question_bank.distinct("lesson", {"scope": "global", "grade": req.grade})
-        lessons = [l for l in lessons if l]
-        if lessons:
-            topic = random.choice(lessons)
-        else:
-            topic = random.choice(GRADE5_TOPICS if req.grade == "5" else GRADE8_TOPICS)
-
-    llm_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not llm_key:
-        raise HTTPException(500, "مفتاح الذكاء الاصطناعي غير مهيأ")
-
-    prompt = build_generation_prompt(req.grade, topic)
-    try:
-        chat = LlmChat(
-            api_key=llm_key,
-            session_id=f"qbgen-{uuid.uuid4()}",
-            system_message="أنت أستاذ متخصص في تقنية المعلومات. تُنشئ أسئلة امتحانية بصيغة JSON فقط.",
-        ).with_model("gemini", "gemini-3-flash-preview")
-        response_text = await chat.send_message(UserMessage(text=prompt)) or ""
-    except Exception as e:
-        raise HTTPException(500, f"خطأ في توليد الأسئلة: {str(e)}")
-
-    # استخراج JSON من الاستجابة
-    try:
-        text = response_text.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        questions_data = json.loads(text)
-        if not isinstance(questions_data, list):
-            raise ValueError("الاستجابة ليست قائمة")
-    except Exception as e:
-        raise HTTPException(500, f"خطأ في تحليل استجابة الذكاء الاصطناعي: {str(e)}")
-
-    saved = []
-    for q in questions_data[:15]:
-        item = {
-            "id": str(uuid.uuid4()),
-            "owner_id": t["teacher_id"],
-            "text": q.get("text", ""),
-            "type": q.get("type", "mcq"),
-            "options": q.get("options") if q.get("type") == "mcq" else None,
-            "correct_answer": q.get("correct_answer"),
-            "points": float(q.get("points", 1)),
-            "difficulty": q.get("difficulty", "medium"),
-            "grade": req.grade,
-            "topic": q.get("topic", topic),
-            "cognitive_level": q.get("cognitive_level", "recall"),
-            "created_at": now_iso()
-        }
-        await db.question_bank.insert_one(item)
-        item.pop("_id", None)
-        saved.append(item)
-
-    return {"questions": saved, "count": len(saved), "topic": topic}
-
 
 @api_router.get("/question-bank/meta")
 async def question_bank_meta(grade: Optional[str] = None, t=Depends(get_teacher)):

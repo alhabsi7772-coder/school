@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import TeacherLayout from './TeacherLayout';
 import {
-  Sparkles, Trash2, Search, CheckCircle2, ChevronRight, ChevronLeft,
+  Trash2, Search, CheckCircle2, ChevronRight, ChevronLeft,
   BookOpen, Layers, Brain, Gauge, FilePlus2, X, Loader2, Eye, EyeOff,
   ListChecks, GitCompareArrows, AlignLeft, AlignJustify, ToggleLeft, Image as ImageIcon
 } from 'lucide-react';
@@ -157,12 +157,6 @@ export default function QuestionBank() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(new Set());
 
-  const [genOpen, setGenOpen] = useState(false);
-  const [genGrade, setGenGrade] = useState('5');
-  const [genTopic, setGenTopic] = useState('');
-  const [genLoading, setGenLoading] = useState(false);
-  const [genMeta, setGenMeta] = useState(null);
-
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizTitle, setQuizTitle] = useState('');
   const [quizLoading, setQuizLoading] = useState(false);
@@ -183,7 +177,6 @@ export default function QuestionBank() {
   }, []);
 
   useEffect(() => { fetchMeta(grade).then(setMeta); }, [grade, fetchMeta]);
-  useEffect(() => { if (genOpen) fetchMeta(genGrade).then(setGenMeta); }, [genOpen, genGrade, fetchMeta]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -223,19 +216,6 @@ export default function QuestionBank() {
     } catch (e) { toast.error(e.response?.data?.detail || 'فشل الحذف'); }
   };
 
-  const generate = async () => {
-    setGenLoading(true);
-    try {
-      const res = await axios.post(`${API}/question-bank/generate`,
-        { grade: genGrade, topic: genTopic || null }, getAuthHeaders());
-      toast.success(`تم توليد ${res.data.count} سؤالاً في «${res.data.topic}»`);
-      setGenOpen(false);
-      if (genGrade === grade) { setPage(1); fetchQuestions(); }
-      fetchMeta(grade).then(setMeta);
-    } catch (e) { toast.error(e.response?.data?.detail || 'فشل التوليد'); }
-    finally { setGenLoading(false); }
-  };
-
   const createQuiz = async () => {
     if (!quizTitle.trim()) return toast.error('أدخل عنوان الاختبار');
     setQuizLoading(true);
@@ -269,10 +249,6 @@ export default function QuestionBank() {
           </div>
         ) : null)}
         <div className="mr-auto flex gap-2">
-          <button onClick={() => { setGenGrade(grade === '7' ? '5' : grade); setGenTopic(''); setGenOpen(true); }}
-            className="btn-primary flex items-center gap-2 text-sm" data-testid="qb-open-generate">
-            <Sparkles className="w-4 h-4" /> توليد بالذكاء الاصطناعي
-          </button>
           {selected.size > 0 && (
             <button onClick={() => { setQuizTitle(''); setQuizOpen(true); }}
               className="btn-secondary flex items-center gap-2 text-sm" data-testid="qb-create-quiz-btn">
@@ -350,11 +326,9 @@ export default function QuestionBank() {
       ) : data.questions.length === 0 ? (
         <div className="glass-card p-10 text-center" data-testid="qb-empty-state">
           <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--text-hint)' }} />
-          <p className="font-bold mb-1" style={{ color: 'var(--text-muted)' }}>
-            {grade === '7' ? 'أسئلة الصف السابع ستُضاف فور إرفاق كتاب الصف السابع' : 'لا توجد أسئلة مطابقة'}
-          </p>
+          <p className="font-bold mb-1" style={{ color: 'var(--text-muted)' }}>لا توجد أسئلة مطابقة</p>
           <p className="text-sm" style={{ color: 'var(--text-hint)' }}>
-            {grade === '7' ? 'أرفق الكتاب وسيتم توليد 200 سؤال تلقائياً' : hasFilters ? 'جرّب تعديل الفلاتر أو مسحها' : 'استخدم زر التوليد بالذكاء الاصطناعي'}
+            {hasFilters ? 'جرّب تعديل الفلاتر أو مسحها' : 'لا توجد أسئلة لهذا الصف حالياً'}
           </p>
         </div>
       ) : (
@@ -386,40 +360,6 @@ export default function QuestionBank() {
             </div>
           )}
         </>
-      )}
-
-      {/* نافذة التوليد */}
-      {genOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }}
-          onClick={() => !genLoading && setGenOpen(false)}>
-          <div className="glass-modal w-full max-w-md p-6" onClick={e => e.stopPropagation()} data-testid="qb-generate-modal">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5" style={{ color: '#28F5A7' }} /> توليد أسئلة بالذكاء الاصطناعي
-              </h3>
-              <button onClick={() => setGenOpen(false)} disabled={genLoading}><X className="w-5 h-5" style={{ color: 'var(--text-hint)' }} /></button>
-            </div>
-            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الصف الدراسي</label>
-            <select value={genGrade} onChange={e => { setGenGrade(e.target.value); setGenTopic(''); }}
-              className="input-field mb-4" data-testid="gen-grade-select">
-              {GRADES.map(g => <option key={g} value={g}>الصف {GRADE_LABELS[g]}</option>)}
-            </select>
-            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الدرس (اختياري — فارغ = عشوائي)</label>
-            <select value={genTopic} onChange={e => setGenTopic(e.target.value)}
-              className="input-field mb-5" data-testid="gen-topic-select">
-              <option value="">درس عشوائي</option>
-              {(genMeta?.units || []).map(u => (
-                <optgroup key={u.unit} label={`وحدة: ${u.unit}`}>
-                  {u.lessons.map(l => <option key={l.lesson} value={l.lesson}>{l.lesson}</option>)}
-                </optgroup>
-              ))}
-            </select>
-            <button onClick={generate} disabled={genLoading} data-testid="gen-submit-btn"
-              className="btn-primary w-full flex items-center justify-center gap-2">
-              {genLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> جارٍ التوليد (15 سؤالاً)...</> : <><Sparkles className="w-4 h-4" /> توليد 15 سؤالاً</>}
-            </button>
-          </div>
-        </div>
       )}
 
       {/* نافذة إنشاء اختبار */}
