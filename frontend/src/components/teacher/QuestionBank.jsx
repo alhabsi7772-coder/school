@@ -402,7 +402,7 @@ export default function QuestionBank() {
             <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الصف الدراسي</label>
             <select value={genGrade} onChange={e => { setGenGrade(e.target.value); setGenTopic(''); }}
               className="input-field mb-4" data-testid="gen-grade-select">
-              {GRADES.filter(g => g !== '7').map(g => <option key={g} value={g}>الصف {GRADE_LABELS[g]}</option>)}
+              {GRADES.map(g => <option key={g} value={g}>الصف {GRADE_LABELS[g]}</option>)}
             </select>
             <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>الدرس (اختياري — فارغ = عشوائي)</label>
             <select value={genTopic} onChange={e => setGenTopic(e.target.value)}

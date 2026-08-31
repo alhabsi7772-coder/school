@@ -32,6 +32,17 @@ BOOKS = {
 
 # (unit, lesson, start_page, end_page, target_questions)
 LESSONS = {
+    '7': [
+        ('تطور التقنية والذكاء الاصطناعي', 'تطور الحواسيب والتقنيات الناشئة', 16, 28, 23),
+        ('تطور التقنية والذكاء الاصطناعي', 'الذكاء الاصطناعي التوليدي', 29, 50, 23),
+        ('تطور التقنية والذكاء الاصطناعي', 'تأثير التقنية على البيئة والصحة', 51, 60, 22),
+        ('الرسوم المعلوماتية وتحرير الصور', 'مقدمة في تصميم الرسوم المعلوماتية', 66, 88, 22),
+        ('الرسوم المعلوماتية وتحرير الصور', 'إنشاء رسوم معلوماتية', 89, 101, 22),
+        ('الرسوم المعلوماتية وتحرير الصور', 'تحرير الصور باستخدام الذكاء الاصطناعي', 102, 118, 22),
+        ('الشبكات والمواطنة الرقمية', 'شبكات الحاسوب', 126, 133, 22),
+        ('الشبكات والمواطنة الرقمية', 'اختيار جهاز الحاسوب وإصلاح الأنظمة', 134, 142, 22),
+        ('الشبكات والمواطنة الرقمية', 'المواطنة الرقمية', 143, 149, 22),
+    ],
     '5': [
         ('أساسيات الحاسوب', 'الحاسوب', 16, 28, 19),
         ('أساسيات الحاسوب', 'الملفات والمجلدات', 29, 42, 19),
@@ -84,7 +95,9 @@ def log(msg):
 
 
 def dist_for(target):
-    # target 18: mcq8 tf4 short3 long2 match1 | 19: match2 | 20: mcq9 match2
+    # 22-23 (الصف السابع): mcq أكثر | 18-20 (بقية الصفوف)
+    if target >= 22:
+        return {'mcq': target - 12, 'true_false': 5, 'short': 3, 'long': 2, 'match': 2}
     mcq = 9 if target >= 20 else 8
     match = 2 if target >= 19 else 1
     return {'mcq': mcq, 'true_false': 4, 'short': 3, 'long': 2, 'match': match}
@@ -255,7 +268,13 @@ async def gen_batch(batch, grade, unit, lesson, counts, lesson_text, images):
 
 
 async def run_grade(grade):
-    doc = pymupdf.open(BOOKS[grade])
+    # الصف السابع: نصوص صفحات الكتاب من العارض الإلكتروني (JSON) — بلا صور
+    pages7 = None
+    if grade == '7':
+        pages7 = json.load(open('/app/data/books/cls7_pages.json'))
+        doc = None
+    else:
+        doc = pymupdf.open(BOOKS[grade])
     total_grade = 0
     for idx, (unit, lesson, start, end, target) in enumerate(LESSONS[grade]):
         existing = await db.question_bank.count_documents({'scope': 'global', 'grade': grade, 'lesson': lesson})
@@ -266,7 +285,11 @@ async def run_grade(grade):
         if existing:
             await db.question_bank.delete_many({'scope': 'global', 'grade': grade, 'lesson': lesson})
         counts = dist_for(target)
-        lesson_text, images = extract_lesson(doc, grade, idx, start, end)
+        if pages7 is not None:
+            lesson_text = '\n'.join(pages7[p] for p in range(start, min(end + 1, len(pages7))))[:14000]
+            images = []
+        else:
+            lesson_text, images = extract_lesson(doc, grade, idx, start, end)
         log(f'📖 صف {grade} | درس {idx + 1}/{len(LESSONS[grade])}: {lesson} (نص {len(lesson_text)} حرف، {len(images)} صور)')
         a = await gen_batch('A', grade, unit, lesson, counts, lesson_text, images)
         b = await gen_batch('B', grade, unit, lesson, counts, lesson_text, images)
