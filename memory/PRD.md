@@ -150,3 +150,7 @@
 
 ## Credentials
 ملف `/app/memory/test_credentials.md` — Admin: `admin` / `teacher123`
+
+## سجل الحوادث (Deployment)
+- 2026-06: خطأ Cloudflare 520 على كل مسارات /api في النسخة المنشورة (school-frontend-3.emergent.host) رغم عمل المعاينة بشكل سليم ونجاح فحص الجاهزية 3 مرات. التشخيص: مشكلة بنية تحتية (Backend pod متوقف في الإنتاج) وليست مشكلة كود. الحل الموصى به: إعادة النشر (Redeploy) من لوحة Emergent، وإن لم ينجح: إيقاف النشر كلياً ثم النشر من جديد، أو التواصل مع support@emergent.sh.
+
