@@ -152,5 +152,6 @@
 ملف `/app/memory/test_credentials.md` — Admin: `admin` / `teacher123`
 
 ## سجل الحوادث (Deployment)
+- 2026-09: كلمة مرور admin في الإنتاج كانت مختلفة + قفل 429. تمت إضافة ترحيل لمرة واحدة في init_db (مفتاح db.meta: admin_pwd_reset_v1) يعيد كلمة المرور إلى teacher123 ويمسح login_attempts. يتطلب Redeploy ليسري على الإنتاج.
 - 2026-06: خطأ Cloudflare 520 على كل مسارات /api في النسخة المنشورة (school-frontend-3.emergent.host) رغم عمل المعاينة بشكل سليم ونجاح فحص الجاهزية 3 مرات. التشخيص: مشكلة بنية تحتية (Backend pod متوقف في الإنتاج) وليست مشكلة كود. الحل الموصى به: إعادة النشر (Redeploy) من لوحة Emergent، وإن لم ينجح: إيقاف النشر كلياً ثم النشر من جديد، أو التواصل مع support@emergent.sh.
 

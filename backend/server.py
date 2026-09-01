@@ -118,6 +118,12 @@ async def init_db():
         await db.teachers.insert_one(admin)
     admin_id = admin["id"]
 
+    # ترحيل لمرة واحدة: إعادة كلمة مرور المدير إلى teacher123 وفك القفل (لإصلاح الإنتاج)
+    if not await db.meta.find_one({"key": "admin_pwd_reset_v1"}):
+        await db.teachers.update_one({"id": admin_id}, {"$set": {"password_hash": hash_password("teacher123"), "is_active": True}})
+        await db.login_attempts.delete_many({})
+        await db.meta.insert_one({"key": "admin_pwd_reset_v1", "at": now_iso()})
+
     # إنشاء 3 حسابات معلمين افتراضية
     seed_teachers = [
         ("teacher1", "khairat1", "المعلم الأول"),
