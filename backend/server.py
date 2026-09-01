@@ -118,6 +118,18 @@ async def init_db():
         await db.teachers.insert_one(admin)
     admin_id = admin["id"]
 
+    # استيراد بنك الأسئلة من ملف البذرة (لمرة واحدة — لنقل الأسئلة إلى الإنتاج)
+    if not await db.meta.find_one({"key": "question_bank_seed_v1"}):
+        seed_file = ROOT_DIR / "data" / "question_bank_seed.json"
+        if seed_file.exists():
+            with open(seed_file, encoding="utf-8") as f:
+                seed_questions = json.load(f)
+            from pymongo import UpdateOne
+            ops = [UpdateOne({"id": q["id"]}, {"$setOnInsert": q}, upsert=True) for q in seed_questions]
+            if ops:
+                await db.question_bank.bulk_write(ops, ordered=False)
+        await db.meta.insert_one({"key": "question_bank_seed_v1", "at": now_iso()})
+
     # ترحيل لمرة واحدة: إعادة كلمة مرور المدير إلى teacher123 وفك القفل (لإصلاح الإنتاج)
     if not await db.meta.find_one({"key": "admin_pwd_reset_v1"}):
         await db.teachers.update_one({"id": admin_id}, {"$set": {"password_hash": hash_password("teacher123"), "is_active": True}})
