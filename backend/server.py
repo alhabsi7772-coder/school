@@ -694,6 +694,12 @@ async def get_questions(qid: str, sub_id: str):
             item['options'] = qq.get('options', [])
         elif qq['type'] == 'true_false':
             item['options'] = ['صح', 'خطأ']
+        elif qq['type'] == 'match':
+            pairs = qq.get('pairs') or []
+            item['left'] = [p.get('left') for p in pairs]
+            right_list = [p.get('right') for p in pairs]
+            random.shuffle(right_list)
+            item['right'] = right_list
         safe.append(item)
 
     return {"status": "active", "questions": safe,
@@ -737,6 +743,20 @@ async def submit(qid: str, sub_id: str, data: SubmitReq):
             rec['is_correct'] = correct.lower() == student.lower()
             rec['score'] = pts if rec['is_correct'] else 0
             total += rec['score']
+        elif qq['type'] == 'match':
+            pairs = qq.get('pairs') or []
+            try:
+                student_map = json.loads(ans.answer_text) if ans.answer_text else {}
+            except Exception:
+                student_map = {}
+            correct_count = sum(
+                1 for i, p in enumerate(pairs)
+                if str(student_map.get(str(i), '')).strip() == (p.get('right') or '').strip()
+            )
+            total_pairs = len(pairs) or 1
+            rec['is_correct'] = correct_count == total_pairs
+            rec['score'] = round(pts * correct_count / total_pairs, 2)
+            total += rec['score']
         elif qq['type'] == 'long':
             has_long = True
         answers.append(rec)
@@ -771,14 +791,28 @@ async def get_result(qid: str, sub_id: str):
     enriched = []
     for ans in sub.get('answers', []):
         qq = q_map.get(ans['question_id'], {})
-        enriched.append({
+        entry = {
             **ans,
             "question_text": qq.get('text', ''),
             "question_type": qq.get('type', ''),
-            "correct_answer": qq.get('correct_answer') if qq.get('type') != 'long' else None,
+            "correct_answer": qq.get('correct_answer') if qq.get('type') not in ('long', 'match') else None,
             "image_url": qq.get('image_url'),
             "points": qq.get('points', 1)
-        })
+        }
+        if qq.get('type') == 'match':
+            pairs = qq.get('pairs') or []
+            try:
+                student_map = json.loads(ans.get('answer_text')) if ans.get('answer_text') else {}
+            except Exception:
+                student_map = {}
+            entry['pairs_result'] = [
+                {
+                    "left": p.get('left'), "correct_right": p.get('right'),
+                    "student_right": student_map.get(str(i), ''),
+                    "correct": str(student_map.get(str(i), '')).strip() == (p.get('right') or '').strip()
+                } for i, p in enumerate(pairs)
+            ]
+        enriched.append(entry)
 
     owner = await db.teachers.find_one({"id": q.get("owner_id")}, {"_id": 0, "school_name": 1})
 
@@ -1119,8 +1153,6 @@ async def create_quiz_from_bank(data: CreateQuizFromBankReq, t=Depends(get_teach
 
     quiz_questions = []
     for i, bq in enumerate(questions_cursor):
-        if bq.get("type") == "match":
-            continue  # أسئلة التوصيل غير مدعومة في الاختبارات التفاعلية
         quiz_questions.append({
             "id": str(uuid.uuid4()),
             "type": bq["type"],
@@ -1128,11 +1160,12 @@ async def create_quiz_from_bank(data: CreateQuizFromBankReq, t=Depends(get_teach
             "image_url": bq.get("image_url"),
             "options": bq.get("options"),
             "correct_answer": bq.get("correct_answer"),
+            "pairs": bq.get("pairs"),
             "points": bq.get("points", 1.0),
             "order": i
         })
     if not quiz_questions:
-        raise HTTPException(400, "الأسئلة المختارة كلها من نوع التوصيل — غير مدعومة في الاختبارات")
+        raise HTTPException(400, "لم يتم العثور على الأسئلة المختارة")
 
     quiz = {
         "id": str(uuid.uuid4()),
@@ -2247,9 +2280,7 @@ async def _resync_rubric_evaluations_to_gradebooks(rid: str, data: RubricCreate,
             scores = {cid: max(0.0, min(float(v), float(crit_max[cid])))
                       for cid, v in (ev.get("scores") or {}).items() if cid in crit_max}
             total = round(sum(scores.values()), 2)
-            tot_max = new_total_max or col_max
-            gb_score = round((total / tot_max) * col_max * 2) / 2 if tot_max > 0 else 0
-            gb_score = max(0.0, min(gb_score, col_max))
+            gb_score = max(0.0, min(total, col_max))
             ev_updates.append((ev["id"], scores, total, gb_score))
             sets[f"scores.{new_sem}.{ev['student_id']}.{new_col}"] = gb_score
             # احذف الموقع القديم (إن اختلف)
@@ -2340,14 +2371,12 @@ async def save_rubric_evaluation(rid: str, data: RubricEvalSave, t=Depends(get_t
             upsert=True
         )
         return {"total": total, "gb_score": None, "column": "none", "semester": rubric["semester"]}
-    # تحويل المجموع إلى درجة عمود السجل (تحجيم تلقائي إذا اختلف الحد الأقصى) — حسب نموذج السجل
+    # النقل كما هو بدون تحجيم (3 تبقى 3) مع عدم تجاوز حد الخانة
     mx_map = gb_max_map(gb)
     if rubric["column"] not in mx_map:
         raise HTTPException(400, "عمود البطاقة غير متاح في نموذج هذا السجل")
     col_max = float(mx_map[rubric["column"]])
-    tot_max = float(rubric.get("total_max") or 0) or col_max
-    gb_score = round((total / tot_max) * col_max * 2) / 2
-    gb_score = max(0.0, min(gb_score, col_max))
+    gb_score = max(0.0, min(total, col_max))
     await db.rubric_evaluations.update_one(
         {"rubric_id": rid, "gradebook_id": data.gradebook_id, "student_id": data.student_id},
         {"$set": {

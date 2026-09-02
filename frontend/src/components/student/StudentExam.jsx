@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Clock, ChevronLeft, ChevronRight, Send, AlertCircle, CheckCircle, Hourglass } from 'lucide-react';
 import { API, QUESTION_TYPES } from '../../utils';
 import { useStudentMode } from '../../hooks/useStudentMode';
+import { MatchingQuestion } from './MatchingQuestion';
 
 /* ─── Timer ─────────────────────────────────────────────── */
 function Timer({ startTime, timeLimit, onExpire }) {
@@ -178,7 +179,7 @@ export default function StudentExam() {
     try {
       const answerList = qs.map(q => ({
         question_id: q.id,
-        answer_text: ans[q.id] || '',
+        answer_text: q.type === 'match' ? JSON.stringify(ans[q.id] || {}) : (ans[q.id] || ''),
       }));
       const res = await axios.post(`${API}/quiz/${quizId}/submit/${submission_id}`, { answers: answerList });
       const graded = res.data.is_graded && res.data.show_results;
@@ -212,7 +213,7 @@ export default function StudentExam() {
         show_question_nav:   res.data.show_question_nav,
       });
       const init = {};
-      (res.data.questions || []).forEach(q => { init[q.id] = ''; });
+      (res.data.questions || []).forEach(q => { init[q.id] = q.type === 'match' ? {} : ''; });
       setAnswers(init);
     } catch { toast.error('تعذر تحميل الأسئلة'); }
     finally { setLoading(false); }
@@ -253,7 +254,12 @@ export default function StudentExam() {
     doSubmit(questionsRef.current, answersRef.current, false);
   };
 
-  const answered = Object.values(answers).filter(a => a !== '').length;
+  const isAnswered = (qq) => {
+    const a = answers[qq.id];
+    if (qq.type === 'match') return a && Object.keys(a).length === (qq.left?.length || 0) && (qq.left?.length || 0) > 0;
+    return a !== undefined && a !== '';
+  };
+  const answered = questions.filter(isAnswered).length;
   const total    = questions.length;
   const q        = questions[current];
 
@@ -309,7 +315,7 @@ export default function StudentExam() {
                 className="flex-shrink-0 w-9 h-9 rounded-xl text-sm font-bold transition-all"
                 style={i === current
                   ? { background: 'var(--theme-accent)', color: '#000' }
-                  : answers[q2.id]
+                  : isAnswered(q2)
                   ? { background: 'rgba(34,197,94,0.2)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }
                   : { background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)' }
                 }>
@@ -393,6 +399,16 @@ export default function StudentExam() {
                 value={answers[q.id] || ''}
                 onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))}
                 data-testid="long-answer-input" />
+            )}
+
+            {/* Match */}
+            {q.type === 'match' && (
+              <div>
+                <p className="text-xs mb-3" style={{ color: 'var(--text-hint)' }}>انقر على عنصر من العمود الأول (يمين) ثم العنصر المطابق له من العمود الثاني (يسار)</p>
+                <MatchingQuestion left={q.left || []} right={q.right || []}
+                  value={answers[q.id] || {}}
+                  onChange={v => setAnswers(p => ({ ...p, [q.id]: v }))} />
+              </div>
             )}
           </div>
         )}

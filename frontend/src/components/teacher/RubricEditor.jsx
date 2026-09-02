@@ -217,14 +217,14 @@ export default function RubricEditor() {
             <Plus className="w-4 h-4" /> إضافة معيار
           </button>
 
-          {colMax !== null && totalMax > 0 && totalMax !== colMax && (
+          {colMax !== null && totalMax > colMax && (
             <div className="mt-4 flex items-start gap-2 p-3 rounded-xl text-sm"
               style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#FBBF24' }}
               data-testid="rubric-scale-warning">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>
-                مجموع البطاقة ({totalMax % 1 === 0 ? totalMax : totalMax.toFixed(1)}) يختلف عن درجة العمود ({colMax}) —
-                سيتم تحويل الدرجة تلقائياً عند النقل للسجل (مثال: {totalMax % 1 === 0 ? totalMax : totalMax.toFixed(1)}/{totalMax % 1 === 0 ? totalMax : totalMax.toFixed(1)} → {colMax}/{colMax})
+                مجموع البطاقة ({totalMax % 1 === 0 ? totalMax : totalMax.toFixed(1)}) أكبر من درجة العمود ({colMax}) —
+                تُنقل الدرجة كما هي بلا تحويل، وأي درجة تتجاوز {colMax} ستُسجَّل {colMax} فقط
               </span>
             </div>
           )}

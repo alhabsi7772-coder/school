@@ -399,6 +399,14 @@ export default function QuizResults() {
               {selected.answers?.map((ans, i) => {
                 const qInfo = qMap[ans.question_id] || {};
                 const isLong = qInfo.type === 'long';
+                const isMatch = qInfo.type === 'match';
+                let matchPairs = [];
+                if (isMatch) {
+                  let studentMap = {};
+                  try { studentMap = JSON.parse(ans.answer_text || '{}'); } catch { studentMap = {}; }
+                  matchPairs = (qInfo.pairs || []).map(p => ({ left: p.left, correct_right: p.right }))
+                    .map((p, pi) => ({ ...p, student_right: studentMap[String(pi)] || '', correct: (studentMap[String(pi)] || '').trim() === p.correct_right.trim() }));
+                }
                 const g = grades[ans.question_id];
                 return (
                   <div key={i} className={`p-4 rounded-xl border ${
@@ -422,18 +430,39 @@ export default function QuizResults() {
                     <p className="text-sm font-medium text-slate-800 mb-2">{qInfo.text || '—'}</p>
                     {qInfo.image_url && <img src={qInfo.image_url} alt="" className="mb-2 h-24 rounded-lg object-cover" />}
 
-                    <div className={`rounded-lg p-2.5 ${ans.is_correct ? 'bg-green-100' : ans.is_correct === null ? 'bg-orange-100' : 'bg-red-100'}`}>
-                      <p className="text-xs text-slate-500 mb-0.5">إجابة الطالب:</p>
-                      <p className={`text-sm font-semibold ${ans.is_correct ? 'text-green-800' : ans.is_correct === null ? 'text-orange-800' : 'text-red-800'}`}>
-                        {ans.answer_text || '(لم يجب)'}
-                      </p>
-                    </div>
-
-                    {!ans.is_correct && ans.is_correct !== null && qInfo.correct_answer && !isLong && (
-                      <div className="bg-green-100 rounded-lg p-2.5 mt-2">
-                        <p className="text-xs text-slate-500 mb-0.5">الإجابة الصحيحة:</p>
-                        <p className="text-sm font-semibold text-green-800">{qInfo.correct_answer}</p>
+                    {isMatch ? (
+                      <div className="space-y-1.5">
+                        {matchPairs.map((p, pi) => (
+                          <div key={pi} className={`rounded-lg p-2 flex items-center justify-between gap-2 text-sm ${p.correct ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <span className="text-slate-700 font-medium">{p.left}</span>
+                            <span className={`font-semibold ${p.correct ? 'text-green-800' : 'text-red-800'}`}>{p.student_right || '(لم يربط)'}</span>
+                          </div>
+                        ))}
+                        {matchPairs.some(p => !p.correct) && (
+                          <div className="bg-green-50 rounded-lg p-2 mt-1">
+                            <p className="text-xs text-slate-500 mb-1">الربط الصحيح:</p>
+                            {matchPairs.filter(p => !p.correct).map((p, pi) => (
+                              <p key={pi} className="text-xs text-green-700">{p.left} ← {p.correct_right}</p>
+                            ))}
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <>
+                        <div className={`rounded-lg p-2.5 ${ans.is_correct ? 'bg-green-100' : ans.is_correct === null ? 'bg-orange-100' : 'bg-red-100'}`}>
+                          <p className="text-xs text-slate-500 mb-0.5">إجابة الطالب:</p>
+                          <p className={`text-sm font-semibold ${ans.is_correct ? 'text-green-800' : ans.is_correct === null ? 'text-orange-800' : 'text-red-800'}`}>
+                            {ans.answer_text || '(لم يجب)'}
+                          </p>
+                        </div>
+
+                        {!ans.is_correct && ans.is_correct !== null && qInfo.correct_answer && !isLong && (
+                          <div className="bg-green-100 rounded-lg p-2.5 mt-2">
+                            <p className="text-xs text-slate-500 mb-0.5">الإجابة الصحيحة:</p>
+                            <p className="text-sm font-semibold text-green-800">{qInfo.correct_answer}</p>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* Long answer grading */}

@@ -350,9 +350,11 @@ export default function QuizEditor() {
                       {q.image_url && <p className="text-xs text-teal-600 mt-1">📎 يحتوي على صورة</p>}
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => openEditDialog(q)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                        <Pencil className="w-4 h-4 text-slate-500" />
-                      </button>
+                      {q.type !== 'match' && (
+                        <button onClick={() => openEditDialog(q)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                          <Pencil className="w-4 h-4 text-slate-500" />
+                        </button>
+                      )}
                       <button onClick={() => deleteQuestion(q.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </button>

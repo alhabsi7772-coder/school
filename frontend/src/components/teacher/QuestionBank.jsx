@@ -39,21 +39,14 @@ function QuestionCard({ q, selected, onToggle, onDelete, canDelete }) {
   const [showAnswer, setShowAnswer] = useState(false);
   const tm = TYPE_META[q.type] || TYPE_META.mcq;
   const dm = DIFF_META[q.difficulty] || DIFF_META.medium;
-  const selectable = q.type !== 'match';
   const imgSrc = q.image_url ? (q.image_url.startsWith('http') ? q.image_url : `${BACKEND}${q.image_url}`) : null;
 
   return (
     <div data-testid="qb-question-card"
       className={`quiz-card p-4 sm:p-5 transition-all ${selected ? 'ring-2 ring-emerald-400/60' : ''}`}>
       <div className="flex items-start gap-3">
-        {selectable ? (
-          <input type="checkbox" checked={selected} onChange={onToggle} data-testid="qb-select-checkbox"
-            className="mt-1.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0" />
-        ) : (
-          <span className="mt-1.5 w-4 h-4 flex-shrink-0 opacity-30" title="التوصيل غير مدعوم في الاختبارات التفاعلية">
-            <GitCompareArrows className="w-4 h-4" />
-          </span>
-        )}
+        <input type="checkbox" checked={selected} onChange={onToggle} data-testid="qb-select-checkbox"
+          className="mt-1.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
             <Badge color={tm.color} testId="qb-type-badge"><tm.icon className="w-3 h-3" />{tm.label}</Badge>

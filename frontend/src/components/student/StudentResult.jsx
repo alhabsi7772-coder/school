@@ -160,24 +160,48 @@ export default function StudentResult() {
               <p className="text-sm font-semibold text-white mb-2">{ans.question_text}</p>
               {ans.image_url && <img src={ans.image_url} alt="" className="mb-2 h-24 rounded-lg object-cover" />}
 
-              <div className="rounded-lg p-2.5"
-                style={isCorrect
-                  ? { background: 'rgba(34,197,94,0.12)' }
-                  : isPending
-                  ? { background: 'rgba(251,146,60,0.12)' }
-                  : { background: 'rgba(239,68,68,0.12)' }
-                }>
-                <p className="text-xs text-slate-400 mb-0.5">إجابتك:</p>
-                <p className={`text-sm font-semibold ${isCorrect ? 'text-green-300' : isPending ? 'text-orange-300' : 'text-red-300'}`}>
-                  {ans.answer_text || '(لم يجب)'}
-                </p>
-              </div>
-
-              {!isCorrect && !isPending && ans.correct_answer && (
-                <div className="rounded-lg p-2.5 mt-2" style={{ background: 'rgba(34,197,94,0.12)' }}>
-                  <p className="text-xs text-slate-400 mb-0.5">الإجابة الصحيحة:</p>
-                  <p className="text-sm font-semibold text-green-300">{ans.correct_answer}</p>
+              {ans.question_type === 'match' ? (
+                <div className="space-y-1.5">
+                  {(ans.pairs_result || []).map((p, pi) => (
+                    <div key={pi} className="rounded-lg p-2.5 flex items-center justify-between gap-2 text-sm"
+                      style={{ background: p.correct ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)' }}>
+                      <span className="text-slate-200 font-medium">{p.left}</span>
+                      <span className={`font-semibold ${p.correct ? 'text-green-300' : 'text-red-300'}`}>
+                        {p.student_right || '(لم يربط)'}
+                      </span>
+                    </div>
+                  ))}
+                  {!isCorrect && (ans.pairs_result || []).some(p => !p.correct) && (
+                    <div className="rounded-lg p-2.5 mt-1" style={{ background: 'rgba(34,197,94,0.08)' }}>
+                      <p className="text-xs text-slate-400 mb-1">الربط الصحيح:</p>
+                      {(ans.pairs_result || []).filter(p => !p.correct).map((p, pi) => (
+                        <p key={pi} className="text-xs text-green-300">{p.left} ← {p.correct_right}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <>
+                  <div className="rounded-lg p-2.5"
+                    style={isCorrect
+                      ? { background: 'rgba(34,197,94,0.12)' }
+                      : isPending
+                      ? { background: 'rgba(251,146,60,0.12)' }
+                      : { background: 'rgba(239,68,68,0.12)' }
+                    }>
+                    <p className="text-xs text-slate-400 mb-0.5">إجابتك:</p>
+                    <p className={`text-sm font-semibold ${isCorrect ? 'text-green-300' : isPending ? 'text-orange-300' : 'text-red-300'}`}>
+                      {ans.answer_text || '(لم يجب)'}
+                    </p>
+                  </div>
+
+                  {!isCorrect && !isPending && ans.correct_answer && (
+                    <div className="rounded-lg p-2.5 mt-2" style={{ background: 'rgba(34,197,94,0.12)' }}>
+                      <p className="text-xs text-slate-400 mb-0.5">الإجابة الصحيحة:</p>
+                      <p className="text-sm font-semibold text-green-300">{ans.correct_answer}</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

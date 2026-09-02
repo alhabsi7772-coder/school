@@ -19,6 +19,7 @@ export const QUESTION_TYPES = {
   true_false: { label: 'صح أم خطأ', color: 'bg-purple-900/40 text-purple-300 border border-purple-800/40' },
   short: { label: 'إجابة قصيرة', color: 'bg-teal-900/40 text-teal-300 border border-teal-800/40' },
   long: { label: 'إجابة طويلة', color: 'bg-orange-900/40 text-orange-300 border border-orange-800/40' },
+  match: { label: 'توصيل', color: 'bg-violet-900/40 text-violet-300 border border-violet-800/40' },
 };
 
 export const STATUS_MAP = {
