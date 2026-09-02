@@ -32,6 +32,7 @@ import StudentLibrary from './components/student/StudentLibrary';
 import StudentVideoWatch from './components/student/StudentVideoWatch';
 import LibraryResources from './components/teacher/LibraryResources';
 import LibraryVideos from './components/teacher/LibraryVideos';
+import LessonPlans from './components/teacher/LessonPlans';
 import LibraryVideoDetail from './components/teacher/LibraryVideoDetail';
 import './App.css';
 
@@ -81,6 +82,7 @@ function App() {
             <Route path="/teacher/rubrics/:rubricId/print" element={<ProtectedRoute><RubricPrint /></ProtectedRoute>} />
             <Route path="/teacher/library" element={<ProtectedRoute><LibraryResources /></ProtectedRoute>} />
             <Route path="/teacher/library/videos" element={<ProtectedRoute><LibraryVideos /></ProtectedRoute>} />
+            <Route path="/teacher/library/plans" element={<ProtectedRoute><LessonPlans /></ProtectedRoute>} />
             <Route path="/teacher/library/videos/:videoId" element={<ProtectedRoute><LibraryVideoDetail /></ProtectedRoute>} />
             <Route path="/teacher/teachers" element={<AdminRoute><TeacherManagement /></AdminRoute>} />
             <Route path="/teacher/quiz/new" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />

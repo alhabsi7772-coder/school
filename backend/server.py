@@ -210,6 +210,7 @@ class ChangePwdReq(BaseModel):
 class TeacherProfileUpdate(BaseModel):
     teacher_name: Optional[str] = None
     school_name: Optional[str] = None
+    directorate: Optional[str] = None
 
 
 class QuizSettings(BaseModel):
@@ -3849,6 +3850,8 @@ async def bundle_download(code: str, rid: str, access_id: str):
 # انتهت إضافة الحزم
 # =================================================================
 
+from lesson_plans import make_router as _make_lesson_plans_router
+api_router.include_router(_make_lesson_plans_router(db, get_teacher))
 app.include_router(api_router)
 
 # ملفات ثابتة (صور بنك الأسئلة المستخرجة من الكتب) — تحت /api لتمر عبر الـ ingress

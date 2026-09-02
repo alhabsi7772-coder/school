@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   Library, Video, Trash2, Copy, Eye, Edit3, X, Upload, Youtube,
-  MessageCircle, Plus, Users, PlayCircle, Link2, Info
+  MessageCircle, Plus, Users, PlayCircle, Link2, Info, BookOpenCheck
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
@@ -127,6 +127,11 @@ export default function LibraryVideos() {
             style={{ background: 'linear-gradient(135deg, rgba(213,0,249,0.18), rgba(213,0,249,0.08))', color: '#F0ABFC', border: '1px solid rgba(213,0,249,0.35)', boxShadow: '0 4px 16px rgba(213,0,249,0.10)' }}>
             <Video className="w-4 h-4 inline ml-1.5" />الفيديوهات
           </button>
+          <Link to="/teacher/library/plans" data-testid="library-tab-plans"
+            className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105"
+            style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <BookOpenCheck className="w-4 h-4 inline ml-1.5" />التحضير
+          </Link>
         </div>
         <button onClick={() => setShowNew(true)} className="btn-primary rounded-2xl flex items-center gap-1.5 px-4 py-2 text-sm font-bold">
           <Plus className="w-4 h-4" />إضافة فيديو

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   Library, Upload, Trash2, Copy, Download, Eye, Edit3, X, Check,
   FileText, Music, Image as ImageIcon, FileSpreadsheet, Film, RefreshCw,
-  Video, Link2, Plus, Share2, ListChecks, ChevronRight, Sparkles
+  Video, Link2, Plus, Share2, ListChecks, ChevronRight, Sparkles, BookOpenCheck
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
@@ -215,6 +215,11 @@ export default function LibraryResources() {
           className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105"
           style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}>
           <Video className="w-4 h-4 inline ml-1.5" />الفيديوهات
+        </Link>
+        <Link to="/teacher/library/plans" data-testid="library-tab-plans"
+          className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105"
+          style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <BookOpenCheck className="w-4 h-4 inline ml-1.5" />التحضير
         </Link>
         <button onClick={() => setShowBundlesList(s => !s)}
           className="px-4 py-2 rounded-2xl font-bold text-sm transition-all hover:scale-105 mr-auto flex items-center gap-1.5"

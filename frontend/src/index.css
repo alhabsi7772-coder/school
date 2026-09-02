@@ -2155,3 +2155,14 @@ html.mode-light div:has(> [data-testid="login-video-bg"]) button.text-cyan-300 {
 
 /* ── TACTILE OS: صفحات الطلاب ذات الخلفية الداكنة المضمّنة → فاتحة في الوضع النهاري ── */
 html.mode-light div.min-h-screen[style*="11, 17, 32"] { background: #ECECEC !important; }
+
+/* ===== التحضير (Lesson plan sheet) — ورقة بيضاء تحاكي ملف Word في كل الثيمات ===== */
+.lp-sheet { background: #FFFFFF; color: #1F2937; border-radius: 14px; padding: 22px 26px; font-family: 'Tajawal', 'Arial', sans-serif; box-shadow: 0 12px 40px rgba(0,0,0,0.35); border: 1px solid #D1D5DB; }
+.lp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.lp-table td { border: 1px solid #4B5563; padding: 6px 8px; vertical-align: top; font-size: 13px; line-height: 1.7; color: #1F2937; word-wrap: break-word; }
+.lp-table .lp-head td, .lp-table td.lp-head { background: #E7E6E6; font-weight: 800; text-align: center; }
+.lp-table .lp-blue td { background: #D9E2F3; }
+.lp-line { margin: 0; font-size: 13px; line-height: 1.75; color: #1F2937; }
+.lp-edit { width: 100%; font-size: 13px; line-height: 1.7; padding: 6px 8px; border: 1px dashed #3B82F6; border-radius: 8px; background: #EFF6FF; color: #111827; font-family: inherit; resize: vertical; }
+.lp-edit:focus { outline: none; border-style: solid; background: #FFFFFF; }
+html.mode-light .lp-sheet { box-shadow: 8px 8px 20px rgba(0,0,0,0.10), -6px -6px 16px rgba(255,255,255,0.9); }
