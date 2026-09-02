@@ -7,6 +7,7 @@ import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 import { themeOfGrade } from '../../utils/gradebook';
 import { LessonPlanSheet, PlanToolbar } from './LessonPlanSheet';
+import { LessonPlanImport } from './LessonPlanImport';
 
 const PLAN_KEYS = ['prior', 'objectives', 'strategies', 'execution', 'resources', 'formative', 'enrichment', 'remedial', 'summative', 'homework', 'notes'];
 const pick = (p) => Object.fromEntries(PLAN_KEYS.map(k => [k, p[k]]));
@@ -26,6 +27,8 @@ export default function LessonPlans() {
   const [year, setYear] = useState('2025/2026');
   const [directorate, setDirectorate] = useState(DEFAULT_DIRECTORATE);
   const [dirSaved, setDirSaved] = useState(true);
+  const [sheetStyle, setSheetStyle] = useState(() => localStorage.getItem('lp_sheet_style') || 'themed');
+  const toggleStyle = () => setSheetStyle(s => { const n = s === 'paper' ? 'themed' : 'paper'; localStorage.setItem('lp_sheet_style', n); return n; });
 
   const loadCatalog = useCallback(async () => {
     const r = await axios.get(`${API}/lesson-plans/catalog`, getAuthHeaders());
@@ -46,13 +49,22 @@ export default function LessonPlans() {
     })();
   }, [loadCatalog]);
 
+  const loadLesson = useCallback((id) => axios.get(`${API}/lesson-plans/${id}`, getAuthHeaders())
+    .then(r => { setData(r.data); return r.data; })
+    .catch(() => toast.error('تعذر تحميل تحاضير الدرس')), []);
+
   useEffect(() => {
     if (!lessonId) return;
     setEditing(false); setDraft(null);
-    axios.get(`${API}/lesson-plans/${lessonId}`, getAuthHeaders())
-      .then(r => setData(r.data))
-      .catch(() => toast.error('تعذر تحميل تحاضير الدرس'));
-  }, [lessonId]);
+    loadLesson(lessonId);
+  }, [lessonId, loadLesson]);
+
+  const onImported = async (lid, v) => {
+    const g = catalog.grades.find(x => x.units.some(u => u.lessons.some(l => l.id === lid)))?.grade;
+    if (g) setGrade(g);
+    if (lid !== lessonId) setLessonId(lid); else await loadLesson(lid);
+    setVariant(v);
+  };
 
   const current = data?.variants.find(v => v.variant === variant);
   const plan = editing ? draft : current;
@@ -77,10 +89,13 @@ export default function LessonPlans() {
   };
 
   const reset = async () => {
+    const isCustom = current?.custom;
+    if (isCustom && !window.confirm('حذف هذا التحضير المستورد نهائياً؟')) return;
     try {
       await axios.delete(`${API}/lesson-plans/${lessonId}/${variant}`, getAuthHeaders());
-      const r = await axios.get(`${API}/lesson-plans/${lessonId}`, getAuthHeaders());
-      setData(r.data); toast.success('تمت استعادة التحضير الأصلي'); loadCatalog();
+      await loadLesson(lessonId);
+      if (isCustom) setVariant(1);
+      toast.success(isCustom ? 'تم حذف التحضير المستورد' : 'تمت استعادة التحضير الأصلي'); loadCatalog();
     } catch { toast.error('تعذر الاستعادة'); }
   };
 
@@ -164,8 +179,7 @@ export default function LessonPlans() {
                 const active = l.id === lessonId;
                 return (
                   <button key={l.id} data-testid={`lp-lesson-${l.id}`} onClick={() => setLessonId(l.id)}
-                    className="w-full text-right flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all"
-                    style={{ background: active ? 'rgba(255,255,255,0.08)' : 'transparent', color: active ? '#F8FAFC' : '#CBD5E1', fontWeight: active ? 800 : 500 }}>
+                    className={`lp-nav-item w-full text-right flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all ${active ? 'active' : ''}`}>
                     <span className="flex-1">{l.lesson}</span>
                     {l.edited_variants.length > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-black" title="يحوي تعديلات محفوظة">{l.edited_variants.length}</span>}
                     <ChevronLeft className="w-4 h-4 opacity-40" />
@@ -180,30 +194,31 @@ export default function LessonPlans() {
         <section className="min-w-0">
           {data && (
             <>
-              <div className="flex flex-wrap gap-2 mb-4" data-testid="lp-variant-tabs">
+              <div className="flex flex-wrap gap-2 mb-4 items-stretch" data-testid="lp-variant-tabs">
                 {data.variants.map(v => {
                   const active = v.variant === variant;
                   return (
                     <button key={v.variant} data-testid={`lp-variant-${v.variant}`} onClick={() => { if (editing) { setEditing(false); setDraft(null); } setVariant(v.variant); }}
                       className="rounded-2xl px-3 py-2 text-right transition-all hover:scale-[1.02]"
-                      style={{ background: active ? 'rgba(52,211,153,0.16)' : 'rgba(255,255,255,0.04)', border: `1px solid ${active ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.08)'}`, minWidth: 170 }}>
-                      <p className="text-[10px] font-black" style={{ color: active ? '#6EE7B7' : '#94A3B8' }}>التحضير {v.variant} {v.edited && <span className="text-amber-300">• معدَّل</span>}</p>
-                      <p className="text-xs font-bold" style={{ color: active ? '#F8FAFC' : '#CBD5E1' }}>{v.name}</p>
+                      style={{ background: active ? (v.custom ? 'rgba(96,165,250,0.16)' : 'rgba(52,211,153,0.16)') : 'rgba(255,255,255,0.04)', border: `1px solid ${active ? (v.custom ? 'rgba(96,165,250,0.55)' : 'rgba(52,211,153,0.5)') : 'rgba(255,255,255,0.08)'}`, minWidth: 170 }}>
+                      <p className={`lp-vtab-sub text-[10px] font-black ${active ? (v.custom ? 'active-custom' : 'active') : ''}`}>التحضير {v.variant} {v.edited && <span className="text-amber-300">• معدَّل</span>}{v.custom && <span className="text-sky-300"> • مستورد</span>}</p>
+                      <p className={`lp-vtab-title text-xs font-bold ${active ? 'active' : ''}`}>{v.name}</p>
                     </button>
                   );
                 })}
+                <div className="flex items-center"><LessonPlanImport catalog={catalog} currentLessonId={lessonId} onImported={onImported} /></div>
               </div>
               {current && <p className="text-xs text-slate-400 mb-3">{current.tagline}</p>}
 
               <div className="mb-3">
                 <PlanToolbar editing={editing} dirty={editing && JSON.stringify(pick(draft)) !== JSON.stringify(pick(current))} saving={saving} exporting={exporting}
-                  edited={current?.edited}
+                  edited={current?.edited} custom={current?.custom} sheetStyle={sheetStyle} onToggleStyle={toggleStyle}
                   onEdit={() => { setDraft(pick(current)); setEditing(true); }}
                   onCancel={() => { setEditing(false); setDraft(null); }}
                   onSave={save} onReset={reset} onExport={exportDocx} />
               </div>
 
-              {plan && <LessonPlanSheet lesson={data.lesson} plan={plan} header={header} editing={editing} onChange={setDraft} />}
+              {plan && <LessonPlanSheet lesson={data.lesson} plan={plan} header={header} editing={editing} onChange={setDraft} themed={sheetStyle === 'themed'} />}
             </>
           )}
         </section>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, Pencil, RotateCcw, FileDown, Save } from 'lucide-react';
+import { Check, X, Pencil, RotateCcw, FileDown, Save, Trash2, Palette, FileText } from 'lucide-react';
 
 const linesToArr = (s) => s.split('\n').map(x => x.trim()).filter(Boolean);
 
@@ -14,7 +14,7 @@ const Lines = ({ items, prefix = '' }) => (
   </div>
 );
 
-export const LessonPlanSheet = ({ lesson, plan, header, editing, onChange }) => {
+export const LessonPlanSheet = ({ lesson, plan, header, editing, onChange, themed = false }) => {
   const set = (k) => (v) => onChange({ ...plan, [k]: v });
   const setList = (k) => (v) => onChange({ ...plan, [k]: linesToArr(v) });
   const stratText = plan.strategies.map(s => `${s.name} | ${s.objectives}`).join('\n');
@@ -26,7 +26,7 @@ export const LessonPlanSheet = ({ lesson, plan, header, editing, onChange }) => 
   });
 
   return (
-    <div className="lp-sheet" dir="rtl" data-testid="lesson-plan-sheet">
+    <div className={`lp-sheet ${themed ? 'lp-themed' : ''}`} dir="rtl" data-testid="lesson-plan-sheet" data-style={themed ? 'themed' : 'paper'}>
       <div className="text-center space-y-0.5 mb-3">
         <p className="font-black text-[15px]">{header.directorate}</p>
         <p className="font-bold">مدرسة: {header.school}</p>
@@ -107,12 +107,13 @@ export const LessonPlanSheet = ({ lesson, plan, header, editing, onChange }) => 
   );
 };
 
-export const PlanToolbar = ({ editing, dirty, saving, exporting, edited, onEdit, onCancel, onSave, onReset, onExport }) => (
+export const PlanToolbar = ({ editing, dirty, saving, exporting, edited, custom, sheetStyle, onToggleStyle, onEdit, onCancel, onSave, onReset, onExport }) => (
   <div className="flex flex-wrap items-center gap-2" data-testid="lp-toolbar">
     {!editing ? (
       <>
         <button data-testid="lp-edit-btn" onClick={onEdit} className="btn-secondary rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm"><Pencil className="w-4 h-4" />تعديل</button>
-        {edited && <button data-testid="lp-reset-btn" onClick={onReset} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm"><RotateCcw className="w-4 h-4" />استعادة الأصل</button>}
+        {edited && !custom && <button data-testid="lp-reset-btn" onClick={onReset} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm"><RotateCcw className="w-4 h-4" />استعادة الأصل</button>}
+        {custom && <button data-testid="lp-delete-custom-btn" onClick={onReset} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm text-red-300"><Trash2 className="w-4 h-4" />حذف التحضير</button>}
       </>
     ) : (
       <>
@@ -123,8 +124,12 @@ export const PlanToolbar = ({ editing, dirty, saving, exporting, edited, onEdit,
         {dirty && <span className="text-xs text-amber-300">تغييرات غير محفوظة</span>}
       </>
     )}
+    <button data-testid="lp-style-toggle" onClick={onToggleStyle} className="btn-ghost rounded-2xl flex items-center gap-1.5 px-3 py-2 text-sm mr-auto" title="تبديل نمط الورقة">
+      {sheetStyle === 'paper' ? <Palette className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+      {sheetStyle === 'paper' ? 'نمط متناسق مع الثيم' : 'نمط ورقة Word'}
+    </button>
     <button data-testid="lp-export-btn" onClick={onExport} disabled={exporting}
-      className="rounded-2xl flex items-center gap-1.5 px-4 py-2 text-sm font-bold transition-all hover:scale-105 mr-auto"
+      className="rounded-2xl flex items-center gap-1.5 px-4 py-2 text-sm font-bold transition-all hover:scale-105"
       style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.35), rgba(37,99,235,0.15))', color: '#93C5FD', border: '1px solid rgba(96,165,250,0.45)' }}>
       <FileDown className="w-4 h-4" />{exporting ? 'جارٍ التصدير…' : 'تصدير Word'}
     </button>

@@ -2166,3 +2166,28 @@ html.mode-light div.min-h-screen[style*="11, 17, 32"] { background: #ECECEC !imp
 .lp-edit { width: 100%; font-size: 13px; line-height: 1.7; padding: 6px 8px; border: 1px dashed #3B82F6; border-radius: 8px; background: #EFF6FF; color: #111827; font-family: inherit; resize: vertical; }
 .lp-edit:focus { outline: none; border-style: solid; background: #FFFFFF; }
 html.mode-light .lp-sheet { box-shadow: 8px 8px 20px rgba(0,0,0,0.10), -6px -6px 16px rgba(255,255,255,0.9); }
+
+/* ===== نمط التحضير المتناسق مع الثيم (lp-themed) ===== */
+.lp-sheet.lp-themed { background: rgba(30, 42, 58, 0.55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); color: #E2E8F0; border: 1px solid rgba(var(--theme-accent-rgb), 0.18); box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05); }
+.lp-sheet.lp-themed .lp-table td { border-color: rgba(255,255,255,0.14); color: #E2E8F0; }
+.lp-sheet.lp-themed .lp-line { color: #E2E8F0; }
+.lp-sheet.lp-themed .lp-table .lp-head td, .lp-sheet.lp-themed .lp-table td.lp-head { background: rgba(var(--theme-accent-rgb), 0.16); color: var(--theme-accent); }
+.lp-sheet.lp-themed .lp-table .lp-blue td { background: rgba(var(--theme-accent-rgb), 0.09); color: #F8FAFC; }
+.lp-sheet.lp-themed .lp-edit { background: rgba(17, 24, 39, 0.75); color: #F8FAFC; border-color: rgba(var(--theme-accent-rgb), 0.55); }
+.lp-sheet.lp-themed .lp-edit:focus { background: rgba(17, 24, 39, 0.95); }
+html.mode-light .lp-sheet.lp-themed { background: #F7F7F7; backdrop-filter: none; color: #2a2a2a; border: 1px solid #DCDCDC; box-shadow: 10px 10px 24px rgba(0,0,0,0.10), -8px -8px 20px rgba(255,255,255,0.95); }
+html.mode-light .lp-sheet.lp-themed .lp-table td { border-color: #C9C9C9; color: #2a2a2a; }
+html.mode-light .lp-sheet.lp-themed .lp-line { color: #2a2a2a; }
+html.mode-light .lp-sheet.lp-themed .lp-table .lp-head td, html.mode-light .lp-sheet.lp-themed .lp-table td.lp-head { background: #111111; color: #FFFFFF; }
+html.mode-light .lp-sheet.lp-themed .lp-table .lp-blue td { background: #E4E4E4; color: #111111; }
+html.mode-light .lp-sheet.lp-themed .lp-edit { background: #FFFFFF; color: #111; border-color: #111; }
+
+/* عناصر تنقل صفحة التحضير — ألوان عبر كلاسات لتتوافق مع الثيم النهاري */
+.lp-nav-item { background: transparent; color: #CBD5E1; font-weight: 500; }
+.lp-nav-item.active { background: rgba(255,255,255,0.08); color: #F8FAFC; font-weight: 800; }
+.lp-vtab-sub { color: #94A3B8; } .lp-vtab-sub.active { color: #6EE7B7; } .lp-vtab-sub.active-custom { color: #93C5FD; }
+.lp-vtab-title { color: #CBD5E1; } .lp-vtab-title.active { color: #F8FAFC; }
+html.mode-light .lp-nav-item { color: #3a3a3a; }
+html.mode-light .lp-nav-item.active { background: #111111; color: #FFFFFF; }
+html.mode-light .lp-vtab-sub { color: #6b6b6b; } html.mode-light .lp-vtab-sub.active, html.mode-light .lp-vtab-sub.active-custom { color: #111111; }
+html.mode-light .lp-vtab-title { color: #2a2a2a; } html.mode-light .lp-vtab-title.active { color: #111111; }

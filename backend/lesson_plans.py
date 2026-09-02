@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import uuid
+import re
+from difflib import SequenceMatcher
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -102,6 +105,117 @@ class ExportReq(BaseModel):
     directorate: Optional[str] = None
 
 
+class CustomCreate(BaseModel):
+    name: Optional[str] = None
+    plan: PlanSave
+
+
+# ============================ DOCX PARSER (استيراد) ============================
+
+GRADE_BY_NAME = {v: k for k, v in GRADE_NAMES.items()}
+
+
+def _norm(s: str) -> str:
+    s = re.sub(r"[\u064B-\u0652\u0640]", "", s or "")
+    s = s.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه").replace("ى", "ي")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _row_cells(row):
+    out, prev = [], None
+    for c in row.cells:
+        if c._tc is prev:
+            continue
+        prev = c._tc
+        out.append(c.text)
+    return out
+
+
+def _lines(txt: str):
+    return [x.strip() for x in (txt or "").split("\n") if x.strip()]
+
+
+def _strip_num(s: str):
+    return re.sub(r"^\s*[\(\[]?\d+[\)\]\.\-:]\s*", "", s).strip()
+
+
+def parse_plan_docx(raw: bytes) -> dict:
+    doc = Document(BytesIO(raw))
+    plan = {k: ([] if k in ("objectives", "strategies", "execution", "resources", "formative", "summative") else "") for k in PLAN_FIELDS}
+    meta = {"grade": None, "unit": "", "lesson": ""}
+    for table in doc.tables:
+        rows = [_row_cells(r) for r in table.rows]
+        for i, cells in enumerate(rows):
+            joined = " ".join(cells)
+            if "الصف" in joined and "الوحدة" in joined and "الدرس" in joined and len(cells) >= 3 and not meta["lesson"]:
+                for c in cells:
+                    c = c.strip()
+                    if c.startswith("الصف"):
+                        g = c.split(":", 1)[-1].strip()
+                        meta["grade"] = GRADE_BY_NAME.get(g) or next((k for k, v in GRADE_NAMES.items() if v in g), None)
+                    elif c.startswith("الوحدة"):
+                        meta["unit"] = c.split(":", 1)[-1].strip()
+                    elif "الدرس" in c or "الموضوع" in c:
+                        meta["lesson"] = re.split(r"[:/]", c, 1)[-1].strip() if (":" in c or "/" in c) else c
+                        meta["lesson"] = re.sub(r"^\s*الموضوع\s*[:/]?\s*", "", meta["lesson"]).strip()
+            elif "التعلم القبلي" in cells[0] and len(cells) >= 2:
+                plan["prior"] = " ".join(_lines(cells[-1]))
+            elif "الأهداف" in joined and "الاستراتيجيات" in joined and i + 1 < len(rows):
+                body = rows[i + 1]
+                if len(body) >= 4:
+                    objs = [_strip_num(x) for x in _lines(body[0]) if "يتوقع من الطالب" not in x]
+                    plan["objectives"] = [o for o in objs if o]
+                    strats = []
+                    for ln in _lines(body[1]):
+                        m = re.match(r"^\(\s*([^)]*)\)\s*(.+?)\.?$", ln)
+                        if m:
+                            strats.append({"name": m.group(2).strip(), "objectives": re.sub(r"\s+", "", m.group(1))})
+                        else:
+                            strats.append({"name": ln.rstrip("."), "objectives": ""})
+                    plan["strategies"] = strats
+                    plan["execution"] = _lines(body[2])
+                    plan["resources"] = [re.sub(r"^[•\-\*]\s*", "", x) for x in _lines(body[3])]
+            elif "التقويم التكويني" in joined and "الواجب" in joined and i + 1 < len(rows):
+                body = rows[i + 1]
+                if len(body) >= 4:
+                    plan["formative"] = [re.sub(r"^[•\-\*]\s*", "", x) for x in _lines(body[0])]
+                    enr, rem, cur = [], [], None
+                    for ln in _lines(body[1]):
+                        if "إثرائي" in ln and len(ln) < 25:
+                            cur = enr
+                        elif "علاجي" in ln and len(ln) < 25:
+                            cur = rem
+                        elif cur is not None:
+                            cur.append(ln)
+                        else:
+                            enr.append(ln)
+                    plan["enrichment"], plan["remedial"] = " ".join(enr), " ".join(rem)
+                    plan["summative"] = [re.sub(r"^[•\-\*]\s*", "", x) for x in _lines(body[2])]
+                    plan["homework"] = " ".join(_lines(body[3]))
+            elif "ملاحظات المعلم" in cells[0]:
+                plan["notes"] = " ".join(_lines(cells[-1])) if len(cells) > 1 else ""
+    # مطابقة الدرس
+    target = _norm(meta["lesson"])
+    scored = []
+    for l in LESSONS:
+        if meta["grade"] and l["grade"] != meta["grade"]:
+            continue
+        r = SequenceMatcher(None, target, _norm(l["lesson"])).ratio() if target else 0
+        if target and (_norm(l["lesson"]) in target or target in _norm(l["lesson"])):
+            r = max(r, 0.9)
+        scored.append((r, l))
+    scored.sort(key=lambda x: -x[0])
+    best = scored[0] if scored else (0, None)
+    return {
+        "detected": {**meta, "grade_name": GRADE_NAMES.get(meta["grade"]) if meta["grade"] else None,
+                     "match": lesson_meta(best[1]) if best[1] is not None and best[0] >= 0.6 else None,
+                     "confidence": round(best[0], 2),
+                     "candidates": [lesson_meta(l) for _, l in scored[:5]]},
+        "plan": plan,
+        "name": f"مستورد: {meta['lesson']}" if meta["lesson"] else "تحضير مستورد",
+    }
+
+
 def make_router(db, get_teacher):
     router = APIRouter(prefix="/lesson-plans")
 
@@ -123,6 +237,9 @@ def make_router(db, get_teacher):
             grades.append({"grade": g, "grade_name": GRADE_NAMES[g], "units": units})
         return {"grades": grades, "variants": [{"variant": v["variant"], "name": v["name"], "tagline": v["tagline"]} for v in VARIANTS]}
 
+    async def _customs(owner, lesson_id):
+        return await db.lesson_plan_custom.find({"owner_id": owner, "lesson_id": lesson_id}, {"_id": 0}).sort("variant", 1).to_list(50)
+
     @router.get("/{lesson_id}")
     async def get_plans(lesson_id: str, t=Depends(get_teacher)):
         l = LESSON_INDEX.get(lesson_id)
@@ -137,13 +254,48 @@ def make_router(db, get_teacher):
                 base = {**base, **{k: emap[v["variant"]].get(k, base[k]) for k in PLAN_FIELDS}, "edited": True}
             else:
                 base["edited"] = False
+            base["custom"] = False
             variants.append(base)
+        for c in await _customs(t["teacher_id"], lesson_id):
+            variants.append({"variant": c["variant"], "name": c["name"], "tagline": "تحضير مستورد من ملف Word", "custom": True, "edited": False,
+                             **{k: c["data"].get(k, [] if k in ("objectives", "strategies", "execution", "resources", "formative", "summative") else "") for k in PLAN_FIELDS}})
         return {"lesson": lesson_meta(l), "variants": variants}
+
+    @router.post("/import/parse")
+    async def import_parse(file: UploadFile = File(...), t=Depends(get_teacher)):
+        if not (file.filename or "").lower().endswith(".docx"):
+            raise HTTPException(400, "يُقبل ملف Word بصيغة .docx فقط")
+        raw = await file.read()
+        try:
+            parsed = parse_plan_docx(raw)
+        except Exception:
+            raise HTTPException(400, "تعذر قراءة الملف — تأكد أنه بنفس قالب التحضير")
+        if not parsed["plan"]["objectives"] and not parsed["plan"]["execution"]:
+            raise HTTPException(400, "لم يتم العثور على جداول التحضير في الملف")
+        return parsed
+
+    @router.post("/{lesson_id}/custom")
+    async def create_custom(lesson_id: str, req: CustomCreate, t=Depends(get_teacher)):
+        if lesson_id not in LESSON_INDEX:
+            raise HTTPException(404, "الدرس غير موجود")
+        existing = await _customs(t["teacher_id"], lesson_id)
+        variant = max([5] + [c["variant"] for c in existing]) + 1
+        doc = {"id": str(uuid.uuid4()), "owner_id": t["teacher_id"], "lesson_id": lesson_id, "variant": variant,
+               "name": (req.name or "").strip() or f"تحضير مستورد {variant}", "data": req.plan.model_dump(),
+               "created_at": datetime.now(timezone.utc).isoformat()}
+        await db.lesson_plan_custom.insert_one(doc)
+        return {"message": "تمت إضافة التحضير", "variant": variant}
 
     @router.put("/{lesson_id}/{variant}")
     async def save_plan(lesson_id: str, variant: int, data: PlanSave, t=Depends(get_teacher)):
-        if lesson_id not in LESSON_INDEX or not 1 <= variant <= 5:
+        if lesson_id not in LESSON_INDEX or variant < 1:
             raise HTTPException(404, "الدرس أو التحضير غير موجود")
+        if variant > 5:
+            r = await db.lesson_plan_custom.update_one({"owner_id": t["teacher_id"], "lesson_id": lesson_id, "variant": variant},
+                                                       {"$set": {"data": data.model_dump(), "updated_at": datetime.now(timezone.utc).isoformat()}})
+            if not r.matched_count:
+                raise HTTPException(404, "التحضير غير موجود")
+            return {"message": "تم حفظ التحضير"}
         await db.lesson_plan_edits.update_one(
             {"owner_id": t["teacher_id"], "lesson_id": lesson_id, "variant": variant},
             {"$set": {"data": data.model_dump(), "updated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
@@ -151,13 +303,16 @@ def make_router(db, get_teacher):
 
     @router.delete("/{lesson_id}/{variant}")
     async def reset_plan(lesson_id: str, variant: int, t=Depends(get_teacher)):
+        if variant > 5:
+            await db.lesson_plan_custom.delete_one({"owner_id": t["teacher_id"], "lesson_id": lesson_id, "variant": variant})
+            return {"message": "تم حذف التحضير المستورد"}
         await db.lesson_plan_edits.delete_one({"owner_id": t["teacher_id"], "lesson_id": lesson_id, "variant": variant})
         return {"message": "تمت استعادة التحضير الأصلي"}
 
     @router.post("/{lesson_id}/{variant}/export")
     async def export_docx(lesson_id: str, variant: int, req: ExportReq, t=Depends(get_teacher)):
         l = LESSON_INDEX.get(lesson_id)
-        if not l or not 1 <= variant <= 5:
+        if not l or variant < 1:
             raise HTTPException(404, "الدرس أو التحضير غير موجود")
         teacher = t["teacher"]
         year = teacher.get("academic_year", "2025-2026").replace("-", "/")
