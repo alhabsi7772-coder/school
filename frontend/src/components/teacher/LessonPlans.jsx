@@ -206,16 +206,16 @@ export default function LessonPlans() {
                     </button>
                   );
                 })}
-                <div className="flex items-center"><LessonPlanImport catalog={catalog} currentLessonId={lessonId} onImported={onImported} /></div>
               </div>
               {current && <p className="text-xs text-slate-400 mb-3">{current.tagline}</p>}
 
-              <div className="mb-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 <PlanToolbar editing={editing} dirty={editing && JSON.stringify(pick(draft)) !== JSON.stringify(pick(current))} saving={saving} exporting={exporting}
                   edited={current?.edited} custom={current?.custom} sheetStyle={sheetStyle} onToggleStyle={toggleStyle}
                   onEdit={() => { setDraft(pick(current)); setEditing(true); }}
                   onCancel={() => { setEditing(false); setDraft(null); }}
                   onSave={save} onReset={reset} onExport={exportDocx} />
+                <LessonPlanImport catalog={catalog} currentLessonId={lessonId} onImported={onImported} />
               </div>
 
               {plan && <LessonPlanSheet lesson={data.lesson} plan={plan} header={header} editing={editing} onChange={setDraft} themed={sheetStyle === 'themed'} />}
