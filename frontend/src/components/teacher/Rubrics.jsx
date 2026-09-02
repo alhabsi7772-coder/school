@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import { ClipboardCheck, Plus, Trash2, Pencil, Smartphone, AlertTriangle, ListCh
 import TeacherLayout from './TeacherLayout';
 import ReleaseGradesButton from './ReleaseGradesButton';
 import { API, getAuthHeaders } from '../../utils';
-import { GB_FIELDS, GB_FIELDS_78, themeOfGrade } from '../../utils/gradebook';
+import { GB_FIELDS, GB_FIELDS_78, themeOfGrade, GRADE_ORDER_NUM } from '../../utils/gradebook';
 
 const GRADES_56 = ['الخامس', 'السادس'];
 const colLabel = (key, grade) => {
@@ -51,6 +51,17 @@ export default function Rubrics() {
     finally { setResyncing(null); }
   };
 
+  // تجميع بطاقات التقييم حسب الصف (كما في سجل الدرجات)
+  const groupedRubrics = useMemo(() => {
+    const withGrade = rubrics.filter(r => r.grade);
+    const noGrade = rubrics.filter(r => !r.grade);
+    const grades = [...new Set(withGrade.map(r => r.grade))]
+      .sort((a, b) => (GRADE_ORDER_NUM[a] || 99) - (GRADE_ORDER_NUM[b] || 99));
+    const groups = grades.map(grade => ({ grade, items: withGrade.filter(r => r.grade === grade) }));
+    if (noGrade.length) groups.push({ grade: null, items: noGrade });
+    return groups;
+  }, [rubrics]);
+
   return (
     <TeacherLayout title="التقييم السريع">
       {/* Header */}
@@ -91,83 +102,104 @@ export default function Rubrics() {
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="rubrics-grid">
-          {rubrics.map(r => (
-            <div key={r.id} className="quiz-card rounded-2xl p-5 group">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(100,181,246,0.12)', border: '1px solid rgba(100,181,246,0.25)' }}>
-                  <ClipboardCheck className="w-5 h-5" style={{ color: '#64B5F6' }} />
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => navigate(`/teacher/rubrics/${r.id}/print`)}
-                    className="p-1.5 rounded-lg hover:bg-white/10" title="طباعة / تنزيل PDF" data-testid={`print-rubric-${r.id}`}>
-                    <Printer className="w-4 h-4" style={{ color: '#FBBF24' }} />
-                  </button>
-                  <button onClick={() => navigate(`/teacher/rubrics/${r.id}/edit`)}
-                    className="p-1.5 rounded-lg hover:bg-white/10" title="تعديل" data-testid={`edit-rubric-${r.id}`}>
-                    <Pencil className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
-                  </button>
-                  <button onClick={() => setDeleteTarget(r)}
-                    className="p-1.5 rounded-lg hover:bg-white/10" title="حذف" data-testid={`delete-rubric-${r.id}`}>
-                    <Trash2 className="w-4 h-4" style={{ color: '#F87171' }} />
-                  </button>
-                </div>
-              </div>
-              <p className="font-bold text-white mb-2 leading-snug">{r.title}</p>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {r.grade && (() => {
-                  const th = themeOfGrade(r.grade);
-                  return (
-                    <span className="px-2 py-0.5 rounded-md text-xs font-bold"
-                      style={{ background: `rgba(${th.rgb},0.15)`, color: th.hex, border: `1px solid rgba(${th.rgb},0.3)` }}
-                      data-testid={`rubric-grade-badge-${r.id}`}>
-                      الصف {r.grade}
+        <div className="space-y-6" data-testid="rubrics-grid">
+          {groupedRubrics.map(group => {
+            const gth = group.grade ? themeOfGrade(group.grade) : { hex: '#94A3B8', rgb: '148,163,184' };
+            return (
+              <div key={group.grade || 'no-grade'} data-testid={`rubric-grade-section-${group.grade || 'none'}`}>
+                {/* رأس مجموعة الصف */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                    style={{ background: `rgba(${gth.rgb},0.12)`, border: `1px solid rgba(${gth.rgb},0.3)` }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: gth.hex }} />
+                    <span className="text-sm font-bold" style={{ color: gth.hex }}>
+                      {group.grade ? `الصف ${group.grade}` : 'بدون صف محدد'}
                     </span>
-                  );
-                })()}
-                <span className="px-2 py-0.5 rounded-md text-xs font-bold"
-                  style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', color: 'var(--theme-accent)' }}>
-                  {r.criteria.length} معايير — {r.total_max} درجة
-                </span>
-                <span className="px-2 py-0.5 rounded-md text-xs font-bold"
-                  style={r.column === 'none'
-                    ? { background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }
-                    : { background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
-                  {r.column === 'none' ? '— بدون نقل —' : `→ عمود: ${colLabel(r.column, r.grade)}`}
-                </span>
-                <span className="px-2 py-0.5 rounded-md text-xs font-bold"
-                  style={{ background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }}>
-                  {semLabel(r.semester)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                    <ListChecks className="w-3.5 h-3.5" />
-                    {r.evaluation_count} تقييم
-                  </span>
-                  {r.evaluation_count > 0 && r.column !== 'none' && (
-                    <button onClick={() => resyncRubric(r)} disabled={resyncing === r.id}
-                      data-testid={`resync-rubric-${r.id}`}
-                      title="إعادة نقل الدرجات إلى سجل الدرجات (في حال اختلال البيانات)"
-                      className="flex items-center gap-1 text-xs font-bold disabled:opacity-50"
-                      style={{ color: '#FBBF24' }}>
-                      <RefreshCcw className={`w-3.5 h-3.5 ${resyncing === r.id ? 'animate-spin' : ''}`} />
-                      {resyncing === r.id ? 'مزامنة...' : 'إعادة المزامنة'}
-                    </button>
-                  )}
+                    <span className="text-xs font-bold opacity-70" style={{ color: gth.hex }}>
+                      · {group.items.length} {group.items.length === 1 ? 'بطاقة' : 'بطاقات'}
+                    </span>
+                  </div>
+                  <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, rgba(${gth.rgb},0.25), transparent)` }} />
                 </div>
-                <button onClick={() => navigate(`/teacher/rubrics/${r.id}/evaluate`)}
-                  data-testid={`evaluate-rubric-${r.id}`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.03]"
-                  style={{ background: 'rgba(52,211,153,0.15)', color: '#34D399', border: '1px solid rgba(52,211,153,0.3)' }}>
-                  <Smartphone className="w-4 h-4" />
-                  بدء التقييم
-                </button>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map(r => (
+                    <div key={r.id} className="quiz-card rounded-2xl p-5 group" style={{ borderRight: `4px solid ${gth.hex}` }}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+                          style={{ background: 'rgba(100,181,246,0.12)', border: '1px solid rgba(100,181,246,0.25)' }}>
+                          <ClipboardCheck className="w-5 h-5" style={{ color: '#64B5F6' }} />
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => navigate(`/teacher/rubrics/${r.id}/print`)}
+                            className="p-1.5 rounded-lg hover:bg-white/10" title="طباعة / تنزيل PDF" data-testid={`print-rubric-${r.id}`}>
+                            <Printer className="w-4 h-4" style={{ color: '#FBBF24' }} />
+                          </button>
+                          <button onClick={() => navigate(`/teacher/rubrics/${r.id}/edit`)}
+                            className="p-1.5 rounded-lg hover:bg-white/10" title="تعديل" data-testid={`edit-rubric-${r.id}`}>
+                            <Pencil className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
+                          </button>
+                          <button onClick={() => setDeleteTarget(r)}
+                            className="p-1.5 rounded-lg hover:bg-white/10" title="حذف" data-testid={`delete-rubric-${r.id}`}>
+                            <Trash2 className="w-4 h-4" style={{ color: '#F87171' }} />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="font-bold text-white mb-2 leading-snug">{r.title}</p>
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {r.grade && (
+                          <span className="px-2 py-0.5 rounded-md text-xs font-bold"
+                            style={{ background: `rgba(${gth.rgb},0.15)`, color: gth.hex, border: `1px solid rgba(${gth.rgb},0.3)` }}
+                            data-testid={`rubric-grade-badge-${r.id}`}>
+                            الصف {r.grade}
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold"
+                          style={{ background: 'rgba(var(--theme-accent-rgb),0.12)', color: 'var(--theme-accent)' }}>
+                          {r.criteria.length} معايير — {r.total_max} درجة
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold"
+                          style={r.column === 'none'
+                            ? { background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }
+                            : { background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
+                          {r.column === 'none' ? '— بدون نقل —' : `→ عمود: ${colLabel(r.column, r.grade)}`}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold"
+                          style={{ background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }}>
+                          {semLabel(r.semester)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            <ListChecks className="w-3.5 h-3.5" />
+                            {r.evaluation_count} تقييم
+                          </span>
+                          {r.evaluation_count > 0 && r.column !== 'none' && (
+                            <button onClick={() => resyncRubric(r)} disabled={resyncing === r.id}
+                              data-testid={`resync-rubric-${r.id}`}
+                              title="إعادة نقل الدرجات إلى سجل الدرجات (في حال اختلال البيانات)"
+                              className="flex items-center gap-1 text-xs font-bold disabled:opacity-50"
+                              style={{ color: '#FBBF24' }}>
+                              <RefreshCcw className={`w-3.5 h-3.5 ${resyncing === r.id ? 'animate-spin' : ''}`} />
+                              {resyncing === r.id ? 'مزامنة...' : 'إعادة المزامنة'}
+                            </button>
+                          )}
+                        </div>
+                        <button onClick={() => navigate(`/teacher/rubrics/${r.id}/evaluate`)}
+                          data-testid={`evaluate-rubric-${r.id}`}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.03]"
+                          style={{ background: 'rgba(52,211,153,0.15)', color: '#34D399', border: '1px solid rgba(52,211,153,0.3)' }}>
+                          <Smartphone className="w-4 h-4" />
+                          بدء التقييم
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

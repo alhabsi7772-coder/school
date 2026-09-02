@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -9,6 +9,9 @@ import {
 import TeacherLayout from './TeacherLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { API, getAuthHeaders, STATUS_MAP } from '../../utils';
+import { GRADE_ORDER_NUM, themeOfGrade } from '../../utils/gradebook';
+
+const NO_GRADE_THEME = { hex: '#94A3B8', rgb: '148,163,184' };
 
 // عدّاد أرقام متحرك (يصعد بسلاسة حتى القيمة)
 const CountUp = ({ value, duration = 800 }) => {
@@ -77,6 +80,17 @@ export default function Dashboard() {
   const { theme, isDark } = useTheme();
   const lux = !!theme?.lux && isDark;
 
+  // تجميع الاختبارات حسب الصف (كما في سجل الدرجات) — بدون صف في مجموعة منفصلة بالأخير
+  const groupedQuizzes = useMemo(() => {
+    const withGrade = quizzes.filter(q => q.grade);
+    const noGrade = quizzes.filter(q => !q.grade);
+    const grades = [...new Set(withGrade.map(q => q.grade))]
+      .sort((a, b) => (GRADE_ORDER_NUM[a] || 99) - (GRADE_ORDER_NUM[b] || 99));
+    const groups = grades.map(grade => ({ grade, items: withGrade.filter(q => q.grade === grade) }));
+    if (noGrade.length) groups.push({ grade: null, items: noGrade });
+    return groups;
+  }, [quizzes]);
+
   const stats = [
     { label: 'إجمالي الاختبارات', value: quizzes.length, icon: FileQuestion, color: lux ? '#28F5A7' : '#00E5FF', glow: lux ? 'rgba(22,214,122,0.3)' : 'rgba(0,229,255,0.3)' },
     { label: 'جارٍ الآن', value: quizzes.filter(q => q.status === 'active').length, icon: PlayCircle, color: lux ? '#16D67A' : '#00E676', glow: lux ? 'rgba(22,214,122,0.3)' : 'rgba(0,230,118,0.3)' },
@@ -144,22 +158,41 @@ export default function Dashboard() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {quizzes.map(quiz => {
-            const st = STATUS_STYLE[quiz.status] || STATUS_STYLE.draft;
-            const legacySt = STATUS_MAP[quiz.status] || STATUS_MAP.draft;
+        <div className="space-y-6" data-testid="quizzes-grid">
+          {groupedQuizzes.map(group => {
+            const th = group.grade ? themeOfGrade(group.grade) : NO_GRADE_THEME;
             return (
-              <div key={quiz.id} data-testid={`quiz-card-${quiz.id}`}
-                className="quiz-card p-5 group">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                      <h3 className="font-bold text-white text-base">{quiz.title}</h3>
-                      <span className={`badge ${st.cls}`}>{st.label}</span>
-                    </div>
-                    {quiz.description && (
-                      <p className="text-sm mb-2 line-clamp-1" style={{ color: 'var(--text-hint)' }}>{quiz.description}</p>
-                    )}
+              <div key={group.grade || 'no-grade'} data-testid={`quiz-grade-section-${group.grade || 'none'}`}>
+                {/* رأس مجموعة الصف */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                    style={{ background: `rgba(${th.rgb},0.12)`, border: `1px solid rgba(${th.rgb},0.3)` }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: th.hex }} />
+                    <span className="text-sm font-bold" style={{ color: th.hex }}>
+                      {group.grade ? `الصف ${group.grade}` : 'بدون صف محدد'}
+                    </span>
+                    <span className="text-xs font-bold opacity-70" style={{ color: th.hex }}>
+                      · {group.items.length} {group.items.length === 1 ? 'اختبار' : 'اختبارات'}
+                    </span>
+                  </div>
+                  <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, rgba(${th.rgb},0.25), transparent)` }} />
+                </div>
+
+                <div className="grid gap-3">
+                  {group.items.map(quiz => {
+                    const st = STATUS_STYLE[quiz.status] || STATUS_STYLE.draft;
+                    return (
+                      <div key={quiz.id} data-testid={`quiz-card-${quiz.id}`}
+                        className="quiz-card p-5 group" style={{ borderRight: `4px solid ${th.hex}` }}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                              <h3 className="font-bold text-white text-base">{quiz.title}</h3>
+                              <span className={`badge ${st.cls}`}>{st.label}</span>
+                            </div>
+                            {quiz.description && (
+                              <p className="text-sm mb-2 line-clamp-1" style={{ color: 'var(--text-hint)' }}>{quiz.description}</p>
+                            )}
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-hint)' }}>
                         <FileQuestion className="w-3.5 h-3.5" />
@@ -244,7 +277,11 @@ export default function Dashboard() {
                       className="flex items-center gap-1.5 p-1.5 rounded-xl text-xs font-semibold transition-all btn-danger">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

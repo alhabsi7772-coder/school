@@ -11,6 +11,7 @@ import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders, QUESTION_TYPES, generateCode, STATUS_MAP } from '../../utils';
 
 const EMPTY_Q = { type: 'mcq', text: '', image_url: '', options: ['', '', '', ''], correct_answer: '', points: 1 };
+const ALL_GRADES = ['الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
 
 export default function QuizEditor() {
   const { quizId } = useParams();
@@ -19,7 +20,7 @@ export default function QuizEditor() {
 
   const [tab, setTab] = useState('settings');
   const [settings, setSettings] = useState({
-    title: '', description: '',
+    title: '', description: '', grade: '',
     settings: { time_limit: '', secret_code: '', show_results: true, home_exam: false, randomize_questions: true, question_count: '', show_question_nav: false }
   });
   const [questions, setQuestions] = useState([]);
@@ -44,6 +45,7 @@ export default function QuizEditor() {
       setSettings({
         title: res.data.title,
         description: res.data.description,
+        grade: res.data.grade || '',
         settings: {
           ...res.data.settings,
           time_limit: res.data.settings.time_limit || '',
@@ -64,6 +66,7 @@ export default function QuizEditor() {
       const payload = {
         title: settings.title,
         description: settings.description,
+        grade: settings.grade || null,
         settings: {
           ...settings.settings,
           time_limit: settings.settings.time_limit ? parseInt(settings.settings.time_limit) : null,
@@ -231,6 +234,20 @@ export default function QuizEditor() {
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">الوصف (اختياري)</label>
               <textarea className="input-field resize-none" rows={2} placeholder="وصف مختصر للاختبار"
                 value={settings.description} onChange={e => setSettings(p => ({ ...p, description: e.target.value }))} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">الصف الدراسي (اختياري)</label>
+              <div className="flex flex-wrap gap-2" data-testid="quiz-grade-picker">
+                {ALL_GRADES.map(g => (
+                  <button type="button" key={g} onClick={() => setSettings(p => ({ ...p, grade: p.grade === g ? '' : g }))}
+                    data-testid={`quiz-grade-${g}`}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${settings.grade === g ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-1.5">يُستخدم لتنظيم الاختبارات في لوحة التحكم حسب الصف</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -225,12 +225,14 @@ class QuizSettings(BaseModel):
 class QuizCreate(BaseModel):
     title: str
     description: str = ""
+    grade: Optional[str] = None
     settings: QuizSettings = Field(default_factory=QuizSettings)
 
 
 class QuizUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    grade: Optional[str] = None
     settings: Optional[QuizSettings] = None
 
 
@@ -450,6 +452,7 @@ async def create_quiz(data: QuizCreate, t=Depends(get_teacher)):
         "semester": teacher_semester(t),
         "title": data.title,
         "description": data.description,
+        "grade": data.grade,
         "questions": [],
         "settings": data.settings.model_dump(),
         "status": "draft",
@@ -512,6 +515,7 @@ async def duplicate_quiz(qid: str, t=Depends(get_teacher)):
         "semester": teacher_semester(t),
         "title": q['title'] + " (نسخة)",
         "description": q.get('description', ''),
+        "grade": q.get('grade'),
         "questions": new_questions,
         "settings": new_settings,
         "status": "draft",
