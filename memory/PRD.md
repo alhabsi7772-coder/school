@@ -152,6 +152,7 @@
 ملف `/app/memory/test_credentials.md` — Admin: `admin` / `teacher123`
 
 ## سجل الحوادث (Deployment)
+- 2026-09: تعديل نموذج 7-10: تقسيم الاختبار القصير (20) إلى اختبارين (10+10). شمل: gradebook.js، GradebookDetail، GradebookSyncButton، Gradebooks.jsx، server.py (GB_FIELDS_78/GB_XL_COLS_78/تصدير واستيراد إكسل/السجل السنوي: منتصف الفصل = (حوار1+عملي1+قصير1)×100÷40 والدرجة النهائية عمود M). ترحيل gb78_quiz_split_v1 يقصّ قيم q1 القديمة >10. الاستيراد يرفض ملفات النموذج القديم برسالة واضحة. يتطلب Redeploy.
 - 2026-09: بنك الأسئلة فارغ في الإنتاج (1215 سؤالاً كانت محلية فقط). الحل: تصدير الأسئلة إلى /app/backend/data/question_bank_seed.json + استيراد تلقائي لمرة واحدة في init_db (مفتاح db.meta: question_bank_seed_v1). الصور الثابتة /api/static/bank موجودة أصلاً على اللايف. يتطلب Redeploy.
 - 2026-09: كلمة مرور admin في الإنتاج كانت مختلفة + قفل 429. تمت إضافة ترحيل لمرة واحدة في init_db (مفتاح db.meta: admin_pwd_reset_v1) يعيد كلمة المرور إلى teacher123 ويمسح login_attempts. يتطلب Redeploy ليسري على الإنتاج.
 - 2026-06: خطأ Cloudflare 520 على كل مسارات /api في النسخة المنشورة (school-frontend-3.emergent.host) رغم عمل المعاينة بشكل سليم ونجاح فحص الجاهزية 3 مرات. التشخيص: مشكلة بنية تحتية (Backend pod متوقف في الإنتاج) وليست مشكلة كود. الحل الموصى به: إعادة النشر (Redeploy) من لوحة Emergent، وإن لم ينجح: إيقاف النشر كلياً ثم النشر من جديد، أو التواصل مع support@emergent.sh.

@@ -130,6 +130,19 @@ async def init_db():
                 await db.question_bank.bulk_write(ops, ordered=False)
         await db.meta.insert_one({"key": "question_bank_seed_v1", "at": now_iso()})
 
+    # ترحيل لمرة واحدة: تقسيم الاختبار القصير (7-10) إلى اختبارين — قصّ القيم القديمة الأعلى من 10
+    if not await db.meta.find_one({"key": "gb78_quiz_split_v1"}):
+        async for gb in db.gradebooks.find({"template": "7-10"}):
+            sets = {}
+            for sem, sem_scores in (gb.get("scores") or {}).items():
+                for sid, sc in (sem_scores or {}).items():
+                    v = (sc or {}).get("q1")
+                    if v is not None and v > 10:
+                        sets[f"scores.{sem}.{sid}.q1"] = 10.0
+            if sets:
+                await db.gradebooks.update_one({"id": gb["id"]}, {"$set": sets})
+        await db.meta.insert_one({"key": "gb78_quiz_split_v1", "at": now_iso()})
+
     # ترحيل لمرة واحدة: إعادة كلمة مرور المدير إلى teacher123 وفك القفل (لإصلاح الإنتاج)
     if not await db.meta.find_one({"key": "admin_pwd_reset_v1"}):
         await db.teachers.update_one({"id": admin_id}, {"$set": {"password_hash": hash_password("teacher123"), "is_active": True}})
@@ -1163,15 +1176,15 @@ GB_FIELDS = [
 GB_MAX = {k: m for k, _, m in GB_FIELDS}
 GB_XL_COLS = [(3, "d1"), (4, "d2"), (6, "q1"), (7, "q2"), (8, "q3"), (9, "q4"), (11, "p1"), (12, "p2"), (14, "proj")]
 
-# النموذج الرسمي للصفوف (7-10): الحوار 2×10 + الأنشطة العملية 2×20 + الاختبار القصير 20 + المشروع 20 = 100
+# النموذج الرسمي للصفوف (7-10): الحوار 2×10 + الأنشطة العملية 2×20 + اختباران قصيران 2×10 + المشروع 20 = 100
 GB_FIELDS_78 = [
     ("d1", "حوار 1", 10), ("d2", "حوار 2", 10),
     ("p1", "عملي 1", 20), ("p2", "عملي 2", 20),
-    ("q1", "الاختبار القصير", 20),
+    ("q1", "اختبار قصير 1", 10), ("q2", "اختبار قصير 2", 10),
     ("proj", "المشروع", 20),
 ]
 GB_MAX_78 = {k: m for k, _, m in GB_FIELDS_78}
-GB_XL_COLS_78 = [(3, "d1"), (4, "d2"), (6, "p1"), (7, "p2"), (9, "q1"), (10, "proj")]
+GB_XL_COLS_78 = [(3, "d1"), (4, "d2"), (6, "p1"), (7, "p2"), (9, "q1"), (10, "q2"), (12, "proj")]
 GB_TEMPLATES = ("5-6", "7-10")
 
 
@@ -1493,6 +1506,8 @@ async def import_gradebook(data: GBImportReq, t=Depends(get_teacher)):
     f4 = str(s1['F4'].value or '')
     i4 = str(s1['I4'].value or '')
     tpl = "7-10" if ('الأنشطة' in f4 or 'الاختبار القصير' in i4) else "5-6"
+    if tpl == "7-10" and 'المشروع' in str(s1['J4'].value or ''):
+        raise HTTPException(400, "هذا الملف بالنموذج القديم (اختبار قصير واحد من 20) — صدّر السجل من جديد بالنموذج المحدّث (اختباران قصيران 10+10) ثم استورده")
     xl_cols = GB_XL_COLS_78 if tpl == "7-10" else GB_XL_COLS
     mx_map = GB_MAX_78 if tpl == "7-10" else GB_MAX
 
@@ -1663,7 +1678,7 @@ def _gb_sem_sheet(wb, sheet_name, sem_label, gb, sem_key, teacher_name):
 
 
 def _gb_sem_sheet78(wb, sheet_name, sem_label, gb, sem_key, teacher_name):
-    """ورقة فصل دراسي بنموذج الصفوف (7-10): الحوار 20 + الأنشطة العملية 40 + الاختبار القصير 20 + المشروع 20"""
+    """ورقة فصل دراسي بنموذج الصفوف (7-10): الحوار 20 + الأنشطة العملية 40 + اختباران قصيران 20 + المشروع 20"""
     ws = wb.create_sheet(sheet_name)
     ws.sheet_view.rightToLeft = True
     thin = _Side(style='thin', color='9CA3AF')
@@ -1675,7 +1690,7 @@ def _gb_sem_sheet78(wb, sheet_name, sem_label, gb, sem_key, teacher_name):
     total_fill = _Fill('solid', fgColor='E2EFDA')
     bold = _Font(bold=True, size=11)
 
-    ws.merge_cells('A1:K1')
+    ws.merge_cells('A1:M1')
     c = ws['A1']
     c.value = f'استمارة تقييم الطالب للصفوف (7-10) خلال الفصل الدراسي {sem_label}'
     c.font = _Font(bold=True, size=14)
@@ -1695,14 +1710,16 @@ def _gb_sem_sheet78(wb, sheet_name, sem_label, gb, sem_key, teacher_name):
     ws.merge_cells('F4:G4')
     ws['F4'] = 'الأنشطة العملية'
     ws['H4'] = 'المجموع'
+    ws.merge_cells('I4:J4')
     ws['I4'] = 'الاختبار القصير'
-    ws['J4'] = 'المشروع'
-    ws['K4'] = 'الدرجة الكلية'
-    maxes = {3: 10, 4: 10, 5: 20, 6: 20, 7: 20, 8: 40, 9: 20, 10: 20, 11: 100}
+    ws['K4'] = 'المجموع'
+    ws['L4'] = 'المشروع'
+    ws['M4'] = 'الدرجة الكلية'
+    maxes = {3: 10, 4: 10, 5: 20, 6: 20, 7: 20, 8: 40, 9: 10, 10: 10, 11: 20, 12: 20, 13: 100}
     for col, v in maxes.items():
         ws.cell(5, col, v)
     for r in (4, 5):
-        for col in range(1, 12):
+        for col in range(1, 14):
             cell = ws.cell(r, col)
             cell.alignment = center
             cell.border = border
@@ -1725,28 +1742,29 @@ def _gb_sem_sheet78(wb, sheet_name, sem_label, gb, sem_key, teacher_name):
                     ws.cell(r, col, v if v % 1 else int(v))
         ws.cell(r, 5).value = f'=SUM(C{r}:D{r})'
         ws.cell(r, 8).value = f'=SUM(F{r}:G{r})'
-        ws.cell(r, 11).value = f'=SUM(E{r},H{r},I{r},J{r})'
-        for col in range(1, 12):
+        ws.cell(r, 11).value = f'=SUM(I{r}:J{r})'
+        ws.cell(r, 13).value = f'=SUM(E{r},H{r},K{r},L{r})'
+        for col in range(1, 14):
             cell = ws.cell(r, col)
             cell.border = border
             cell.alignment = center if col != 2 else right
-            if col in (5, 8):
+            if col in (5, 8, 11):
                 cell.fill = total_fill
-            if col == 11:
+            if col == 13:
                 cell.font = bold
 
     fr = 6 + n_rows
     ws.cell(fr, 2, f'معلم المادة/{teacher_name}')
-    ws.merge_cells(f'C{fr}:F{fr}')
+    ws.merge_cells(f'C{fr}:G{fr}')
     ws.cell(fr, 3, 'يعتمد مشرف المادة/')
-    ws.merge_cells(f'G{fr}:K{fr}')
-    ws.cell(fr, 7, 'مدير المدرسة/')
-    for col in (2, 3, 7):
+    ws.merge_cells(f'H{fr}:M{fr}')
+    ws.cell(fr, 8, 'مدير المدرسة/')
+    for col in (2, 3, 8):
         ws.cell(fr, col).font = bold
 
     ws.column_dimensions['A'].width = 5
     ws.column_dimensions['B'].width = 38
-    for col in range(3, 12):
+    for col in range(3, 14):
         ws.column_dimensions[_col_letter(col)].width = 11
     return ws
 
@@ -1812,11 +1830,11 @@ def _gb_annual_sheet(wb, gb):
     s1, s2 = GB_SEM1, GB_SEM2
     # صيغ منتصف الفصل ونهاية الفصل حسب النموذج:
     # 5-6: منتصف = (حوار1 + قصيرة1 + قصيرة2 + عملي1) ×100/40، النهاية = العمود O
-    # 7-10: منتصف = (حوار1 + عملي1 + الاختبار القصير) ×100/50، النهاية = العمود K
+    # 7-10: منتصف = (حوار1 + عملي1 + اختبار قصير1) ×100/40، النهاية = العمود M
     if is78:
         def mid_formula(sheet, sr):
-            return f"=IF('{sheet}'!C{sr}=\"\",\"\",SUM('{sheet}'!C{sr},'{sheet}'!F{sr},'{sheet}'!I{sr})*100/50)"
-        total_col = 'K'
+            return f"=IF('{sheet}'!C{sr}=\"\",\"\",SUM('{sheet}'!C{sr},'{sheet}'!F{sr},'{sheet}'!I{sr})*100/40)"
+        total_col = 'M'
     else:
         def mid_formula(sheet, sr):
             return f"=IF('{sheet}'!C{sr}=\"\",\"\",SUM('{sheet}'!C{sr},'{sheet}'!F{sr},'{sheet}'!G{sr},'{sheet}'!K{sr})*100/40)"

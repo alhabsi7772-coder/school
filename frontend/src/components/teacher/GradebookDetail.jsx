@@ -197,7 +197,7 @@ export default function GradebookDetail() {
   const renderSemester = (sem) => (
     <div className="quiz-card rounded-2xl overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="gb-table w-full text-sm" style={{ minWidth: is78 ? '840px' : '980px' }}>
+        <table className="gb-table w-full text-sm" style={{ minWidth: is78 ? '940px' : '980px' }}>
           <thead>
             <tr className="gb-head-row">
               <th rowSpan={2} className="px-2 py-2 w-10">م</th>
@@ -208,7 +208,8 @@ export default function GradebookDetail() {
                 <>
                   <th colSpan={2} className="px-2 py-2">الأنشطة العملية</th>
                   <th rowSpan={2} className="px-2 py-2 gb-total-col">المجموع<br /><span className="gb-max">40</span></th>
-                  <th rowSpan={2} className="px-2 py-2">الاختبار القصير<br /><span className="gb-max">20</span></th>
+                  <th colSpan={2} className="px-2 py-2">الاختبار القصير</th>
+                  <th rowSpan={2} className="px-2 py-2 gb-total-col">المجموع<br /><span className="gb-max">20</span></th>
                 </>
               ) : (
                 <>
@@ -224,8 +225,8 @@ export default function GradebookDetail() {
             </tr>
             <tr className="gb-head-row">
               {is78
-                ? ['d1', 'd2', 'p1', 'p2'].map(k => (
-                    <th key={k} className="px-1 py-1.5 text-xs font-semibold">{k.startsWith('d') ? 10 : 20}</th>
+                ? ['d1', 'd2', 'p1', 'p2', 'q1', 'q2'].map(k => (
+                    <th key={k} className="px-1 py-1.5 text-xs font-semibold">{k.startsWith('p') ? 20 : 10}</th>
                   ))
                 : GB_FIELDS.filter(f => f.key !== 'proj').map(f => (
                     <th key={f.key} className="px-1 py-1.5 text-xs font-semibold">{f.max}</th>
@@ -253,7 +254,9 @@ export default function GradebookDetail() {
                       <td className="px-1 py-1 text-center"><ScoreCell value={sc.p1} max={20} onChange={v => setScore(sem, st.id, 'p1', v)} testId={`gb-${sem}-${i}-p1`} /></td>
                       <td className="px-1 py-1 text-center"><ScoreCell value={sc.p2} max={20} onChange={v => setScore(sem, st.id, 'p2', v)} testId={`gb-${sem}-${i}-p2`} /></td>
                       <td className="px-2 py-1.5 text-center font-bold gb-total-col">{sumKeys(sc, ['p1', 'p2']) ?? '—'}</td>
-                      <td className="px-1 py-1 text-center"><ScoreCell value={sc.q1} max={20} onChange={v => setScore(sem, st.id, 'q1', v)} testId={`gb-${sem}-${i}-q1`} /></td>
+                      <td className="px-1 py-1 text-center"><ScoreCell value={sc.q1} max={10} onChange={v => setScore(sem, st.id, 'q1', v)} testId={`gb-${sem}-${i}-q1`} /></td>
+                      <td className="px-1 py-1 text-center"><ScoreCell value={sc.q2} max={10} onChange={v => setScore(sem, st.id, 'q2', v)} testId={`gb-${sem}-${i}-q2`} /></td>
+                      <td className="px-2 py-1.5 text-center font-bold gb-total-col">{sumKeys(sc, ['q1', 'q2']) ?? '—'}</td>
                     </>
                   ) : (
                     <>

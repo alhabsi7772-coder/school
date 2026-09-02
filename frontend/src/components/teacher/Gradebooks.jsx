@@ -282,7 +282,7 @@ export default function Gradebooks() {
               <div className="px-3 py-2 rounded-xl text-xs font-bold" data-testid="gradebook-template-hint"
                 style={{ background: 'rgba(var(--theme-accent-rgb),0.07)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb),0.18)' }}>
                 {templateOfGrade(form.grade) === '7-10'
-                  ? 'النموذج: الصفوف (7-10) — الحوار 20 + الأنشطة العملية 40 + الاختبار القصير 20 + المشروع 20'
+                  ? 'النموذج: الصفوف (7-10) — الحوار 20 + الأنشطة العملية 40 + اختباران قصيران (10+10) + المشروع 20'
                   : 'النموذج: الصفوف (5-6) — الحوار 20 + الأسئلة القصيرة 20 + الأنشطة العملية 40 + المشروع 20'}
               </div>
               <div>

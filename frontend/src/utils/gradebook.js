@@ -11,13 +11,14 @@ export const GB_FIELDS = [
   { key: 'proj', label: 'المشروع', max: 20 },
 ];
 
-// Official MOE template for grades 7-10: dialogue 2×10 + practical 2×20 + short test 20 + project 20 = 100
+// Official MOE template for grades 7-10: dialogue 2×10 + practical 2×20 + short tests 2×10 + project 20 = 100
 export const GB_FIELDS_78 = [
   { key: 'd1', label: 'حوار 1', max: 10 },
   { key: 'd2', label: 'حوار 2', max: 10 },
   { key: 'p1', label: 'عملي 1', max: 20 },
   { key: 'p2', label: 'عملي 2', max: 20 },
-  { key: 'q1', label: 'الاختبار القصير', max: 20 },
+  { key: 'q1', label: 'اختبار قصير 1', max: 10 },
+  { key: 'q2', label: 'اختبار قصير 2', max: 10 },
   { key: 'proj', label: 'المشروع', max: 20 },
 ];
 
@@ -56,12 +57,12 @@ export const totalScore = (sc, tpl = '5-6') => sumKeys(sc, gbFields(tpl).map(f =
 
 // منتصف الفصل — مطابق لصيغة السجل الرسمي:
 // 5-6: (حوار1 + قصيرة1 + قصيرة2 + عملي1) × 100 ÷ 40
-// 7-10: (حوار1 + عملي1 + الاختبار القصير) × 100 ÷ 50
+// 7-10: (حوار1 + عملي1 + اختبار قصير1) × 100 ÷ 40
 export const midterm = (sc, tpl = '5-6') => {
   if (sc?.d1 == null) return null;
   if (tpl === '7-10') {
     const s = (sc.d1 || 0) + (sc.p1 || 0) + (sc.q1 || 0);
-    return Math.round((s * 100 / 50) * 10) / 10;
+    return Math.round((s * 100 / 40) * 10) / 10;
   }
   const s = (sc.d1 || 0) + (sc.q1 || 0) + (sc.q2 || 0) + (sc.p1 || 0);
   return Math.round((s * 100 / 40) * 10) / 10;

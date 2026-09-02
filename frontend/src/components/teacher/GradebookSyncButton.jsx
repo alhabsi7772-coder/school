@@ -14,7 +14,7 @@ const COLUMN_GROUPS_56 = [
   { label: 'المشروع (20)', keys: ['proj'] },
 ];
 const COLUMN_GROUPS_78 = [
-  { label: 'الاختبار القصير (20)', keys: ['q1'] },
+  { label: 'الاختبارات القصيرة (10)', keys: ['q1', 'q2'] },
   { label: 'الحوار (10)', keys: ['d1', 'd2'] },
   { label: 'الأنشطة العملية (20)', keys: ['p1', 'p2'] },
   { label: 'المشروع (20)', keys: ['proj'] },
