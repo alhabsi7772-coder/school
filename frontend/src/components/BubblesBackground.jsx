@@ -28,7 +28,7 @@ export default function BubblesBackground() {
 
     let w, h, bubbles;
     const COUNT = 38; // small floating bubbles
-    const GOLD  = '201, 169, 97'; // antique gold rgb
+    const GOLD  = '150, 150, 150'; // tactile soft gray
 
     const reset = (b, fromBottom = true) => {
       b.x  = Math.random() * w;

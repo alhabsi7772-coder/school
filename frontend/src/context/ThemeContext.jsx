@@ -72,8 +72,8 @@ export function ThemeProvider({ children }) {
     const t = theme;
     const root = document.documentElement;
     const light = mode === 'light';
-    root.style.setProperty('--theme-accent',     light ? t.grad1 : t.accent);
-    root.style.setProperty('--theme-accent-rgb', light ? hexToRgb(t.grad1) : t.accentRgb);
+    root.style.setProperty('--theme-accent',     light ? '#111111' : t.accent);
+    root.style.setProperty('--theme-accent-rgb', light ? '17,17,17' : t.accentRgb);
     root.style.setProperty('--theme-grad1',      t.grad1);
     root.style.setProperty('--theme-grad2',      t.grad2);
     root.style.setProperty('--theme-orb1',       t.orb1);
@@ -100,10 +100,10 @@ export function ThemeProvider({ children }) {
     const lux = !!theme.lux;
     if (mode === 'light') {
       html.classList.add('mode-light');
-      html.style.setProperty('--mode-bg', '#F5EEDC');                        /* warm parchment cream */
-      html.style.setProperty('--mobile-header-bg', 'rgba(250,245,232,0.97)');
-      html.style.setProperty('--text-muted', 'rgba(26, 26, 26, 0.88)');      /* near-black */
-      html.style.setProperty('--text-hint',  'rgba(74, 66, 50, 0.85)');      /* warm dark brown */
+      html.style.setProperty('--mode-bg', '#ECECEC');                        /* tactile soft gray */
+      html.style.setProperty('--mobile-header-bg', 'rgba(246,246,246,0.97)');
+      html.style.setProperty('--text-muted', 'rgba(26, 26, 26, 0.9)');       /* near-black */
+      html.style.setProperty('--text-hint',  '#6B6B6B');                     /* medium gray */
     } else {
       html.classList.remove('mode-light');
       html.style.setProperty('--mode-bg', lux ? '#050505' : '#0B1120');

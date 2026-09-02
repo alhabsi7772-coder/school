@@ -1635,3 +1635,479 @@ html.theme-lux.in-app:not(.mode-light) h2, html.theme-lux.in-app:not(.mode-light
   html.theme-lux [data-lux-particles],
   html.theme-lux [data-lux-glow] { display: none !important; }
 }
+
+/* ============================================================
+   TACTILE OS — Soft Neumorphic Monochrome LIGHT THEME
+   (يتجاوز كل قواعد الوضع النهاري الذهبية أعلاه — الأخير يفوز)
+   Palette: bg #ECECEC · surface #F7F7F7 · accent #111 · text #1A1A1A/#6B6B6B
+   ============================================================ */
+
+html.mode-light {
+  --theme-accent: #111111 !important;
+  --theme-accent-rgb: 17, 17, 17 !important;
+  --mode-bg: #ECECEC !important;
+  --text-muted: #2A2A2A !important;
+  --text-hint: #6B6B6B !important;
+  --tact-surface: #F7F7F7;
+  --tact-surface-2: #FAFAFA;
+  --tact-border: #E0E0E0;
+  --tact-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.65);
+  --tact-shadow-sm: 0 8px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6);
+  --tact-shadow-raised: 0 14px 28px rgba(0,0,0,0.22), 0 3px 8px rgba(0,0,0,0.14);
+}
+
+html.mode-light body {
+  background-color: #ECECEC !important;
+  color: #1A1A1A !important;
+}
+html.mode-light .page-bg { background-color: transparent !important; }
+html.mode-light .page-bg::before { display: none !important; }
+html.mode-light .orb { display: none !important; }
+
+/* ── Cards: floating near-white rounded surfaces ── */
+html.mode-light .glass-card,
+html.mode-light .quiz-card,
+html.mode-light .stat-card,
+html.mode-light .lib-card {
+  background: var(--tact-surface) !important;
+  border: 1px solid var(--tact-border) !important;
+  border-radius: 28px !important;
+  box-shadow: var(--tact-shadow-sm) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.mode-light .glass-card-hover:hover,
+html.mode-light .quiz-card:hover,
+html.mode-light .lib-card:hover {
+  border-color: #D5D5D5 !important;
+  box-shadow: var(--tact-shadow) !important;
+  transform: translateY(-2px);
+}
+html.mode-light .lib-card.is-selected {
+  background: var(--tact-surface-2) !important;
+  border-color: #111111 !important;
+  box-shadow: var(--tact-shadow) !important;
+}
+html.mode-light .glass-modal,
+html.mode-light .lib-modal {
+  background: #FAFAFA !important;
+  border: 1px solid var(--tact-border) !important;
+  border-radius: 32px !important;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+html.mode-light .glass-sidebar {
+  background: #F6F6F6 !important;
+  border-left: 1px solid var(--tact-border) !important;
+  box-shadow: -8px 0 24px rgba(0,0,0,0.05) !important;
+}
+html.mode-light [data-mobile-header] {
+  background: rgba(246,246,246,0.97) !important;
+  border-bottom: 1px solid var(--tact-border) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05) !important;
+}
+
+/* ── Hero cards (library) → monochrome ── */
+html.mode-light .lib-hero-card,
+html.mode-light .lib-hero-card.is-fuchsia {
+  background: var(--tact-surface) !important;
+  border: 1px solid var(--tact-border) !important;
+  border-radius: 32px !important;
+  box-shadow: var(--tact-shadow) !important;
+}
+html.mode-light .lib-hero-orb-1,
+html.mode-light .lib-hero-orb-2 { background: radial-gradient(circle, rgba(0,0,0,0.05) 0%, transparent 70%) !important; }
+html.mode-light .lib-hero-code,
+html.mode-light .lib-hero-card.is-fuchsia .lib-hero-code {
+  color: #111111 !important;
+  text-shadow: none !important;
+}
+html.mode-light .lib-hero-card span[dir="ltr"] {
+  color: #FFFFFF !important;
+  background: #111111 !important;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+html.mode-light .lib-hero-card .text-cyan-300,
+html.mode-light .lib-hero-card .text-cyan-400,
+html.mode-light .lib-hero-card .text-fuchsia-300,
+html.mode-light .lib-hero-card [style*="color: rgba(0,229,255"],
+html.mode-light .lib-hero-card [style*="color: #00E5FF"],
+html.mode-light .lib-hero-card [style*="color: rgb(0, 229, 255"],
+html.mode-light .lib-hero-card [style*="color: rgba(213,0,249"],
+html.mode-light .lib-hero-card [style*="color: #E879F9"] { color: #111111 !important; }
+html.mode-light .lib-card [class*="text-cyan-3"],
+html.mode-light .lib-card [class*="text-fuchsia-3"],
+html.mode-light .lib-card .text-fuchsia-300 { color: #3A3A3A !important; }
+html.mode-light p[style*="rgba(148,163,184"] { color: #6B6B6B !important; }
+html.mode-light p[style*="rgba(0,229,255,0.6"],
+html.mode-light p[style*="rgba(0,229,255,0.7"],
+html.mode-light p[style*="rgba(213,0,249,0.7"],
+html.mode-light p[style*="rgba(213,0,249,0.75"] { color: #4A4A4A !important; }
+html.mode-light button[style*="rgba(0,229,255"],
+html.mode-light a[style*="rgba(0,229,255"],
+html.mode-light button[style*="rgba(213,0,249"],
+html.mode-light a[style*="rgba(213,0,249"] { color: #111111 !important; }
+html.mode-light button[style*="rgba(239,68,68"] { color: #3A3A3A !important; }
+html.mode-light .lib-modal label { color: #4A4A4A !important; }
+
+/* ── Primary button → solid black raised pill ── */
+html.mode-light .btn-primary {
+  background: #111111 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 999px !important;
+  box-shadow: var(--tact-shadow-raised) !important;
+}
+html.mode-light .btn-primary::before { display: none !important; }
+html.mode-light .btn-primary:hover {
+  background: #000000 !important;
+  box-shadow: 0 18px 34px rgba(0,0,0,0.28), 0 4px 10px rgba(0,0,0,0.16) !important;
+  transform: translateY(-2px);
+}
+html.mode-light .btn-primary:active { transform: translateY(0); box-shadow: 0 6px 14px rgba(0,0,0,0.2) !important; }
+html.mode-light .btn-primary:disabled { background: #BDBDBD !important; box-shadow: none !important; }
+
+/* ── Secondary / ghost buttons → flat light pills ── */
+html.mode-light .btn-secondary {
+  background: #F1F1F1 !important;
+  color: #2A2A2A !important;
+  border: 1px solid var(--tact-border) !important;
+  border-radius: 999px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.04) !important;
+}
+html.mode-light .btn-secondary:hover {
+  background: #FAFAFA !important;
+  color: #111111 !important;
+  border-color: #CFCFCF !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.08) !important;
+}
+html.mode-light .btn-ghost { color: #6B6B6B !important; border-radius: 999px !important; }
+html.mode-light .btn-ghost:hover { background: rgba(0,0,0,0.06) !important; color: #111111 !important; }
+
+/* ── Nav items → active is a solid black pill ── */
+html.mode-light .nav-item { color: #4A4A4A !important; border-radius: 999px !important; }
+html.mode-light .nav-item:hover { color: #111111 !important; }
+html.mode-light .nav-item::before { background: rgba(0,0,0,0.05) !important; border-radius: 999px !important; }
+html.mode-light .nav-item.active {
+  background: #111111 !important;
+  color: #FFFFFF !important;
+  box-shadow: var(--tact-shadow-raised) !important;
+}
+html.mode-light .nav-item.active::before,
+html.mode-light .nav-item.active::after { display: none !important; }
+html.mode-light .nav-item.active * { color: #FFFFFF !important; }
+
+/* ── Inputs → soft pressed-in wells ── */
+html.mode-light .input-field,
+html.mode-light .glass-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html.mode-light .glass-modal select,
+html.mode-light .glass-modal textarea {
+  background: #F0F0F0 !important;
+  border: 1px solid #E4E4E4 !important;
+  border-radius: 18px !important;
+  color: #1A1A1A !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+html.mode-light .input-field::placeholder,
+html.mode-light .glass-modal input::placeholder,
+html.mode-light .glass-modal textarea::placeholder { color: #9A9A9A !important; }
+html.mode-light .input-field:focus,
+html.mode-light .glass-modal input:focus,
+html.mode-light .glass-modal textarea:focus {
+  background: #FAFAFA !important;
+  border-color: #111111 !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(0,0,0,0.06) !important;
+}
+html.mode-light select.input-field,
+html.mode-light select.input-field:focus,
+html.mode-light .glass-modal select.input-field,
+html.mode-light .glass-modal select.input-field:focus {
+  background-color: #F0F0F0 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 0.85rem center !important;
+  background-size: 1rem !important;
+  color: #1A1A1A !important;
+}
+html.mode-light select.input-field option,
+html.mode-light .glass-modal select.input-field option { background: #FAFAFA !important; color: #1A1A1A !important; }
+html.mode-light select.bg-white { background-color: #F0F0F0 !important; border-radius: 18px !important; }
+html.mode-light select.bg-white option { background-color: #FAFAFA !important; }
+
+/* ── Text hierarchy ── */
+html.mode-light .text-white { color: #1A1A1A !important; }
+html.mode-light .glass-card .text-white,
+html.mode-light .glass-modal .text-white,
+html.mode-light .quiz-card .text-white,
+html.mode-light .stat-card .text-white,
+html.mode-light .glass-sidebar .text-white,
+html.mode-light .lib-card .text-white,
+html.mode-light .lib-hero-card .text-white,
+html.mode-light .lib-modal .text-white { color: #1A1A1A !important; }
+html.mode-light .text-slate-100, html.mode-light .text-slate-200 { color: #2A2A2A !important; }
+html.mode-light .text-slate-300 { color: #6B6B6B !important; }
+html.mode-light .text-slate-400 { color: #6B6B6B !important; }
+html.mode-light .text-slate-500 { color: #5A5A5A !important; }
+html.mode-light .text-slate-600 { color: #4A4A4A !important; }
+html.mode-light .text-slate-700 { color: #3A3A3A !important; }
+html.mode-light .text-slate-800, html.mode-light .text-slate-900 { color: #1A1A1A !important; }
+html.mode-light .glass-card .text-slate-300, html.mode-light .glass-card .text-slate-400, html.mode-light .glass-card .text-slate-500,
+html.mode-light .quiz-card .text-slate-300, html.mode-light .quiz-card .text-slate-400, html.mode-light .quiz-card .text-slate-500,
+html.mode-light .stat-card .text-slate-300, html.mode-light .stat-card .text-slate-400,
+html.mode-light .lib-card .text-slate-200, html.mode-light .lib-card .text-slate-300, html.mode-light .lib-card .text-slate-400,
+html.mode-light .lib-card .text-slate-500,
+html.mode-light .lib-hero-card .text-slate-300, html.mode-light .lib-hero-card .text-slate-400,
+html.mode-light .lib-modal .text-slate-300, html.mode-light .lib-modal .text-slate-400, html.mode-light .lib-modal .text-slate-500,
+html.mode-light .glass-sidebar .text-slate-400 { color: #6B6B6B !important; }
+
+/* ── Neutral surfaces ── */
+html.mode-light .bg-slate-50  { background-color: #F5F5F5 !important; }
+html.mode-light .bg-slate-100 { background-color: #EFEFEF !important; }
+html.mode-light .hover\:bg-slate-50:hover  { background-color: #F5F5F5 !important; }
+html.mode-light .hover\:bg-slate-100:hover { background-color: #EFEFEF !important; }
+html.mode-light .border-slate-100 { border-color: #EAEAEA !important; }
+html.mode-light .border-slate-200 { border-color: #E0E0E0 !important; }
+html.mode-light .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #EFEFEF !important; }
+html.mode-light .bg-white.border.rounded-2xl {
+  background-color: var(--tact-surface) !important;
+  border-color: var(--tact-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--tact-shadow-sm) !important;
+}
+
+/* ── Badges → monochrome pills ── */
+html.mode-light .badge-draft   { background: #EFEFEF !important; color: #6B6B6B !important; border: 1px solid #E0E0E0 !important; border-radius: 999px !important; }
+html.mode-light .badge-waiting { background: #DEDEDE !important; color: #3A3A3A !important; border: 1px solid #D0D0D0 !important; border-radius: 999px !important; }
+html.mode-light .badge-active  { background: #111111 !important; color: #FFFFFF !important; border: 1px solid #111111 !important; border-radius: 999px !important; box-shadow: 0 6px 14px rgba(0,0,0,0.18) !important; }
+html.mode-light .badge-closed  { background: #E6E6E6 !important; color: #4A4A4A !important; border: 1px solid #D8D8D8 !important; border-radius: 999px !important; }
+html.mode-light .lib-status-badge.is-active { background: #111111 !important; color: #FFFFFF !important; border-color: #111111 !important; border-radius: 999px !important; }
+html.mode-light .lib-status-badge.is-closed { background: #E6E6E6 !important; color: #4A4A4A !important; border-color: #D8D8D8 !important; border-radius: 999px !important; }
+
+/* ── Colored utility classes → strict grayscale ── */
+html.mode-light .text-emerald-700, html.mode-light .text-emerald-600, html.mode-light .text-emerald-300,
+html.mode-light .text-amber-700, html.mode-light .text-amber-500,
+html.mode-light .text-blue-700, html.mode-light .text-blue-300,
+html.mode-light .text-purple-700, html.mode-light .text-purple-300,
+html.mode-light .text-teal-700, html.mode-light .text-teal-200, html.mode-light .text-teal-300,
+html.mode-light .text-violet-600, html.mode-light .text-violet-500, html.mode-light .text-violet-300,
+html.mode-light .text-cyan-300, html.mode-light .text-pink-300,
+html.mode-light .text-orange-300, html.mode-light .text-yellow-300 { color: #4A4A4A !important; }
+html.mode-light .text-red-700, html.mode-light .text-red-600 { color: #2A2A2A !important; }
+html.mode-light .bg-emerald-50, html.mode-light .bg-amber-50, html.mode-light .bg-blue-50,
+html.mode-light .bg-purple-50, html.mode-light .bg-teal-50 { background-color: #F0F0F0 !important; }
+html.mode-light .bg-violet-100, html.mode-light .bg-emerald-100, html.mode-light .bg-amber-100 { background-color: #E8E8E8 !important; }
+html.mode-light .border-emerald-200, html.mode-light .border-amber-200, html.mode-light .border-blue-200,
+html.mode-light .border-purple-200, html.mode-light .border-teal-200 { border-color: #E0E0E0 !important; }
+html.mode-light .bg-cyan-900\/30, html.mode-light .bg-teal-900\/30, html.mode-light .bg-violet-900\/30,
+html.mode-light .bg-emerald-900\/30, html.mode-light .bg-blue-900\/30, html.mode-light .bg-pink-900\/30,
+html.mode-light .bg-purple-900\/30, html.mode-light .bg-orange-900\/30,
+html.mode-light .bg-blue-900\/40, html.mode-light .bg-purple-900\/40,
+html.mode-light .bg-teal-900\/40, html.mode-light .bg-orange-900\/40 { background-color: rgba(0,0,0,0.05) !important; }
+html.mode-light .bg-slate-700\/40 { background-color: rgba(0,0,0,0.06) !important; }
+html.mode-light .border-cyan-700\/40, html.mode-light .border-cyan-800\/40,
+html.mode-light .border-teal-500\/40, html.mode-light .border-teal-700\/40, html.mode-light .border-teal-800\/40,
+html.mode-light .border-violet-700\/40, html.mode-light .border-emerald-700\/40,
+html.mode-light .border-blue-700\/40, html.mode-light .border-pink-700\/40,
+html.mode-light .border-purple-700\/40, html.mode-light .border-purple-800\/40,
+html.mode-light .border-orange-700\/40, html.mode-light .border-orange-800\/40,
+html.mode-light .border-slate-600\/40 { border-color: #DCDCDC !important; }
+
+/* ── Result modal status tints → grayscale ── */
+html.mode-light .glass-modal .bg-green-50, html.mode-light .glass-modal .bg-green-100 { background-color: #EFEFEF !important; }
+html.mode-light .glass-modal .bg-red-50, html.mode-light .glass-modal .bg-red-100 { background-color: #E7E7E7 !important; }
+html.mode-light .glass-modal .bg-orange-50, html.mode-light .glass-modal .bg-orange-100 { background-color: #ECECEC !important; }
+html.mode-light .glass-modal .border-green-200 { border-color: #C9C9C9 !important; }
+html.mode-light .glass-modal .border-red-200 { border-color: #BDBDBD !important; }
+html.mode-light .glass-modal .border-orange-200 { border-color: #D4D4D4 !important; }
+html.mode-light .glass-modal .text-green-600, html.mode-light .glass-modal .text-green-800 { color: #1A1A1A !important; }
+html.mode-light .glass-modal .text-red-500, html.mode-light .glass-modal .text-red-800 { color: #4A4A4A !important; }
+html.mode-light .glass-modal .text-orange-500, html.mode-light .glass-modal .text-orange-600,
+html.mode-light .glass-modal .text-orange-800 { color: #5A5A5A !important; }
+html.mode-light .glass-modal .bg-violet-100, html.mode-light .glass-modal .bg-emerald-100,
+html.mode-light .glass-modal .bg-amber-50 { background-color: #EFEFEF !important; }
+html.mode-light .glass-modal .text-violet-600, html.mode-light .glass-modal .text-emerald-600,
+html.mode-light .glass-modal .text-amber-500, html.mode-light .glass-modal .text-amber-700 { color: #3A3A3A !important; }
+html.mode-light .glass-modal .border-amber-200 { border-color: #DCDCDC !important; }
+
+/* ── Gradebook table ── */
+html.mode-light .gb-table th, html.mode-light .gb-table td { border-color: #E0E0E0 !important; }
+html.mode-light .gb-head-row th { background: #EFEFEF !important; color: #1A1A1A !important; }
+html.mode-light .gb-total-col { background: #F2F2F2 !important; color: #1A1A1A !important; }
+html.mode-light .gb-grand-col { background: #E9E9E9 !important; }
+html.mode-light .gb-cell-input {
+  background: #FAFAFA !important; color: #1A1A1A !important;
+  border-color: #E0E0E0 !important; border-radius: 12px !important;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.05) !important;
+}
+html.mode-light .gb-cell-input:focus { border-color: #111111 !important; background: #FFFFFF !important; }
+html.mode-light .gb-row:hover td { background: rgba(0,0,0,0.03) !important; }
+
+/* ── Misc chrome ── */
+html.mode-light ::-webkit-scrollbar-track { background: #E4E4E4 !important; }
+html.mode-light ::-webkit-scrollbar-thumb { background: #BDBDBD !important; border-radius: 999px; }
+html.mode-light ::-webkit-scrollbar-thumb:hover { background: #8A8A8A !important; }
+html.mode-light .shimmer { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%) !important; }
+html.mode-light .neon-text-cyan { text-shadow: none !important; }
+html.mode-light .neon-glow-cyan { box-shadow: none !important; }
+html.mode-light .icon-3d-float { filter: drop-shadow(0 6px 12px rgba(0,0,0,0.18)) !important; }
+html.mode-light canvas[data-particles] { display: none !important; }
+html.mode-light .lib-card-ribbon { display: none !important; }
+html.mode-light ::selection { background: #111111; color: #FFFFFF; }
+
+/* ── TACTILE OS: grayscale all colored TINT utilities in light mode ──
+   (الألوان الصلبة الوظيفية مثل أزرار إجابات الطالب bg-red-500/green-500 تبقى) */
+html.mode-light .bg-amber-50, html.mode-light .bg-blue-50, html.mode-light .bg-green-50,
+html.mode-light .bg-indigo-50, html.mode-light .bg-orange-50, html.mode-light .bg-purple-50,
+html.mode-light .bg-red-50, html.mode-light .bg-sky-50, html.mode-light .bg-teal-50,
+html.mode-light .bg-violet-50, html.mode-light .bg-yellow-50 { background-color: #F0F0F0 !important; }
+html.mode-light .bg-green-100, html.mode-light .bg-orange-100, html.mode-light .bg-red-100,
+html.mode-light .bg-violet-100, html.mode-light .bg-yellow-100 { background-color: #E8E8E8 !important; }
+html.mode-light .bg-cyan-500\/15, html.mode-light .bg-green-500\/10,
+html.mode-light .bg-yellow-500\/10 { background-color: rgba(0,0,0,0.05) !important; }
+html.mode-light .hover\:bg-amber-100:hover, html.mode-light .hover\:bg-amber-50:hover,
+html.mode-light .hover\:bg-blue-100:hover, html.mode-light .hover\:bg-green-100:hover,
+html.mode-light .hover\:bg-indigo-100:hover, html.mode-light .hover\:bg-indigo-50:hover,
+html.mode-light .hover\:bg-orange-100:hover, html.mode-light .hover\:bg-purple-100:hover,
+html.mode-light .hover\:bg-red-100:hover, html.mode-light .hover\:bg-red-50:hover,
+html.mode-light .hover\:bg-sky-100:hover, html.mode-light .hover\:bg-teal-100:hover,
+html.mode-light .hover\:bg-violet-100:hover, html.mode-light .hover\:bg-violet-50:hover,
+html.mode-light .hover\:bg-violet-50\/40:hover, html.mode-light .hover\:bg-red-500\/10:hover { background-color: #E4E4E4 !important; }
+html.mode-light .border-amber-200, html.mode-light .border-amber-400,
+html.mode-light .border-blue-200, html.mode-light .border-green-200,
+html.mode-light .border-indigo-400, html.mode-light .border-orange-200,
+html.mode-light .border-purple-200, html.mode-light .border-red-200,
+html.mode-light .border-sky-200, html.mode-light .border-teal-200,
+html.mode-light .border-violet-200, html.mode-light .border-violet-400,
+html.mode-light .border-cyan-500, html.mode-light .border-green-500,
+html.mode-light .border-red-500, html.mode-light .border-violet-500,
+html.mode-light .border-violet-600, html.mode-light .border-green-500\/35,
+html.mode-light .border-green-700\/30, html.mode-light .border-orange-700\/30,
+html.mode-light .border-red-700\/30, html.mode-light .border-yellow-500\/35,
+html.mode-light .hover\:border-cyan-500\/40:hover, html.mode-light .hover\:border-green-400:hover,
+html.mode-light .hover\:border-violet-100:hover, html.mode-light .hover\:border-violet-300:hover { border-color: #D5D5D5 !important; }
+html.mode-light .text-amber-600, html.mode-light .text-blue-500, html.mode-light .text-blue-300,
+html.mode-light .text-cyan-400, html.mode-light .text-fuchsia-300,
+html.mode-light .text-green-300, html.mode-light .text-green-400, html.mode-light .text-green-500,
+html.mode-light .text-green-600, html.mode-light .text-green-700, html.mode-light .text-green-800,
+html.mode-light .text-indigo-600, html.mode-light .text-indigo-700,
+html.mode-light .text-orange-400, html.mode-light .text-orange-500, html.mode-light .text-orange-600,
+html.mode-light .text-orange-800, html.mode-light .text-pink-300, html.mode-light .text-purple-500,
+html.mode-light .text-red-300, html.mode-light .text-red-400, html.mode-light .text-red-400\/70,
+html.mode-light .text-red-500, html.mode-light .text-red-800,
+html.mode-light .text-sky-700, html.mode-light .text-teal-600, html.mode-light .text-teal-800,
+html.mode-light .text-yellow-600, html.mode-light .text-yellow-700 { color: #3A3A3A !important; }
+html.mode-light .hover\:text-cyan-300:hover, html.mode-light .hover\:text-red-300:hover,
+html.mode-light .hover\:text-red-400:hover, html.mode-light .hover\:text-red-500:hover,
+html.mode-light .hover\:text-violet-700:hover { color: #111111 !important; }
+
+/* ── Stat cards: monochrome strip + icons ── */
+html.mode-light .stat-card::before { background: linear-gradient(90deg, transparent, rgba(0,0,0,0.4), transparent) !important; }
+html.mode-light .stat-card svg { color: #111111 !important; }
+html.mode-light .stat-card .w-10, html.mode-light .stat-card [class*="rounded"] > svg { color: #111111 !important; }
+html.mode-light .stat-card div[style*="background"] { background: #EFEFEF !important; border-color: #E0E0E0 !important; }
+
+/* ── Inline cyan/neon accents (empty states, icons) → gray ── */
+html.mode-light div[style*="0, 229, 255"], html.mode-light span[style*="0, 229, 255"] {
+  background-color: #EFEFEF !important; border-color: #E0E0E0 !important; color: #4A4A4A !important;
+}
+html.mode-light svg[style*="0, 229, 255"] { color: #6B6B6B !important; }
+
+/* ── TACTILE OS: تحييد الألوان المضمّنة (inline styles) داخل واجهة المعلم فقط ── */
+/* نصوص/أيقونات ملونة → رمادي داكن */
+html.mode-light.in-app [style*="40, 245, 167"], html.mode-light.in-app [style*="74, 222, 128"], html.mode-light.in-app [style*="74, 222, 128"],
+html.mode-light.in-app [style*="103, 232, 249"], html.mode-light.in-app [style*="248, 113, 113"], html.mode-light.in-app [style*="0, 229, 255"],
+html.mode-light.in-app [style*="213, 0, 249"], html.mode-light.in-app [style*="251, 191, 36"], html.mode-light.in-app [style*="52, 211, 153"],
+html.mode-light.in-app [style*="96, 165, 250"], html.mode-light.in-app [style*="167, 139, 250"], html.mode-light.in-app [style*="244, 114, 182"],
+html.mode-light.in-app [style*="45, 212, 191"], html.mode-light.in-app [style*="56, 189, 248"], html.mode-light.in-app [style*="251, 146, 60"],
+html.mode-light.in-app [style*="252, 211, 77"], html.mode-light.in-app [style*="232, 121, 249"], html.mode-light.in-app [style*="240, 171, 252"],
+html.mode-light.in-app [style*="34, 211, 238"], html.mode-light.in-app [style*="168, 85, 247"], html.mode-light.in-app [style*="100, 181, 246"],
+html.mode-light.in-app [style*="255, 234, 0"], html.mode-light.in-app [style*="0, 230, 118"],
+html.mode-light.in-app [style*="213, 0, 249"], html.mode-light.in-app [style*="0, 229, 255"],
+html.mode-light.in-app [style*="52, 211, 153"], html.mode-light.in-app [style*="239, 68, 68"],
+html.mode-light.in-app [style*="251, 191, 36"], html.mode-light.in-app [style*="22, 214, 122"],
+html.mode-light.in-app [style*="34, 197, 94"], html.mode-light.in-app [style*="248, 113, 113"],
+html.mode-light.in-app [style*="167, 139, 250"], html.mode-light.in-app [style*="251, 146, 60"],
+html.mode-light.in-app [style*="0, 230, 118"], html.mode-light.in-app [style*="96, 165, 250"],
+html.mode-light.in-app [style*="34, 211, 238"], html.mode-light.in-app [style*="40, 245, 167"],
+html.mode-light.in-app [style*="99, 102, 241"], html.mode-light.in-app [style*="100, 181, 246"],
+html.mode-light.in-app [style*="255, 145, 0"], html.mode-light.in-app [style*="255, 234, 0"],
+html.mode-light.in-app [style*="168, 85, 247"], html.mode-light.in-app [style*="244, 114, 182"],
+html.mode-light.in-app [style*="45, 212, 191"], html.mode-light.in-app [style*="255, 170, 0"],
+html.mode-light.in-app [style*="255, 110, 64"] { color: #3A3A3A !important; }
+
+/* عناصر بخلفيات ملونة مضمّنة → حبّة رمادية فاتحة بنص داكن */
+html.mode-light.in-app [style*="background"][style*="213, 0, 249"], html.mode-light.in-app [style*="background"][style*="0, 229, 255"],
+html.mode-light.in-app [style*="background"][style*="52, 211, 153"], html.mode-light.in-app [style*="background"][style*="239, 68, 68"],
+html.mode-light.in-app [style*="background"][style*="251, 191, 36"], html.mode-light.in-app [style*="background"][style*="22, 214, 122"],
+html.mode-light.in-app [style*="background"][style*="34, 197, 94"], html.mode-light.in-app [style*="background"][style*="248, 113, 113"],
+html.mode-light.in-app [style*="background"][style*="167, 139, 250"], html.mode-light.in-app [style*="background"][style*="251, 146, 60"],
+html.mode-light.in-app [style*="background"][style*="0, 230, 118"], html.mode-light.in-app [style*="background"][style*="96, 165, 250"],
+html.mode-light.in-app [style*="background"][style*="34, 211, 238"], html.mode-light.in-app [style*="background"][style*="40, 245, 167"],
+html.mode-light.in-app [style*="background"][style*="99, 102, 241"], html.mode-light.in-app [style*="background"][style*="100, 181, 246"],
+html.mode-light.in-app [style*="background"][style*="255, 145, 0"], html.mode-light.in-app [style*="background"][style*="255, 234, 0"],
+html.mode-light.in-app [style*="background"][style*="168, 85, 247"], html.mode-light.in-app [style*="background"][style*="244, 114, 182"],
+html.mode-light.in-app [style*="background"][style*="45, 212, 191"], html.mode-light.in-app [style*="background"][style*="255, 170, 0"],
+html.mode-light.in-app [style*="background"][style*="255, 110, 64"] {
+  background-color: #E7E7E7 !important;
+  background-image: none !important;
+  border-color: #D5D5D5 !important;
+  color: #1A1A1A !important;
+}
+
+/* شرائح شفافة بيضاء (تظهر على الزجاج الداكن) → رمادي فاتح مرئي */
+html.mode-light.in-app [style*="background"][style*="255, 255, 255, 0.0"] { background-color: #F1F1F1 !important; border-color: #E2E2E2 !important; }
+html.mode-light.in-app [style*="background"][style*="255, 255, 255, 0.1"] { background-color: #EAEAEA !important; border-color: #DDDDDD !important; }
+html.mode-light.in-app [style*="border"][style*="255, 255, 255, 0.0"] { border-color: #E2E2E2 !important; }
+html.mode-light.in-app [style*="border"][style*="255, 255, 255, 0.1"] { border-color: #DDDDDD !important; }
+
+/* خلفيات داكنة مضمّنة (كحلي) → أسطح فاتحة */
+html.mode-light.in-app [style*="background"][style*="11, 17, 32"],
+html.mode-light.in-app [style*="background"][style*="30, 42, 58"],
+html.mode-light.in-app [style*="background"][style*="17, 24, 39"],
+html.mode-light.in-app [style*="background"][style*="17, 24, 39"] { background-color: #F5F5F5 !important; color: #1A1A1A !important; }
+
+/* checkboxes بلون التمييز */
+html.mode-light.in-app input[type="checkbox"] { accent-color: #111111 !important; }
+html.mode-light.in-app .accent-emerald-500 { accent-color: #111111 !important; }
+html.mode-light.in-app .ring-emerald-400\/60 { --tw-ring-color: rgba(0,0,0,0.35) !important; }
+
+/* ── TACTILE OS: أزرار الخطر + الأزرار النشطة الملونة → أحادية اللون ── */
+html.mode-light.in-app .btn-danger {
+  background: #E6E6E6 !important;
+  color: #2A2A2A !important;
+  border-color: #D5D5D5 !important;
+  box-shadow: none !important;
+}
+html.mode-light.in-app .btn-danger:hover { background: #111111 !important; color: #FFFFFF !important; }
+
+/* الأزرار المحددة/النشطة ذات الخلفيات الملونة المضمّنة → حبّة سوداء بنص أبيض */
+html.mode-light.in-app button[style*="background"][style*="22, 214, 122"],
+html.mode-light.in-app button[style*="background"][style*="0, 230, 118"],
+html.mode-light.in-app button[style*="background"][style*="0, 229, 255"],
+html.mode-light.in-app button[style*="background"][style*="213, 0, 249"] {
+  background-color: #111111 !important;
+  color: #FFFFFF !important;
+  border-color: #111111 !important;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+html.mode-light.in-app button[style*="background"][style*="22, 214, 122"] svg,
+html.mode-light.in-app button[style*="background"][style*="0, 230, 118"] svg,
+html.mode-light.in-app button[style*="background"][style*="0, 229, 255"] svg,
+html.mode-light.in-app button[style*="background"][style*="213, 0, 249"] svg { color: #FFFFFF !important; }
+
+/* ── TACTILE OS: أزرار Tailwind ذات الألوان الصلبة داخل واجهة المعلم → أسود ── */
+html.mode-light.in-app .bg-yellow-400, html.mode-light.in-app .bg-yellow-500,
+html.mode-light.in-app .bg-teal-600, html.mode-light.in-app .bg-teal-700,
+html.mode-light.in-app .bg-violet-600, html.mode-light.in-app .bg-amber-600,
+html.mode-light.in-app .bg-green-500, html.mode-light.in-app .bg-red-500 {
+  background-color: #111111 !important;
+  color: #FFFFFF !important;
+  border-color: #111111 !important;
+}
+html.mode-light.in-app .bg-yellow-400 *, html.mode-light.in-app .bg-yellow-500 *,
+html.mode-light.in-app .bg-teal-600 *, html.mode-light.in-app .bg-violet-600 * { color: #FFFFFF !important; }
+html.mode-light.in-app .hover\:bg-yellow-500:hover, html.mode-light.in-app .hover\:bg-teal-700:hover,
+html.mode-light.in-app .hover\:bg-green-600:hover, html.mode-light.in-app .hover\:bg-red-600:hover {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
