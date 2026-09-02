@@ -2111,3 +2111,32 @@ html.mode-light.in-app .hover\:bg-green-600:hover, html.mode-light.in-app .hover
   background-color: #000000 !important;
   color: #FFFFFF !important;
 }
+
+/* ── TACTILE OS: صفحات الدخول/الانضمام في الوضع النهاري — خلفية فاتحة بدل الفيديو الداكن ── */
+html.mode-light [data-testid="login-video-bg"] { display: none !important; }
+html.mode-light div:has(> [data-testid="login-video-bg"]) { background: #ECECEC !important; }
+html.mode-light .neon-text-cyan, html.mode-light .neon-text-fuchsia {
+  color: #111111 !important;
+  text-shadow: none !important;
+}
+html.mode-light h1.text-white { color: #1A1A1A !important; text-shadow: none !important; }
+html.mode-light .login-glow-pulse { animation: none !important; box-shadow: var(--tact-shadow-sm) !important; }
+html.mode-light .btn-primary:disabled { background: #C9C9C9 !important; color: #707070 !important; box-shadow: none !important; }
+
+/* ── TACTILE OS: تفاصيل صفحات الدخول في الوضع النهاري ── */
+html.mode-light div:has(> [data-testid="login-video-bg"]) p[style*="255, 255, 255"] {
+  color: #6B6B6B !important;
+  text-shadow: none !important;
+}
+html.mode-light div:has(> [data-testid="login-video-bg"]) [style*="213, 0, 249"],
+html.mode-light div:has(> [data-testid="login-video-bg"]) [style*="0, 229, 255"] {
+  color: #111111 !important;
+  text-shadow: none !important;
+}
+html.mode-light div:has(> [data-testid="login-video-bg"]) div[style*="background"][style*="213, 0, 249"],
+html.mode-light div:has(> [data-testid="login-video-bg"]) div[style*="background"][style*="0, 229, 255"] {
+  background: #F1F1F1 !important;
+  border-color: #DDDDDD !important;
+}
+html.mode-light div:has(> [data-testid="login-video-bg"]) a,
+html.mode-light div:has(> [data-testid="login-video-bg"]) button.text-cyan-300 { color: #111111 !important; }
