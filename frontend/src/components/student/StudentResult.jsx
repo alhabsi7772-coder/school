@@ -5,7 +5,6 @@ import { CheckCircle, XCircle, Clock, Trophy, Award } from 'lucide-react';
 import { API, getScoreColor } from '../../utils';
 import { downloadCertificate } from '../../utils/generateCertificate';
 import { useStudentMode } from '../../hooks/useStudentMode';
-import ThemeModeFab from '../ThemeModeFab';
 
 export default function StudentResult() {
   const { quizId, submissionId } = useParams();
@@ -104,7 +103,6 @@ export default function StudentResult() {
 
   return (
     <div className="min-h-screen page-bg font-tajawal">
-      <ThemeModeFab />
       {/* Score header */}
       <div className={`bg-gradient-to-bl ${scoreColor} text-white py-10 px-4 text-center`}>
         <div className="text-5xl mb-3">{emoji}</div>

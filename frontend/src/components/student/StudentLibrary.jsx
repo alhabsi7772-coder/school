@@ -6,7 +6,6 @@ import { Library, Download, FileText, Music, Image as ImageIcon, Film, FileSprea
 import { API, GRADES } from '../../utils';
 import LoginVideoBackground from '../LoginVideoBackground';
 import { useStudentMode } from '../../hooks/useStudentMode';
-import ThemeModeFab from '../ThemeModeFab';
 
 const guessIcon = (ct = '', name = '') => {
   const n = (name || '').toLowerCase();
@@ -117,7 +116,6 @@ export default function StudentLibrary() {
 
   return (
     <div className="min-h-screen font-tajawal relative" style={{ background: '#0B1120' }}>
-      <ThemeModeFab />
       <LoginVideoBackground accentRgb={accent} overlay={0.65} />
       <div className="relative z-10 max-w-5xl mx-auto p-4 md:p-8">
         <div className="text-center mb-8">

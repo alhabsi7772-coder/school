@@ -6,7 +6,6 @@ import { User, ArrowRight, Award, Loader2, Pencil, Sparkles, GraduationCap, Cloc
 import { API, GRADES } from '../../utils';
 import Particles from '../Particles';
 import { useStudentMode } from '../../hooks/useStudentMode';
-import ThemeModeFab from '../ThemeModeFab';
 
 const STORAGE_KEY = (code) => `gradeSession:${code}`;
 const semLabel = (s) => (s === '2' ? 'الفصل الثاني' : 'الفصل الأول');
@@ -316,7 +315,6 @@ export default function StudentJoinGrade() {
 function PageShell({ children }) {
   return (
     <div className="min-h-screen page-bg font-tajawal flex items-center justify-center p-4 relative overflow-hidden">
-      <ThemeModeFab />
       <div className="orb orb-1" />
       <div className="orb orb-2" />
       <div className="orb orb-3" />
