@@ -6,6 +6,7 @@ import { Search, GraduationCap, ArrowLeft, User, CreditCard, Zap, Clock } from '
 import { API, GRADES } from '../../utils';
 import LoginVideoBackground from '../LoginVideoBackground';
 import { useStudentMode } from '../../hooks/useStudentMode';
+import ThemeModeFab from '../ThemeModeFab';
 
 export default function StudentJoin() {
   const navigate = useNavigate();
@@ -72,6 +73,7 @@ export default function StudentJoin() {
 
       {/* خلفية فيديو لانهائية بكامل الشاشة */}
       <LoginVideoBackground accentRgb="213,0,249" overlay={0.6} />
+      <ThemeModeFab />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}

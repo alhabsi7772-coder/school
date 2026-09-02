@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Clock, Users, GraduationCap, Wifi } from 'lucide-react';
 import { API } from '../../utils';
 import { useStudentMode } from '../../hooks/useStudentMode';
+import ThemeModeFab from '../ThemeModeFab';
 
 export default function StudentLobby() {
   const { quizId } = useParams();
@@ -43,6 +44,7 @@ export default function StudentLobby() {
 
   return (
     <div className="min-h-screen page-bg flex items-center justify-center p-4 font-tajawal">
+      <ThemeModeFab />
       <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(8)].map((_, i) => (

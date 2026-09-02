@@ -2140,3 +2140,6 @@ html.mode-light div:has(> [data-testid="login-video-bg"]) div[style*="background
 }
 html.mode-light div:has(> [data-testid="login-video-bg"]) a,
 html.mode-light div:has(> [data-testid="login-video-bg"]) button.text-cyan-300 { color: #111111 !important; }
+
+/* ── TACTILE OS: صفحات الطلاب ذات الخلفية الداكنة المضمّنة → فاتحة في الوضع النهاري ── */
+html.mode-light div.min-h-screen[style*="11, 17, 32"] { background: #ECECEC !important; }
