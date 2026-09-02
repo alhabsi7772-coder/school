@@ -737,12 +737,8 @@ async def submit(qid: str, sub_id: str, data: SubmitReq):
             rec['is_correct'] = correct == student
             rec['score'] = pts if rec['is_correct'] else 0
             total += rec['score']
-        elif qq['type'] == 'short':
-            correct = (qq.get('correct_answer') or '').strip()
-            student = ans.answer_text.strip()
-            rec['is_correct'] = correct.lower() == student.lower()
-            rec['score'] = pts if rec['is_correct'] else 0
-            total += rec['score']
+        elif qq['type'] in ('short', 'long'):
+            has_long = True
         elif qq['type'] == 'match':
             pairs = qq.get('pairs') or []
             try:
@@ -757,8 +753,6 @@ async def submit(qid: str, sub_id: str, data: SubmitReq):
             rec['is_correct'] = correct_count == total_pairs
             rec['score'] = round(pts * correct_count / total_pairs, 2)
             total += rec['score']
-        elif qq['type'] == 'long':
-            has_long = True
         answers.append(rec)
 
     is_graded = not has_long

@@ -34,7 +34,7 @@ export default function GradeAnswers() {
   };
 
   const initGrades = (sub, quiz) => {
-    const longQs = quiz?.questions?.filter(q => q.type === 'long') || [];
+    const longQs = quiz?.questions?.filter(q => q.type === 'long' || q.type === 'short') || [];
     const g = {};
     for (const q of longQs) {
       const ans = sub.answers?.find(a => a.question_id === q.id);
@@ -65,7 +65,7 @@ export default function GradeAnswers() {
   if (loading) return <TeacherLayout title="التصحيح اليدوي"><div className="text-center py-16 text-slate-400">جارٍ التحميل...</div></TeacherLayout>;
 
   const { submissions, quiz } = data || {};
-  const longQuestions = quiz?.questions?.filter(q => q.type === 'long') || [];
+  const longQuestions = quiz?.questions?.filter(q => q.type === 'long' || q.type === 'short') || [];
 
   if (!submissions?.length) {
     return (
@@ -133,6 +133,12 @@ export default function GradeAnswers() {
                   <p className="text-xs text-slate-500 mb-1">إجابة الطالب:</p>
                   <p className="text-sm text-slate-800 font-medium">{ans?.answer_text || '(لم يجب)'}</p>
                 </div>
+                {q.type === 'short' && q.correct_answer && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4" data-testid={`model-answer-${q.id}`}>
+                    <p className="text-xs text-emerald-700 mb-1">الإجابة النموذجية (للمقارنة):</p>
+                    <p className="text-sm text-emerald-900 font-medium">{q.correct_answer}</p>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm font-semibold text-slate-700 mb-2">الدرجة المخصصة:</p>

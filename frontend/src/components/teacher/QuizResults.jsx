@@ -41,7 +41,7 @@ export default function QuizResults() {
   useEffect(() => {
     if (selected && data?.quiz?.questions) {
       const gs = {};
-      data.quiz.questions.filter(q => q.type === 'long').forEach(q => {
+      data.quiz.questions.filter(q => q.type === 'long' || q.type === 'short').forEach(q => {
         const ans = selected.answers?.find(a => a.question_id === q.id);
         gs[q.id] = { score: ans?.manual_score ?? ans?.score ?? 0, is_correct: ans?.is_correct ?? false };
       });
@@ -160,7 +160,7 @@ export default function QuizResults() {
   const { quiz, submissions, stats } = data || {};
   const sorted = [...(submissions || [])].sort((a, b) => b.percentage - a.percentage);
   const top3 = sorted.slice(0, 3);
-  const hasLongQuestions = quiz?.questions?.some(q => q.type === 'long');
+  const hasLongQuestions = quiz?.questions?.some(q => q.type === 'long' || q.type === 'short');
   const downloadStudentCert = async (student) => {
     setDownloadingId('cert-' + student.id);
     const templateId = localStorage.getItem('certTemplate') || 'classic_blue';
@@ -398,7 +398,7 @@ export default function QuizResults() {
             <div className="overflow-y-auto flex-1 p-4 md:p-5 space-y-3">
               {selected.answers?.map((ans, i) => {
                 const qInfo = qMap[ans.question_id] || {};
-                const isLong = qInfo.type === 'long';
+                const isLong = qInfo.type === 'long' || qInfo.type === 'short';
                 const isMatch = qInfo.type === 'match';
                 let matchPairs = [];
                 if (isMatch) {
