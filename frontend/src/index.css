@@ -733,6 +733,18 @@ html.mode-light .text-slate-800,
 html.mode-light .text-slate-900 { color: #1a1a1a !important; }
 html.mode-light .text-white { color: #1a1a1a !important; }
 
+/* ── Student exam: unselected option/nav text was near-white, unreadable on light bg ── */
+html.mode-light [style*="rgba(226, 232, 240"][style*="rgba(255, 255, 255, 0.04)"] {
+  color: #2a2a2a !important;
+  background: rgba(0, 0, 0, 0.035) !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+}
+html.mode-light [style*="rgba(226, 232, 240"][style*="rgba(255, 255, 255, 0.06)"] {
+  color: #2a2a2a !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+}
+
 /* ── Restore dark-mode text overrides → proper dark text in light mode ── */
 html.mode-light { --text-muted: rgba(51, 65, 85, 0.90); --text-hint: rgba(71, 85, 105, 0.78); }
 html.mode-light .text-slate-300 { color: rgb(100 116 139) !important; }
