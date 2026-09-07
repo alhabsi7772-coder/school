@@ -6,36 +6,38 @@
  *  - شرائط سينمائية أعلى وأسفل لإطار أنيق (letterbox-style ناعم)
  */
 export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,179,237' }) {
-  // 14 جسيم غبار ضوئي بنقاط بداية عشوائية لإحساس طبيعي
-  const dust = Array.from({ length: 14 }).map((_, i) => ({
-    left: `${(i * 7.3 + 6) % 100}%`,
-    duration: 14 + (i * 1.7) % 12,
-    delay: -((i * 2.1) % 14),
+  // 8 جسيمات غبار ضوئي — عدد منخفض للحفاظ على سلاسة الفيديو
+  const dust = Array.from({ length: 8 }).map((_, i) => ({
+    left: `${(i * 12.7 + 6) % 100}%`,
+    duration: 16 + (i * 1.9) % 10,
+    delay: -((i * 2.6) % 16),
     size: 2 + ((i * 3) % 4),
   }));
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden login-cinematic-bars"
+    <div className="fixed inset-0 z-0 overflow-hidden login-cinematic-bars login-bg-root"
       data-testid="login-video-bg"
-      style={{ '--accent-rgb': accentRgb }}>
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        disablePictureInPicture
-        controlsList="nodownload nofullscreen noremoteplayback"
-        className="absolute inset-0 w-full h-full object-cover login-kenburns login-video-tinted"
-        style={{
-          objectPosition: '30% center',  // قصّ ناعم للنجمة في اليمين
-          willChange: 'transform',
-        }}
-        onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}
-        onEnded={(e) => { e.currentTarget.currentTime = 0; e.currentTarget.play().catch(() => {}); }}
-      >
-        <source src="/login-bg.mp4" type="video/mp4" />
-      </video>
+      style={{ '--accent-rgb': accentRgb, backgroundImage: 'url(/login-bg-poster.jpg)' }}>
+      {/* طبقة Ken Burns منفصلة عن الفيديو: الحركة على الحاوية والفلتر على الفيديو
+          => المتصفح يخزّن الفيديو المفلتر كطبقة واحدة ويحرّكها فقط (بدون إعادة فلترة كل إطار) */}
+      <div className="absolute inset-0 login-kenburns">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          poster="/login-bg-poster.jpg"
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noremoteplayback"
+          className="absolute inset-0 w-full h-full object-cover login-video-tinted"
+          style={{ objectPosition: '30% center' }}
+          onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}
+          onEnded={(e) => { e.currentTarget.currentTime = 0; e.currentTarget.play().catch(() => {}); }}
+        >
+          <source src="/login-bg-720.mp4" type="video/mp4" />
+        </video>
+      </div>
 
       {/* فينييت دائري — يُبقي الأطراف ساطعة والمركز معتم لقراءة النموذج */}
       <div

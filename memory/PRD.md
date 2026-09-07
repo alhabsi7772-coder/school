@@ -196,3 +196,16 @@
 ## 2026-06 — السؤال القصير يُصحَّح يدوياً
 - `submit` في server.py: نوع `short` لم يعد يُصحَّح تلقائياً؛ يُعامل مثل `long` (التسليم يبقى "ينتظر التصحيح").
 - GradeAnswers.jsx و QuizResults.jsx: تشمل أسئلة `short` في التصحيح اليدوي، مع عرض الإجابة النموذجية للمقارنة.
+
+## 2026-06 — إصلاح تقطّع فيديو خلفية صفحات الدخول
+- السبب الجذري: ملف `/public/login-bg.mp4` كان بحجم **41.6MB** بدقة 2544x1434 وبت-ريت 33Mbps (10 ثوانٍ) — تنزيل ثقيل + فك ترميز مكلف. يضاف إليه فلتر CSS رباعي (hue-rotate/saturate/contrast/brightness) يُطبَّق على كل إطار مع أنيميشن Ken Burns على نفس العنصر.
+- الحل:
+  - إعادة ترميز إلى `login-bg-720.mp4` (1280x722، CRF 28، بدون صوت، +faststart) = **2.8MB** (تقليل 93%). حُذف الملف الأصلي.
+  - `login-bg-poster.jpg` (95KB) كـ poster وخلفية فورية قبل تحميل الفيديو.
+  - فصل طبقة Ken Burns (على div حاوية) عن الفلتر (على الفيديو) => المتصفح يخزّن الطبقة المفلترة ويحرّكها فقط.
+  - تقليص الفلتر إلى خطوتين (hue-rotate + saturate) — التعتيم يأتي من طبقات التدرّج الموجودة.
+  - تقليل جسيمات الغبار من 14 إلى 8.
+  - ≤640px: إخفاء الفيديو واستخدام صورة الـposter + إيقاف الأنيميشن. كذلك احترام `prefers-reduced-motion`.
+- الملفات: `frontend/src/components/LoginVideoBackground.jsx`، `frontend/src/index.css` (`.login-kenburns`, `.login-video-tinted`, `.login-bg-root`)
+- يستفيد منها: TeacherLogin, StudentJoin, StudentLibrary, StudentVideoLibrary, StudentVideoWatch
+- ملاحظة: ffmpeg مُثبَّت في البيئة الآن لأي معالجة وسائط مستقبلية.
