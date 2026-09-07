@@ -216,12 +216,17 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-cand { display: flex; align-items: center; gap: 12px; padding: 0.8rem 0.9rem; border-radius: 16px; border: 1.5px solid var(--sub-line); background: var(--sub-surface); transition: border-color .15s, background-color .15s, transform .15s; }
 .sub-cand.free:hover { border-color: var(--sub-green); background: var(--sub-green-soft); transform: translateX(-2px); }
 .sub-cand.busy { opacity: 0.55; background: var(--sub-surface-2); }
+.sub-cand.free.high-quota { border-color: var(--sub-amber-line); background: var(--sub-amber-soft); }
+.sub-cand.free.high-quota:hover { border-color: var(--sub-amber); background: var(--sub-amber-soft); }
 .sub-cand .rank { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; color: var(--sub-on-navy); background: var(--sub-navy); flex-shrink: 0; }
 .sub-cand.free .rank { background: var(--sub-green); color: #fff; }
+.sub-cand.free.high-quota .rank { background: var(--sub-amber); }
 .sub-root.sub-dark .sub-cand.free .rank, .sub-root.sub-lux .sub-cand.free .rank { color: #04170C; }
+.sub-root.sub-dark .sub-cand.free.high-quota .rank, .sub-root.sub-lux .sub-cand.free.high-quota .rank { color: #1A1200; }
 .sub-cand.busy .rank { background: #9CA3AF; color: #fff; }
 .sub-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .sub-dot.green { background: #22C55E; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18); }
+.sub-dot.amber { background: var(--sub-amber); box-shadow: 0 0 0 4px var(--sub-amber-soft); }
 .sub-dot.gray { background: #9CA3AF; }
 
 /* شرائح الغائبين */

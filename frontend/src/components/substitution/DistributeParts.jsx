@@ -1,4 +1,4 @@
-import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users } from 'lucide-react';
+import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users, AlertTriangle } from 'lucide-react';
 import { fmtAr } from './subApi';
 
 export function DateCard({ date, setDate, day }) {
@@ -122,15 +122,21 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
         <p className="text-sm font-semibold py-6 text-center" style={{ color: 'var(--sub-muted)' }}>جارٍ التحميل...</p>
       ) : (
         <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+          <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--sub-muted)' }}>
+            <span className="sub-dot green" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }} /> متاح · نصاب عادي
+            &nbsp;&nbsp;
+            <span className="sub-dot amber" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }} /> متاح · نصابه عالٍ جداً
+          </p>
           {free.map((c, i) => (
-            <div key={c.id} className="sub-cand free" data-testid={`sub-cand-${c.id}`}>
+            <div key={c.id} className={`sub-cand free ${c.high_quota ? 'high-quota' : ''}`} data-testid={`sub-cand-${c.id}`}>
               <span className="rank">{i + 1}</span>
-              <span className="sub-dot green" />
+              <span className={`sub-dot ${c.high_quota ? 'amber' : 'green'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="font-extrabold text-sm" style={{ color: 'var(--sub-ink)' }}>{c.name}</span>
                   {c.least_quota && <span className="sub-badge sub-badge-teal">أقل نصاب</span>}
                   {c.least_subs && <span className="sub-badge sub-badge-green">أقل احتياط</span>}
+                  {c.high_quota && <span className="sub-badge sub-badge-amber" data-testid={`sub-cand-highquota-${c.id}`}><AlertTriangle className="w-3 h-3" /> نصاب عالي جداً</span>}
                   {c.same_subject && <span className="sub-badge sub-badge-navy">نفس التخصص</span>}
                   {c.subs_today > 0 && <span className="sub-badge sub-badge-amber">له احتياط اليوم: {c.subs_today}</span>}
                 </div>
@@ -181,7 +187,7 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
   const word = async () => {
     const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/substitution/day/${date}/export`, { headers: { Authorization: `Bearer ${localStorage.getItem('subToken')}` } });
     const blob = await res.blob();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `توزيع الاحتياط ${date}.docx`; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `احتياط ${day.day_name} ${(day.date_ar || date).replace(/\//g, '-')}.docx`; a.click();
   };
   return (
     <div className="sub-card p-5 sub-rise sub-rise-3" data-testid="sub-report">

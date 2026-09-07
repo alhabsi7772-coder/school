@@ -308,6 +308,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 if a["period"] == period:
                     taken_this_period.add(a["substitute_id"])
         absent_t = tmap.get(absent_id) or {}
+        active_quotas = sorted((t.get("quota", 0) for t in tmap.values() if t.get("active", True)), reverse=True)
+        hq_threshold = active_quotas[max(0, int(len(active_quotas) * 0.2) - 1)] if active_quotas else 0
         out = []
         for t in tmap.values():
             if not t.get("active", True) or t["id"] in doc["absent"]:
@@ -322,6 +324,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "free": free, "busy_class": (slot or {}).get("class") if slot else None,
                 "same_subject": bool(absent_t.get("subject")) and t.get("subject") == absent_t.get("subject"),
                 "already_taken": t["id"] in taken_this_period,
+                "high_quota": hq_threshold > 0 and t.get("quota", 0) >= hq_threshold,
             })
         out.sort(key=lambda c: (not c["free"], c["subs_today"], c["subs_year"], c["quota"], c["name"]))
         if out:
@@ -677,8 +680,10 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         para("اعتماد إدارة المدرسة", 12, bold=True, align=WD_ALIGN_PARAGRAPH.LEFT)
         para("الاسم: .................................        التوقيع: .......................", 11, align=WD_ALIGN_PARAGRAPH.LEFT)
         buf = io.BytesIO(); doc.save(buf); buf.seek(0)
-        fname = f"substitution_{d}.docx"
+        import urllib.parse
+        fname_ar = f"احتياط {data['day_name']} {data['date_ar'].replace('/', '-')}.docx"
+        encoded = urllib.parse.quote(fname_ar)
         return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                 headers={"Content-Disposition": f"attachment; filename={fname}"})
+                                 headers={"Content-Disposition": f"attachment; filename=substitution_{d}.docx; filename*=UTF-8''{encoded}"})
 
     return router

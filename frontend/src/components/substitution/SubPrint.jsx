@@ -16,10 +16,19 @@ export default function SubPrint() {
     return () => document.documentElement.classList.remove('sub-app');
   }, [date]);
 
+  useEffect(() => {
+    if (!day?.day_name) return;
+    const prevTitle = document.title;
+    document.title = `احتياط ${day.day_name} ${(day.date_ar || '').replace(/\//g, '-')}`;
+    return () => { document.title = prevTitle; };
+  }, [day]);
+
+  const fileName = () => `احتياط ${day?.day_name || ''} ${(day?.date_ar || date).replace(/\//g, '-')}.docx`;
+
   const word = async () => {
     const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/substitution/day/${date}/export`, { headers: { Authorization: `Bearer ${localStorage.getItem('subToken')}` } });
     const blob = await res.blob();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `توزيع الاحتياط ${date}.docx`; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName(); a.click();
   };
 
   const rows = day?.assignments || [];
