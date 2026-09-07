@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Upload, Search, Pencil, Trash2, Check, X, CalendarDays, UserPlus } from 'lucide-react';
 import SubLayout from './SubLayout';
 import { subApi, errMsg } from './subApi';
+import ImportModal from './ImportModal';
 
 function WeekModal({ t, days, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(26,31,46,0.45)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={onClose}>
       <div className="sub-card p-6 w-full max-w-3xl sub-rise" onClick={(e) => e.stopPropagation()} data-testid="sub-week-modal">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy)' }}>{t.name}</h3>
+            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>{t.name}</h3>
             <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>{t.subject} · النصاب {t.quota} حصة</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-black/5"><X className="w-4 h-4" /></button>
@@ -42,9 +43,9 @@ function AddModal({ onClose, onAdded }) {
     } catch (err) { toast.error(errMsg(err)); }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(26,31,46,0.45)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={onClose}>
       <form className="sub-card p-6 w-full max-w-sm space-y-3 sub-rise" onClick={(e) => e.stopPropagation()} onSubmit={save} data-testid="sub-add-teacher-modal">
-        <h3 className="font-black" style={{ color: 'var(--sub-navy)' }}>إضافة معلم</h3>
+        <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>إضافة معلم</h3>
         <input className="sub-input" placeholder="اسم المعلم" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required data-testid="sub-add-name" />
         <input className="sub-input" placeholder="المادة" value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} data-testid="sub-add-subject" />
         <input className="sub-input" type="number" min="0" placeholder="النصاب" value={f.quota} onChange={(e) => setF({ ...f, quota: e.target.value })} data-testid="sub-add-quota" />
@@ -61,8 +62,7 @@ export default function SubTeachers() {
   const [edit, setEdit] = useState(null);
   const [week, setWeek] = useState(null);
   const [add, setAdd] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const fileRef = useRef();
+  const [imp, setImp] = useState(false);
 
   const load = () => subApi.get('/teachers').then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
@@ -70,17 +70,6 @@ export default function SubTeachers() {
   const subjects = useMemo(() => [...new Set(data.teachers.map((t) => t.subject).filter(Boolean))], [data.teachers]);
   const list = data.teachers.filter((t) => (!q || t.name.includes(q)) && (!subj || t.subject === subj));
   const totalQuota = list.reduce((s, t) => s + (t.quota || 0), 0);
-
-  const doImport = async (file) => {
-    if (!file) return;
-    setImporting(true);
-    const fd = new FormData(); fd.append('file', file);
-    try {
-      const r = await subApi.post('/teachers/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success(`تم الاستيراد: ${r.data.total} معلماً (جديد ${r.data.added} · محدَّث ${r.data.updated}${r.data.deactivated ? ` · مُعطَّل ${r.data.deactivated}` : ''})`);
-      load();
-    } catch (e) { toast.error(errMsg(e)); } finally { setImporting(false); if (fileRef.current) fileRef.current.value = ''; }
-  };
 
   const saveEdit = async () => {
     try {
@@ -100,10 +89,9 @@ export default function SubTeachers() {
     <SubLayout title="المعلمون والأنصبة" subtitle={`العام الدراسي ${data.academic_range[0]?.slice(0, 4) || ''}/${data.academic_range[1]?.slice(0, 4) || ''} · ${data.teachers.length} معلماً`}
       actions={
         <>
-          <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => doImport(e.target.files?.[0])} data-testid="sub-import-input" />
           <button className="sub-btn sub-btn-ghost" onClick={() => setAdd(true)} data-testid="sub-add-teacher-btn"><UserPlus className="w-4 h-4" /> إضافة معلم</button>
-          <button className="sub-btn sub-btn-primary" onClick={() => fileRef.current?.click()} disabled={importing} data-testid="sub-import-btn">
-            <Upload className="w-4 h-4" /> {importing ? 'جارٍ الاستيراد...' : 'استيراد الجدول (PDF)'}
+          <button className="sub-btn sub-btn-primary" onClick={() => setImp(true)} data-testid="sub-import-btn">
+            <Upload className="w-4 h-4" /> استيراد الجداول والتوقيت
           </button>
         </>
       }>
@@ -143,14 +131,14 @@ export default function SubTeachers() {
                     <div className="flex items-center gap-1 justify-end">
                       {ed ? (
                         <>
-                          <button className="p-1.5 rounded-lg hover:bg-green-50" style={{ color: 'var(--sub-green)' }} onClick={saveEdit} data-testid="sub-edit-save"><Check className="w-4 h-4" /></button>
+                          <button className="p-1.5 rounded-lg hover:bg-green-50" style={{ color: 'var(--sub-green-ink)' }} onClick={saveEdit} data-testid="sub-edit-save"><Check className="w-4 h-4" /></button>
                           <button className="p-1.5 rounded-lg hover:bg-black/5" onClick={() => setEdit(null)}><X className="w-4 h-4" /></button>
                         </>
                       ) : (
                         <>
-                          <button className="p-1.5 rounded-lg hover:bg-black/5" title="الجدول الأسبوعي" onClick={() => setWeek(t)} data-testid={`sub-week-${t.id}`}><CalendarDays className="w-4 h-4" style={{ color: 'var(--sub-navy)' }} /></button>
+                          <button className="p-1.5 rounded-lg hover:bg-black/5" title="الجدول الأسبوعي" onClick={() => setWeek(t)} data-testid={`sub-week-${t.id}`}><CalendarDays className="w-4 h-4" style={{ color: 'var(--sub-navy-ink)' }} /></button>
                           <button className="p-1.5 rounded-lg hover:bg-black/5" title="تعديل" onClick={() => setEdit({ id: t.id, name: t.name, subject: t.subject, quota: t.quota })} data-testid={`sub-edit-${t.id}`}><Pencil className="w-4 h-4" style={{ color: 'var(--sub-amber)' }} /></button>
-                          <button className="p-1.5 rounded-lg hover:bg-red-50" title="حذف" onClick={() => del(t)} data-testid={`sub-del-${t.id}`}><Trash2 className="w-4 h-4" style={{ color: 'var(--sub-red)' }} /></button>
+                          <button className="p-1.5 rounded-lg hover:bg-red-50" title="حذف" onClick={() => del(t)} data-testid={`sub-del-${t.id}`}><Trash2 className="w-4 h-4" style={{ color: 'var(--sub-red-ink)' }} /></button>
                         </>
                       )}
                     </div>
@@ -158,13 +146,14 @@ export default function SubTeachers() {
                 </tr>
               );
             })}
-            {list.length === 0 && <tr><td colSpan={8} className="text-center py-8 font-bold" style={{ color: 'var(--sub-muted)' }}>لا توجد نتائج — استورد ملف جداول المعلمين (PDF) للبدء</td></tr>}
+            {list.length === 0 && <tr><td colSpan={8} className="text-center py-8 font-bold" style={{ color: 'var(--sub-muted)' }}>لا توجد نتائج — استورد ملفات الجداول للبدء</td></tr>}
           </tbody>
         </table>
       </div>
 
       {week && <WeekModal t={week} days={data.days} onClose={() => setWeek(null)} />}
       {add && <AddModal onClose={() => setAdd(false)} onAdded={load} />}
+      {imp && <ImportModal onClose={() => setImp(false)} onDone={load} />}
     </SubLayout>
   );
 }

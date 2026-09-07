@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Lock, User, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { subApi, errMsg, SCHOOL_NAME } from './subApi';
+import { useSubTheme, themeClass } from './subTheme';
+import { ThemeSwitch } from './SubLayout';
+import LuxParticles from '../LuxParticles';
 import './substitution.css';
 
 export default function SubLogin() {
@@ -10,6 +13,8 @@ export default function SubLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [theme, setTheme] = useSubTheme();
+  useEffect(() => { document.documentElement.classList.add('sub-app'); return () => document.documentElement.classList.remove('sub-app'); }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -27,11 +32,13 @@ export default function SubLogin() {
   };
 
   return (
-    <div className="sub-root flex items-center justify-center p-4" data-testid="sub-login-page">
+    <div className={`sub-root flex items-center justify-center p-4 ${themeClass(theme)}`} data-testid="sub-login-page">
+      {theme === 'lux' && <LuxParticles />}
+      <div className="fixed top-4 left-4 z-20"><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
       <div className="w-full max-w-md sub-rise">
         <div className="text-center mb-8">
           <img src="/moe-logo.jpeg" alt="وزارة التعليم" className="w-24 h-24 mx-auto rounded-2xl object-contain bg-white p-2 sub-card" />
-          <h1 className="text-3xl sm:text-4xl font-black mt-5" style={{ color: 'var(--sub-navy)' }}>نظام حصص الاحتياط</h1>
+          <h1 className="text-3xl sm:text-4xl font-black mt-5" style={{ color: 'var(--sub-navy-ink)' }}>نظام حصص الاحتياط</h1>
           <p className="text-sm mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{SCHOOL_NAME}</p>
         </div>
 
@@ -41,7 +48,7 @@ export default function SubLogin() {
               <ArrowLeftRight className="w-5 h-5" style={{ color: 'var(--sub-amber)' }} />
             </div>
             <div>
-              <h2 className="font-extrabold" style={{ color: 'var(--sub-navy)' }}>دخول إدارة الاحتياط</h2>
+              <h2 className="font-extrabold" style={{ color: 'var(--sub-navy-ink)' }}>دخول إدارة الاحتياط</h2>
               <p className="text-xs" style={{ color: 'var(--sub-muted)' }}>حساب مستقل عن حسابات المعلمين</p>
             </div>
           </div>

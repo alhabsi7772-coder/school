@@ -44,7 +44,7 @@ export default function SubStats() {
         <div className="flex rounded-full p-1" style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
           {[['day', 'يوم'], ['month', 'شهر'], ['year', 'عام دراسي']].map(([m, l]) => (
             <button key={m} onClick={() => setMode(m)} className="px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
-              style={mode === m ? { background: 'var(--sub-navy)', color: '#fff' } : { color: 'var(--sub-muted)' }} data-testid={`sub-stats-mode-${m}`}>{l}</button>
+              style={mode === m ? { background: 'var(--sub-navy)', color: 'var(--sub-on-navy)' } : { color: 'var(--sub-muted)' }} data-testid={`sub-stats-mode-${m}`}>{l}</button>
           ))}
         </div>
         {mode === 'day' && <input type="date" className="sub-input w-auto" value={val.day} onChange={(e) => e.target.value && setVal({ ...val, day: e.target.value })} data-testid="sub-stats-day" />}
@@ -59,10 +59,10 @@ export default function SubStats() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         {[
-          { l: 'أيام فيها غياب', v: data?.days ?? '—', ic: CalendarDays, c: 'var(--sub-navy)', bg: '#E3E8F5' },
-          { l: 'حالات الغياب', v: data?.total_absences ?? '—', ic: UserX, c: 'var(--sub-red)', bg: 'var(--sub-red-soft)' },
-          { l: 'حصص الاحتياط الموزَّعة', v: data?.total_subs ?? '—', ic: ArrowLeftRight, c: 'var(--sub-green)', bg: 'var(--sub-green-soft)' },
-          { l: 'متوسط الاحتياط لكل يوم', v: data?.days ? (data.total_subs / data.days).toFixed(1) : '—', ic: TrendingUp, c: 'var(--sub-amber)', bg: 'var(--sub-amber-soft)' },
+          { l: 'أيام فيها غياب', v: data?.days ?? '—', ic: CalendarDays, c: 'var(--sub-navy-ink)', bg: 'var(--sub-navy-soft)' },
+          { l: 'حالات الغياب', v: data?.total_absences ?? '—', ic: UserX, c: 'var(--sub-red-ink)', bg: 'var(--sub-red-soft)' },
+          { l: 'حصص الاحتياط الموزَّعة', v: data?.total_subs ?? '—', ic: ArrowLeftRight, c: 'var(--sub-green-ink)', bg: 'var(--sub-green-soft)' },
+          { l: 'متوسط الاحتياط لكل يوم', v: data?.days ? (data.total_subs / data.days).toFixed(1) : '—', ic: TrendingUp, c: 'var(--sub-amber-ink)', bg: 'var(--sub-amber-soft)' },
         ].map((s, i) => (
           <div key={s.l} className={`sub-stat sub-rise sub-rise-${Math.min(3, i + 1)}`} data-testid={`sub-stat-${i}`}>
             <div className="flex items-center justify-between">
@@ -77,7 +77,7 @@ export default function SubStats() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         <div className="xl:col-span-2 sub-card p-5 sub-rise">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h3 className="font-black" style={{ color: 'var(--sub-navy)' }}>المعلمون — الأنصبة والغياب والاحتياط</h3>
+            <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>المعلمون — الأنصبة والغياب والاحتياط</h3>
             <select className="sub-input w-auto py-1.5 text-sm" value={sort} onChange={(e) => setSort(e.target.value)} data-testid="sub-stats-sort">
               <option value="subs">الأكثر احتياطاً</option>
               <option value="absences">الأكثر غياباً</option>
@@ -107,7 +107,7 @@ export default function SubStats() {
 
         <div className="space-y-5">
           <div className="sub-card p-5 sub-rise sub-rise-2">
-            <h3 className="font-black mb-3" style={{ color: 'var(--sub-navy)' }}>حسب المادة</h3>
+            <h3 className="font-black mb-3" style={{ color: 'var(--sub-navy-ink)' }}>حسب المادة</h3>
             <div className="space-y-3">
               {(data?.by_subject || []).sort((a, b) => b.subs - a.subs).map((s) => {
                 const mx = Math.max(1, ...data.by_subject.map((x) => x.subs));
@@ -122,7 +122,7 @@ export default function SubStats() {
           </div>
 
           <div className="sub-card p-5 sub-rise sub-rise-3">
-            <h3 className="font-black mb-3" style={{ color: 'var(--sub-navy)' }}>سجل الأيام</h3>
+            <h3 className="font-black mb-3" style={{ color: 'var(--sub-navy-ink)' }}>سجل الأيام</h3>
             <div className="space-y-2 max-h-80 overflow-y-auto" data-testid="sub-stats-days">
               {(data?.per_day || []).slice().reverse().map((d) => (
                 <div key={d.date} className="flex items-center justify-between p-2.5 rounded-xl" style={{ background: 'var(--sub-surface-2)' }}>
@@ -130,7 +130,7 @@ export default function SubStats() {
                     <p className="text-sm font-bold">{d.day_name} <span dir="ltr" className="text-xs" style={{ color: 'var(--sub-muted)' }}>{d.date_ar}</span></p>
                     <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>غياب {d.absent} · احتياط {d.subs}</p>
                   </div>
-                  <Link to={`/substitution/print/${d.date}`} target="_blank" className="p-1.5 rounded-lg hover:bg-black/5" title="طباعة"><Printer className="w-4 h-4" style={{ color: 'var(--sub-navy)' }} /></Link>
+                  <Link to={`/substitution/print/${d.date}`} target="_blank" className="p-1.5 rounded-lg hover:bg-black/5" title="طباعة"><Printer className="w-4 h-4" style={{ color: 'var(--sub-navy-ink)' }} /></Link>
                 </div>
               ))}
               {data && data.per_day.length === 0 && <p className="text-sm font-semibold text-center py-4" style={{ color: 'var(--sub-muted)' }}>لا توجد بيانات في هذه الفترة</p>}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Printer, FileDown, ArrowRight } from 'lucide-react';
 import { subApi, SCHOOL_NAME } from './subApi';
+import { getSubTheme, themeClass } from './subTheme';
 import './substitution.css';
 
 export default function SubPrint() {
@@ -23,7 +24,7 @@ export default function SubPrint() {
 
   const rows = day?.assignments || [];
   return (
-    <div className="sub-root py-6 px-3" data-testid="sub-print-page">
+    <div className={`sub-root py-6 px-3 ${themeClass(getSubTheme())}`} data-testid="sub-print-page">
       <div className="sub-no-print max-w-[210mm] mx-auto flex flex-wrap items-center justify-between gap-2 mb-4">
         <Link to="/substitution" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="sub-print-back"><ArrowRight className="w-4 h-4" /> رجوع</Link>
         <div className="flex gap-2">
@@ -49,11 +50,17 @@ export default function SubPrint() {
             <tr><th style={{ width: 36 }}>م</th><th>المعلم الغائب</th><th style={{ width: 56 }}>الحصة</th><th style={{ width: 60 }}>الصف</th><th>المادة</th><th>المعلم البديل</th><th style={{ width: 110 }}>التوقيع</th></tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td>{i + 1}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.absent_name}</td><td>{r.period}</td><td>{r.class}</td><td>{r.subject}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.substitute_name}</td><td></td>
-              </tr>
-            ))}
+            {rows.map((r, i) => {
+              const first = i === 0 || rows[i - 1].absent_id !== r.absent_id;
+              const span = first ? rows.filter((x) => x.absent_id === r.absent_id).length : 0;
+              return (
+                <tr key={r.id}>
+                  <td>{i + 1}</td>
+                  {first && <td rowSpan={span} style={{ textAlign: 'right', fontWeight: 700, background: '#FAFAFA' }}>{r.absent_name}</td>}
+                  <td>{r.period}</td><td>{r.class}</td><td>{r.subject}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.substitute_name}</td><td></td>
+                </tr>
+              );
+            })}
             {rows.length === 0 && <tr><td colSpan={7} style={{ padding: 18, color: '#666' }}>لا توجد حصص احتياط لهذا اليوم</td></tr>}
             {rows.length > 0 && rows.length < 6 && Array.from({ length: 6 - rows.length }).map((_, i) => <tr key={`e${i}`}><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>)}
           </tbody>

@@ -5,7 +5,7 @@ export function DateCard({ date, setDate, day }) {
   return (
     <div className="sub-card p-5 sub-rise" data-testid="sub-date-card">
       <div className="sub-card-title mb-4">
-        <span className="ic" style={{ background: '#E3E8F5' }}><CalendarDays className="w-4 h-4" style={{ color: 'var(--sub-navy)' }} /></span>
+        <span className="ic" style={{ background: 'var(--sub-navy-soft)' }}><CalendarDays className="w-4 h-4" style={{ color: 'var(--sub-navy-ink)' }} /></span>
         اليوم الدراسي
       </div>
       <div className="flex items-center gap-2">
@@ -14,7 +14,7 @@ export function DateCard({ date, setDate, day }) {
         <button className="sub-btn sub-btn-ghost sub-btn-sm px-2" onClick={() => setDate(1)} title="اليوم التالي" data-testid="sub-next-day"><ChevronLeft className="w-4 h-4" /></button>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-lg font-black" style={{ color: day?.is_school_day ? 'var(--sub-navy)' : 'var(--sub-red)' }} data-testid="sub-day-name">
+        <span className="text-lg font-black" style={{ color: day?.is_school_day ? 'var(--sub-navy-ink)' : 'var(--sub-red-ink)' }} data-testid="sub-day-name">
           {day?.is_school_day ? day.day_name : 'عطلة نهاية الأسبوع'}
         </span>
         <span className="text-sm font-bold" style={{ color: 'var(--sub-muted)' }} dir="ltr">{fmtAr(date)}</span>
@@ -29,7 +29,7 @@ export function AbsentCard({ teachers, day, selected, onSelect, onAdd, onRemove,
   return (
     <div className="sub-card p-5 sub-rise sub-rise-2" data-testid="sub-absent-card">
       <div className="sub-card-title mb-4">
-        <span className="ic" style={{ background: 'var(--sub-red-soft)' }}><UserX className="w-4 h-4" style={{ color: 'var(--sub-red)' }} /></span>
+        <span className="ic" style={{ background: 'var(--sub-red-soft)' }}><UserX className="w-4 h-4" style={{ color: 'var(--sub-red-ink)' }} /></span>
         المعلمون الغائبون
         <span className="sub-badge sub-badge-red mr-auto" data-testid="sub-absent-count">{day?.absent?.length || 0}</span>
       </div>
@@ -90,7 +90,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
   if (!absent || !period) {
     return (
       <div className="sub-card p-8 text-center sub-rise" data-testid="sub-candidates-empty">
-        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: '#C4C8D0' }} />
+        <Users className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--sub-line-2)' }} />
         <p className="font-bold" style={{ color: 'var(--sub-muted)' }}>اختر معلماً غائباً ثم اضغط على إحدى حصصه لعرض البدلاء المتاحين</p>
       </div>
     );
@@ -102,7 +102,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
     <div className="sub-card p-5 sub-rise" data-testid="sub-candidates">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="sub-card-title">
-          <span className="ic" style={{ background: 'var(--sub-green-soft)' }}><Users className="w-4 h-4" style={{ color: 'var(--sub-green)' }} /></span>
+          <span className="ic" style={{ background: 'var(--sub-green-soft)' }}><Users className="w-4 h-4" style={{ color: 'var(--sub-green-ink)' }} /></span>
           المعلمون البدلاء المتاحون
         </div>
         <div className="flex items-center gap-1.5">
@@ -112,8 +112,8 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
       </div>
 
       {slot?.substitute_id && (
-        <div className="flex items-center justify-between gap-2 p-3 rounded-2xl mb-4" style={{ background: 'var(--sub-green-soft)', border: '1px solid #86EFAC' }} data-testid="sub-current-assignment">
-          <span className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--sub-green)' }}><Check className="w-4 h-4" /> البديل الحالي: {slot.substitute_name}</span>
+        <div className="flex items-center justify-between gap-2 p-3 rounded-2xl mb-4" style={{ background: 'var(--sub-green-soft)', border: '1px solid var(--sub-green-line)' }} data-testid="sub-current-assignment">
+          <span className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--sub-green-ink)' }}><Check className="w-4 h-4" /> البديل الحالي: {slot.substitute_name}</span>
           <button className="sub-btn sub-btn-danger sub-btn-sm" onClick={() => onUnassign(period)} data-testid="sub-unassign-btn"><Ban className="w-3.5 h-3.5" /> إلغاء التكليف</button>
         </div>
       )}
@@ -141,7 +141,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
               </button>
             </div>
           ))}
-          {free.length === 0 && <p className="text-sm font-bold text-center py-4" style={{ color: 'var(--sub-red)' }}>لا يوجد معلم متاح في هذه الحصة</p>}
+          {free.length === 0 && <p className="text-sm font-bold text-center py-4" style={{ color: 'var(--sub-red-ink)' }}>لا يوجد معلم متاح في هذه الحصة</p>}
           {busy.length > 0 && (
             <details className="pt-2">
               <summary className="text-xs font-bold cursor-pointer" style={{ color: 'var(--sub-muted)' }}>المعلمون المشغولون في هذه الحصة ({busy.length})</summary>
@@ -168,8 +168,12 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
 export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) {
   const rows = day?.assignments || [];
   const text = () => {
-    const lines = [`توزيع الاحتياط ليوم ${day.day_name} ${day.date_ar}`, ''];
-    rows.forEach((r, i) => lines.push(`${i + 1}) الحصة ${r.period} — الصف ${r.class} — الغائب: ${r.absent_name} — البديل: ${r.substitute_name}`));
+    const lines = [`توزيع الاحتياط ليوم ${day.day_name} ${day.date_ar}`];
+    let last = null;
+    rows.forEach((r) => {
+      if (r.absent_id !== last) { lines.push('', `الغائب: ${r.absent_name}`); last = r.absent_id; }
+      lines.push(`  • الحصة ${r.period} — الصف ${r.class} (${r.time}) — البديل: ${r.substitute_name}`);
+    });
     return lines.join('\n');
   };
   const copy = async () => { await navigator.clipboard.writeText(text()); };
@@ -183,7 +187,7 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
     <div className="sub-card p-5 sub-rise sub-rise-3" data-testid="sub-report">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="sub-card-title">
-          <span className="ic" style={{ background: '#E3E8F5' }}><Printer className="w-4 h-4" style={{ color: 'var(--sub-navy)' }} /></span>
+          <span className="ic" style={{ background: 'var(--sub-navy-soft)' }}><Printer className="w-4 h-4" style={{ color: 'var(--sub-navy-ink)' }} /></span>
           تقرير التوزيع
           <span className="sub-badge sub-badge-navy">{rows.length} حصة</span>
         </div>
@@ -201,20 +205,27 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
       ) : (
         <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
           <table className="sub-table" data-testid="sub-report-table">
-            <thead><tr><th>م</th><th>الحصة</th><th>الوقت</th><th>الصف</th><th>المادة</th><th>المعلم الغائب</th><th>المعلم البديل</th><th></th></tr></thead>
+            <thead><tr><th>م</th><th>الحصة</th><th>الوقت</th><th>الصف</th><th>المادة</th><th>المعلم البديل</th><th></th></tr></thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.id} data-testid={`sub-report-row-${i}`}>
-                  <td>{i + 1}</td>
-                  <td><span className="sub-badge sub-badge-amber">{r.period}</span></td>
-                  <td className="text-xs" dir="ltr">{r.time}</td>
-                  <td className="font-bold">{r.class}</td>
-                  <td className="text-xs">{r.subject}</td>
-                  <td>{r.absent_name}</td>
-                  <td className="font-bold" style={{ color: 'var(--sub-green)' }}>{r.substitute_name} {r.auto && <span className="sub-badge sub-badge-gray">تلقائي</span>}</td>
-                  <td><button className="p-1.5 rounded-lg hover:bg-red-50" style={{ color: 'var(--sub-red)' }} onClick={() => onRemove(r)} title="إزالة" data-testid={`sub-report-remove-${i}`}><X className="w-4 h-4" /></button></td>
-                </tr>
-              ))}
+              {rows.map((r, i) => {
+                const first = i === 0 || rows[i - 1].absent_id !== r.absent_id;
+                return [
+                  first && (
+                    <tr key={`g-${r.absent_id}`} className="sub-group-row" data-testid={`sub-report-group-${r.absent_id}`}>
+                      <td colSpan={7}>المعلم الغائب: {r.absent_name} <span className="sub-badge sub-badge-red mr-2">{rows.filter((x) => x.absent_id === r.absent_id).length} حصة</span></td>
+                    </tr>
+                  ),
+                  <tr key={r.id} data-testid={`sub-report-row-${i}`}>
+                    <td>{i + 1}</td>
+                    <td><span className="sub-badge sub-badge-amber">{r.period}</span></td>
+                    <td className="text-xs" dir="ltr">{r.time}</td>
+                    <td className="font-bold">{r.class}</td>
+                    <td className="text-xs">{r.subject}</td>
+                    <td className="font-bold" style={{ color: 'var(--sub-green-ink)' }}>{r.substitute_name} {r.auto && <span className="sub-badge sub-badge-gray">تلقائي</span>}</td>
+                    <td><button className="p-1.5 rounded-lg hover:bg-red-50" style={{ color: 'var(--sub-red-ink)' }} onClick={() => onRemove(r)} title="إزالة" data-testid={`sub-report-remove-${i}`}><X className="w-4 h-4" /></button></td>
+                  </tr>,
+                ];
+              })}
             </tbody>
           </table>
         </div>

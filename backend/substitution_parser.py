@@ -90,3 +90,50 @@ if __name__ == "__main__":
     print(len(data), "teachers")
     for t in data:
         print(t["name"], "|", t["subject"], "|", t["quota"])
+
+
+def parse_general_pdf(path: str):
+    """الجدول العام: اسم المعلم + مجموع الحصص + (احتياطياً) الجدول الأسبوعي بدون أسماء المواد."""
+    teachers = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            for tbl in page.extract_tables():
+                for row in tbl:
+                    if not row or len(row) < 42:
+                        continue
+                    total, name_cell = (row[0] or "").strip(), (row[-1] or "").strip()
+                    if not total.isdigit() or not _AR.search(name_cell):
+                        continue
+                    parts = [_fix(l) for l in name_cell.split("\n") if l.strip()]
+                    name = ""
+                    for part in parts:
+                        name = (name + part) if len(part) <= 1 else (name + " " + part).strip()
+                    schedule = {d: [None] * 8 for d in DAYS}
+                    cells = row[1:41]
+                    # الأعمدة بصرياً من اليسار: الخميس 8..1 ثم الأربعاء ... ثم الأحد 8..1
+                    for ci, cell in enumerate(cells):
+                        parsed = _parse_cell(cell)
+                        if not parsed:
+                            continue
+                        day = DAYS[4 - ci // 8]
+                        span = [ci]
+                        if ci + 1 < 40 and (ci + 1) // 8 == ci // 8 and cells[ci + 1] is None:
+                            span.append(ci + 1)
+                        for c in span:
+                            schedule[day][8 - (c % 8) - 1] = {"class": parsed["class"], "subject": ""}
+                    teachers.append({"name": name, "quota": int(total), "schedule": schedule})
+    return teachers
+
+
+AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
+
+def parse_timing_text(text: str):
+    """يستخرج أوقات الحصص الثماني (من/إلى) من نص جدول التوقيت إن وُجد."""
+    t = text.translate(AR_DIGITS)
+    times = re.findall(r"(\d{1,2})\s*[:：]\s*(\d{2})", t)
+    pairs = [f"{int(h)}:{m}" for h, m in times]
+    out = []
+    for i in range(0, len(pairs) - 1, 2):
+        out.append({"from": pairs[i], "to": pairs[i + 1]})
+    return out

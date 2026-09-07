@@ -1,4 +1,5 @@
 """نظام إدارة حصص الاحتياط — قسم مستقل بحساب دخول خاص."""
+import base64
 import io
 import json
 import os
@@ -9,18 +10,26 @@ from typing import List, Optional
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-from substitution_parser import parse_teacher_pdf, DAYS
+from substitution_parser import parse_teacher_pdf, parse_general_pdf, parse_timing_text, DAYS
 
 ROOT = Path(__file__).parent
 SEED_FILE = ROOT / "data" / "substitution_seed.json"
 SCHOOL_NAME = "مدرسة الخيرات للبنين ٥-٨"
 WEEKDAY_TO_DAY = {6: "الأحد", 0: "الاثنين", 1: "الثلاثاء", 2: "الأربعاء", 3: "الخميس"}
-PERIOD_TIMES = ["7:25 - 8:05", "8:05 - 8:45", "8:45 - 9:25", "9:25 - 10:05", "10:35 - 11:15", "11:15 - 11:55", "11:55 - 12:35", "1:00 - 1:40"]
+DEFAULT_PERIOD_TIMES = [
+    {"from": "7:25", "to": "8:05"}, {"from": "8:05", "to": "8:45"}, {"from": "8:45", "to": "9:25"}, {"from": "9:25", "to": "10:05"},
+    {"from": "10:35", "to": "11:15"}, {"from": "11:15", "to": "11:55"}, {"from": "11:55", "to": "12:35"}, {"from": "1:00", "to": "1:40"},
+]
+BUNDLED_TIMING = ROOT / "data" / "school_timing.jpeg"
 security = HTTPBearer()
+
+
+def _key(name: str) -> str:
+    return name.replace(" ", "").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه").replace("ى", "ي").replace("ّ", "")
 
 
 def now_iso():
@@ -35,6 +44,16 @@ def academic_range(d: str):
     dt = ddate.fromisoformat(d)
     y = dt.year if dt.month >= 9 else dt.year - 1
     return f"{y}-09-01", f"{y + 1}-08-31"
+
+
+def _dur(p) -> int:
+    try:
+        h1, m1 = map(int, p["from"].split(":")); h2, m2 = map(int, p["to"].split(":"))
+        if h1 < 6: h1 += 12
+        if h2 < 6: h2 += 12
+        return (h2 * 60 + m2) - (h1 * 60 + m1)
+    except Exception:
+        return -1
 
 
 def fmt_date_ar(d: str) -> str:
@@ -75,11 +94,37 @@ class TeacherCreate(BaseModel):
     quota: int = 0
 
 
+class AccountReq(BaseModel):
+    current_password: str
+    username: Optional[str] = None
+    new_password: Optional[str] = None
+
+
+class SettingsReq(BaseModel):
+    school_name: Optional[str] = None
+    period_times: Optional[List[dict]] = None
+
+
 def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_algorithm):
     router = APIRouter(prefix="/substitution")
     users = db.sub_users
     teachers = db.sub_teachers
     days = db.sub_days
+    settings = db.sub_settings
+
+    async def get_settings():
+        doc = await settings.find_one({"id": "main"}, {"_id": 0, "timing_data": 0})
+        if not doc:
+            doc = {"id": "main", "school_name": SCHOOL_NAME, "period_times": DEFAULT_PERIOD_TIMES, "timing_file": None, "updated_at": now_iso()}
+            if BUNDLED_TIMING.exists():
+                doc.update({"timing_file": "/api/substitution/settings/timing-file?v=seed", "timing_mime": "image/jpeg",
+                            "timing_data": base64.b64encode(BUNDLED_TIMING.read_bytes()).decode()})
+            await settings.insert_one(dict(doc))
+            doc.pop("timing_data", None)
+        pts = doc.get("period_times") or DEFAULT_PERIOD_TIMES
+        doc["period_times"] = (pts + DEFAULT_PERIOD_TIMES)[:8]
+        doc["period_labels"] = [f"{p.get('from', '')} - {p.get('to', '')}" for p in doc["period_times"]]
+        return doc
 
     async def init():
         await teachers.create_index("name")
@@ -144,6 +189,84 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             raise HTTPException(status_code=400, detail="كلمة المرور الجديدة قصيرة (6 أحرف على الأقل)")
         await users.update_one({"id": u["id"]}, {"$set": {"password_hash": hash_password(req.new_password)}})
         return {"message": "تم تغيير كلمة المرور"}
+
+    @router.put("/auth/account")
+    async def update_account(req: AccountReq, u=Depends(current_user)):
+        doc = await users.find_one({"id": u["id"]})
+        if not verify_password(req.current_password, doc["password_hash"]):
+            raise HTTPException(status_code=400, detail="كلمة المرور الحالية غير صحيحة")
+        upd = {}
+        if req.username and req.username.strip().lower() != doc["username"]:
+            new_u = req.username.strip().lower()
+            if len(new_u) < 3:
+                raise HTTPException(status_code=400, detail="اسم المستخدم قصير (3 أحرف على الأقل)")
+            if await users.find_one({"username": new_u}):
+                raise HTTPException(status_code=400, detail="اسم المستخدم مستخدم بالفعل")
+            upd["username"] = new_u
+        if req.new_password:
+            if len(req.new_password) < 6:
+                raise HTTPException(status_code=400, detail="كلمة المرور الجديدة قصيرة (6 أحرف على الأقل)")
+            upd["password_hash"] = hash_password(req.new_password)
+        if not upd:
+            raise HTTPException(status_code=400, detail="لا يوجد تغيير")
+        await users.update_one({"id": u["id"]}, {"$set": upd})
+        username = upd.get("username", doc["username"])
+        return {"message": "تم تحديث الحساب", "username": username,
+                "token": make_token({"role": "substitution", "sub_user_id": doc["id"], "username": username})}
+
+    # ---------------- settings ----------------
+    @router.get("/settings")
+    async def read_settings(u=Depends(current_user)):
+        return await get_settings()
+
+    @router.put("/settings")
+    async def write_settings(req: SettingsReq, u=Depends(current_user)):
+        upd = {"updated_at": now_iso()}
+        if req.school_name is not None:
+            upd["school_name"] = req.school_name.strip() or SCHOOL_NAME
+        if req.period_times is not None:
+            upd["period_times"] = [{"from": str(p.get("from", "")).strip(), "to": str(p.get("to", "")).strip()} for p in req.period_times][:8]
+        await get_settings()
+        await settings.update_one({"id": "main"}, {"$set": upd})
+        return await get_settings()
+
+    async def save_timing_file(file: UploadFile):
+        ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+        mimes = {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+        if ext not in mimes:
+            raise HTTPException(status_code=400, detail="ملف التوقيت يجب أن يكون صورة (JPG/PNG) أو PDF")
+        raw = await file.read()
+        if len(raw) > 6 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="حجم ملف التوقيت كبير (الحد 6MB)")
+        detected = []
+        if ext == "pdf":
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(raw)) as pdf:
+                    text = "\n".join((pg.extract_text() or "") for pg in pdf.pages)
+                detected = parse_timing_text(text)
+            except Exception:
+                detected = []
+        ver = uuid.uuid4().hex[:6]
+        await get_settings()
+        await settings.update_one({"id": "main"}, {"$set": {
+            "timing_file": f"/api/substitution/settings/timing-file?v={ver}", "timing_mime": mimes[ext],
+            "timing_data": base64.b64encode(raw).decode(), "updated_at": now_iso()}})
+        return detected
+
+    @router.get("/settings/timing-file")
+    async def timing_file():
+        doc = await settings.find_one({"id": "main"}, {"_id": 0, "timing_data": 1, "timing_mime": 1})
+        if not doc or not doc.get("timing_data"):
+            raise HTTPException(status_code=404, detail="لا يوجد ملف توقيت")
+        return Response(content=base64.b64decode(doc["timing_data"]), media_type=doc.get("timing_mime", "image/jpeg"))
+
+    @router.post("/settings/timing")
+    async def upload_timing(file: UploadFile = File(...), u=Depends(current_user)):
+        detected = await save_timing_file(file)
+        out = await get_settings()
+        out["detected_times"] = detected
+        return out
 
     # ---------------- helpers ----------------
     async def load_counts(from_d: str, to_d: str):
@@ -213,6 +336,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
     async def enrich_day(doc):
         tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
+        cfg = await get_settings()
+        PERIOD_TIMES = cfg["period_labels"]
         y0, y1 = academic_range(doc["date"])
         abs_year, sub_year = await load_counts(y0, y1)
         absent = []
@@ -229,12 +354,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             absent.append({"id": tid, "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0),
                            "absences_year": abs_year.get(tid, 0), "periods": periods})
         rows = []
-        for a in sorted(doc["assignments"], key=lambda x: (x["period"], tmap.get(x["absent_id"], {}).get("name", ""))):
+        order = {tid: i for i, tid in enumerate(doc["absent"])}
+        for a in sorted(doc["assignments"], key=lambda x: (order.get(x["absent_id"], 99), x["period"])):
             at, st = tmap.get(a["absent_id"], {}), tmap.get(a.get("substitute_id"), {})
-            rows.append({**a, "absent_name": at.get("name", ""), "substitute_name": st.get("name", ""), "substitute_subject": st.get("subject", ""), "time": PERIOD_TIMES[a["period"] - 1]})
+            rows.append({**a, "subject": a.get("subject") or at.get("subject", ""), "absent_name": at.get("name", ""), "substitute_name": st.get("name", ""), "substitute_subject": st.get("subject", ""), "time": PERIOD_TIMES[a["period"] - 1]})
         is_school = bool(doc["day_name"])
         return {"date": doc["date"], "day_name": doc["day_name"], "is_school_day": is_school, "date_ar": fmt_date_ar(doc["date"]),
-                "absent": absent, "assignments": rows, "school_name": SCHOOL_NAME, "updated_at": doc.get("updated_at")}
+                "absent": absent, "assignments": rows, "school_name": cfg["school_name"], "period_times": PERIOD_TIMES, "updated_at": doc.get("updated_at")}
 
     # ---------------- teachers ----------------
     @router.get("/teachers")
@@ -245,7 +371,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         out = []
         async for t in teachers.find({}, {"_id": 0}).sort("order", 1):
             out.append({**t, "absences": abs_c.get(t["id"], 0), "subs": sub_c.get(t["id"], 0)})
-        return {"teachers": out, "academic_range": [y0, y1], "days": DAYS, "period_times": PERIOD_TIMES}
+        cfg = await get_settings()
+        return {"teachers": out, "academic_range": [y0, y1], "days": DAYS, "period_times": cfg["period_labels"]}
 
     @router.post("/teachers")
     async def create_teacher(req: TeacherCreate, u=Depends(current_user)):
@@ -272,37 +399,85 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         return {"ok": True}
 
     @router.post("/teachers/import")
-    async def import_pdf(file: UploadFile = File(...), u=Depends(current_user)):
-        if not (file.filename or "").lower().endswith(".pdf"):
-            raise HTTPException(status_code=400, detail="يرجى رفع ملف PDF لجداول حصص المعلمين")
-        raw = await file.read()
-        tmp = ROOT / "data" / f"_import_{uuid.uuid4().hex}.pdf"
-        tmp.write_bytes(raw)
-        try:
-            parsed = parse_teacher_pdf(str(tmp))
-        except Exception:
-            raise HTTPException(status_code=400, detail="تعذّر قراءة الملف — تأكد أنه ملف جداول المعلمين الصادر من aSc Timetables")
-        finally:
-            tmp.unlink(missing_ok=True)
-        if not parsed:
-            raise HTTPException(status_code=400, detail="لم يتم العثور على أي جدول معلم في الملف")
-        existing = {t["name"]: t async for t in teachers.find({}, {"_id": 0})}
-        added = updated = 0
-        seen = set()
-        for i, t in enumerate(parsed):
-            seen.add(t["name"])
-            if t["name"] in existing:
-                await teachers.update_one({"name": t["name"]}, {"$set": {"subject": t["subject"], "quota": t["quota"], "schedule": t["schedule"], "active": True, "order": i}})
-                updated += 1
+    async def import_files(teachers_pdf: Optional[UploadFile] = File(None), general_pdf: Optional[UploadFile] = File(None),
+                           timing: Optional[UploadFile] = File(None), file: Optional[UploadFile] = File(None), u=Depends(current_user)):
+        teachers_pdf = teachers_pdf or file
+        if not teachers_pdf and not general_pdf and not timing:
+            raise HTTPException(status_code=400, detail="اختر ملفاً واحداً على الأقل للاستيراد")
+
+        async def read_pdf(up, parser, label):
+            if not (up.filename or "").lower().endswith(".pdf"):
+                raise HTTPException(status_code=400, detail=f"{label}: يجب أن يكون ملف PDF")
+            tmp = ROOT / "data" / f"_import_{uuid.uuid4().hex}.pdf"
+            tmp.write_bytes(await up.read())
+            try:
+                return parser(str(tmp))
+            except Exception:
+                raise HTTPException(status_code=400, detail=f"{label}: تعذّر قراءة الملف — تأكد أنه صادر من aSc Timetables")
+            finally:
+                tmp.unlink(missing_ok=True)
+
+        result = {"added": 0, "updated": 0, "deactivated": 0, "total": 0, "quota_mismatch": [], "timing_detected": 0, "sources": []}
+        parsed_t = await read_pdf(teachers_pdf, parse_teacher_pdf, "جدول حصص المعلمين") if teachers_pdf else []
+        parsed_g = await read_pdf(general_pdf, parse_general_pdf, "الجدول العام") if general_pdf else []
+        if teachers_pdf and not parsed_t:
+            raise HTTPException(status_code=400, detail="جدول حصص المعلمين: لم يُعثر على أي جدول معلم")
+        if general_pdf and not parsed_g:
+            raise HTTPException(status_code=400, detail="الجدول العام: لم يُعثر على أسماء المعلمين وأنصبتهم")
+        if parsed_t:
+            result["sources"].append("جدول حصص المعلمين")
+        if parsed_g:
+            result["sources"].append("الجدول العام")
+
+        # الدمج: الجدول التفصيلي هو الأساس (يحوي المواد)، والعام يُكمل الناقص ويتحقق من الأنصبة
+        merged = {}
+        for t in parsed_t:
+            merged[_key(t["name"])] = dict(t)
+        for g in parsed_g:
+            k = _key(g["name"])
+            if k in merged:
+                if merged[k]["quota"] != g["quota"]:
+                    result["quota_mismatch"].append({"name": g["name"], "teachers_pdf": merged[k]["quota"], "general_pdf": g["quota"]})
+                    merged[k]["quota"] = g["quota"]
             else:
-                await teachers.insert_one({"id": str(uuid.uuid4()), "active": True, "order": i, **t})
-                added += 1
-        deactivated = 0
-        for name, t in existing.items():
-            if name not in seen and t.get("active", True):
-                await teachers.update_one({"id": t["id"]}, {"$set": {"active": False}})
-                deactivated += 1
-        return {"added": added, "updated": updated, "deactivated": deactivated, "total": len(parsed)}
+                merged[k] = {"name": g["name"], "subject": "", "quota": g["quota"], "schedule": g["schedule"]}
+
+        if merged:
+            existing = {_key(t["name"]): t async for t in teachers.find({}, {"_id": 0})}
+            seen = set()
+            for i, (k, t) in enumerate(merged.items()):
+                seen.add(k)
+                subj = t.get("subject") or (existing.get(k) or {}).get("subject", "")
+                for cells in t["schedule"].values():
+                    for c in cells:
+                        if c and not c.get("subject"):
+                            c["subject"] = subj
+                if k in existing:
+                    upd = {"quota": t["quota"], "schedule": t["schedule"], "active": True, "order": i, "name": t["name"]}
+                    if subj:
+                        upd["subject"] = subj
+                    await teachers.update_one({"id": existing[k]["id"]}, {"$set": upd})
+                    result["updated"] += 1
+                else:
+                    await teachers.insert_one({"id": str(uuid.uuid4()), "active": True, "order": i, **t})
+                    result["added"] += 1
+            for k, t in existing.items():
+                if k not in seen and t.get("active", True):
+                    await teachers.update_one({"id": t["id"]}, {"$set": {"active": False}})
+                    result["deactivated"] += 1
+            result["total"] = len(merged)
+
+        if timing:
+            detected = await save_timing_file(timing)
+            result["sources"].append("التوقيت")
+            if len(detected) >= 8:
+                # الصف الأول عادةً الطابور، ثم 4 حصص، فسحة، 3 حصص، فسحة، الحصة الثامنة
+                cand = [d for d in detected if _dur(d) == 40][:8]
+                if len(cand) == 8:
+                    await settings.update_one({"id": "main"}, {"$set": {"period_times": cand}})
+                    result["timing_detected"] = 8
+        result["settings"] = await get_settings()
+        return result
 
     # ---------------- day ----------------
     @router.get("/days")
@@ -465,7 +640,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             lp.add_run().add_picture(str(logo), width=Cm(3.2))
         para("سلطنة عمان — وزارة التعليم", 11, color="7A1E1E")
         para("المديرية العامة للتعليم بمحافظة شمال الشرقية", 10)
-        para(SCHOOL_NAME, 14, bold=True)
+        para(data["school_name"], 14, bold=True)
         para(f"توزيع الاحتياط ليوم {data['day_name']} — {data['date_ar']}", 13, bold=True)
 
         headers = ["م", "المعلم الغائب", "الحصة", "الصف", "المادة", "المعلم البديل", "التوقيع"]
@@ -477,12 +652,24 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             p = c.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)
             r = p.add_run(h); r.bold = True; r.font.size = Pt(11)
             shd = OxmlElement("w:shd"); shd.set(qn("w:fill"), "E8E8E8"); c._tc.get_or_add_tcPr().append(shd)
+        group_start = {}
         for i, a in enumerate(data["assignments"], 1):
             row = table.add_row().cells
             vals = [str(i), a["absent_name"], str(a["period"]), a.get("class") or "", a.get("subject") or "", a["substitute_name"], ""]
             for ci, v in enumerate(vals):
                 p = row[ci].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)
                 r = p.add_run(v); r.font.size = Pt(11)
+            group_start.setdefault(a["absent_id"], []).append(i)
+        for idxs in group_start.values():
+            if len(idxs) > 1:
+                top, bottom = table.rows[idxs[0]].cells[1], table.rows[idxs[-1]].cells[1]
+                merged = top.merge(bottom)
+                name = data["assignments"][idxs[0] - 1]["absent_name"]
+                for extra in merged.paragraphs[1:]:
+                    extra._element.getparent().remove(extra._element)
+                merged.paragraphs[0].text = ""
+                rr = merged.paragraphs[0].add_run(name); rr.font.size = Pt(11); rr.bold = True
+                merged.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(merged.paragraphs[0])
         if not data["assignments"]:
             row = table.add_row().cells
             row[0].merge(row[-1]); p = row[0].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p); p.add_run("لا توجد حصص احتياط لهذا اليوم")
