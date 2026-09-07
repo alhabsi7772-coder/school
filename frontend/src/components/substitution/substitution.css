@@ -274,6 +274,9 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-drop { border: 2px dashed var(--sub-line-2); border-radius: 18px; padding: 1rem; text-align: center; cursor: pointer; transition: border-color .15s, background-color .15s; background: var(--sub-surface-2); }
 .sub-drop:hover, .sub-drop.ok { border-color: var(--sub-navy); background: var(--sub-navy-soft); }
 
+/* مربع اختيار "تذكرني" */
+.sub-checkbox { width: 16px; height: 16px; border-radius: 4px; accent-color: var(--sub-navy); cursor: pointer; }
+
 /* مبدّل الثيم */
 .sub-theme-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--sub-surface-2); border: 1px solid var(--sub-line); }
 .sub-theme-switch button { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--sub-muted); border: none; background: transparent; cursor: pointer; transition: background-color .15s, color .15s; }

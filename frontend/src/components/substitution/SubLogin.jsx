@@ -8,13 +8,28 @@ import { ThemeSwitch } from './SubLayout';
 import LuxParticles from '../LuxParticles';
 import './substitution.css';
 
+const REMEMBER_KEY = 'subRememberedCreds';
+
 export default function SubLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [theme, setTheme] = useSubTheme();
-  useEffect(() => { document.documentElement.classList.add('sub-app'); return () => document.documentElement.classList.remove('sub-app'); }, []);
+  useEffect(() => {
+    document.documentElement.classList.add('sub-app');
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY);
+      if (saved) {
+        const { u, p } = JSON.parse(atob(saved));
+        setUsername(u || '');
+        setPassword(p || '');
+        setRemember(true);
+      }
+    } catch { /* بيانات محفوظة تالفة، تجاهلها */ }
+    return () => document.documentElement.classList.remove('sub-app');
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -23,6 +38,8 @@ export default function SubLogin() {
       const res = await subApi.post('/auth/login', { username, password });
       localStorage.setItem('subToken', res.data.token);
       localStorage.setItem('subName', res.data.name || 'إدارة الاحتياط');
+      if (remember) localStorage.setItem(REMEMBER_KEY, btoa(JSON.stringify({ u: username, p: password })));
+      else localStorage.removeItem(REMEMBER_KEY);
       navigate('/substitution');
     } catch (err) {
       toast.error(errMsg(err, 'اسم المستخدم أو كلمة المرور غير صحيحة'));
@@ -68,6 +85,13 @@ export default function SubLogin() {
               <input type="password" className="sub-input pr-11" value={password} onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password" required data-testid="sub-password-input" />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer select-none" style={{ color: 'var(--sub-muted)' }} data-testid="sub-remember-label">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="sub-checkbox" data-testid="sub-remember-checkbox" />
+              تذكرني على هذا الجهاز
+            </label>
           </div>
 
           <button type="submit" disabled={loading} className="sub-btn sub-btn-primary w-full" style={{ padding: '0.85rem' }} data-testid="sub-login-btn">
