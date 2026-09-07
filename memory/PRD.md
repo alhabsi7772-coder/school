@@ -209,3 +209,16 @@
 - الملفات: `frontend/src/components/LoginVideoBackground.jsx`، `frontend/src/index.css` (`.login-kenburns`, `.login-video-tinted`, `.login-bg-root`)
 - يستفيد منها: TeacherLogin, StudentJoin, StudentLibrary, StudentVideoLibrary, StudentVideoWatch
 - ملاحظة: ffmpeg مُثبَّت في البيئة الآن لأي معالجة وسائط مستقبلية.
+
+## 2026-09 — نظام حصص الاحتياط (قسم مستقل بحساب خاص)
+- **الدخول**: `/substitution/login` بحساب مستقل (`ehtiyat` / `ehtiyat2026` من `SUB_ADMIN_USERNAME`/`SUB_ADMIN_PASSWORD` في backend/.env) — توكن JWT بدور `substitution` محفوظ في `localStorage.subToken`. روابط الوصول: صفحة دخول المعلم + الشريط الجانبي.
+- **البيانات**: 49 معلماً مع الجداول الأسبوعية (الأحد–الخميس × 8 حصص) والأنصبة، مستخرجة من ملف aSc Timetables PDF عبر `backend/substitution_parser.py` (يعالج النص المعكوس + الخلايا المدموجة للحصص المزدوجة) → بذرة `backend/data/substitution_seed.json` تُحمَّل تلقائياً عند أول تشغيل. مجموع الأنصبة 960 = 24 صفاً × 40 حصة (تحقق).
+- **التوزيع** (`/substitution`): اختيار التاريخ (الأحد–الخميس فقط) → تحديد أكثر من معلم غائب → شريط 8 حصص (أصفر يحتاج بديلاً / أخضر مكلَّف / فراغ) → قائمة البدلاء المتاحين مرتبة: (أقل احتياط اليوم → أقل احتياط هذا العام → أقل نصاب) مع شارات "أقل نصاب/أقل احتياط/نفس التخصص" + قسم المشغولين. تكليف/إلغاء يدوي، **توزيع تلقائي عادل** بنفس الترتيب مع منع التعارض (لا حصة للبديل في ذات الوقت ولا تكليفين في نفس الحصة).
+- **التقرير**: جدول اليوم + طباعة/PDF (`/substitution/print/:date` ورقة A4 بشعار الوزارة، اسم المدرسة، "توزيع الاحتياط ليوم … الموافق …"، أعمدة م/الغائب/الحصة/الصف/المادة/البديل/التوقيع، اعتماد إدارة المدرسة) + تصدير Word (python-docx) + نسخ + واتساب + مسح.
+- **المعلمون** (`/substitution/teachers`): بحث/فلتر مادة، تعديل الاسم/المادة/النصاب، تفعيل/تعطيل، حذف، عرض الجدول الأسبوعي، إضافة معلم، **استيراد PDF** (`POST /api/substitution/teachers/import` يحدّث بالاسم ويعطّل غير الموجودين).
+- **الإحصائيات** (`/substitution/stats`): فلترة يوم/شهر/عام دراسي (1 سبتمبر → 31 أغسطس)، بطاقات إجمالية، جدول المعلمين (نصاب/غياب/احتياط) مع ترتيب، حسب المادة، سجل الأيام مع رابط طباعة.
+- **المجموعات**: `sub_users`, `sub_teachers {id,name,subject,quota,schedule{day:[8]},active,order}`, `sub_days {date,day_name,absent[],assignments[{id,absent_id,period,class,subject,substitute_id,auto}]}`.
+- **API** (كلها تحت `/api/substitution`): `auth/login|me|change-password`, `teachers` (GET/POST/PUT/DELETE/import), `day/{d}` (GET/DELETE), `day/{d}/absent` PUT, `day/{d}/candidates` GET, `day/{d}/assign` POST, `day/{d}/auto` POST, `day/{d}/assignments` DELETE, `day/{d}/export` GET (docx), `days`, `stats`.
+- الشعار: `frontend/public/moe-logo.jpeg`. الثيم: ورقي فاتح مستقل (`substitution.css` تحت `.sub-root`، ويخفي خلفيات الموقع عبر `html.sub-app`).
+- تحقق وكيل الاختبار: خلفية 22/22 وواجهة كاملة (`iteration_10.json`). ملاحظة: pdfplumber أُضيف إلى requirements. يتطلب Redeploy.
+- **معلّق من قبل**: تطبيق اسم المنصة "براعة" على واجهة المنصة الرئيسية (لم يُنفَّذ بعد).

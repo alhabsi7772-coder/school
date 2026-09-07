@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
   LayoutDashboard, Settings, LogOut, GraduationCap,
-  ChevronLeft, Menu, X, FolderOpen, BookOpen, Sparkles, Users, ShieldCheck, ClipboardList, ClipboardCheck, CalendarRange, Library
+  ChevronLeft, Menu, X, FolderOpen, BookOpen, Sparkles, Users, ShieldCheck, ClipboardList, ClipboardCheck, CalendarRange, Library, ArrowLeftRight
 } from 'lucide-react';
 import Particles from '../Particles';
 import LuxParticles from '../LuxParticles';
@@ -130,6 +130,16 @@ export default function TeacherLayout({ children, title, backTo }) {
           );
         })}
       </nav>
+
+      {/* رابط نظام الاحتياط (قسم مستقل بحساب خاص) */}
+      <div className="mx-3 mb-2">
+        <a href="/substitution/login" target="_blank" rel="noreferrer" data-testid="sidebar-substitution-link"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb), 0.22)' }}>
+          <ArrowLeftRight className="w-4 h-4" />
+          نظام حصص الاحتياط
+        </a>
+      </div>
 
       {/* Logout button (above AI badge for quick access) */}
       <div className="mx-3 mb-2">

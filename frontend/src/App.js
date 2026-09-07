@@ -34,7 +34,17 @@ import LibraryResources from './components/teacher/LibraryResources';
 import LibraryVideos from './components/teacher/LibraryVideos';
 import LessonPlans from './components/teacher/LessonPlans';
 import LibraryVideoDetail from './components/teacher/LibraryVideoDetail';
+import SubLogin from './components/substitution/SubLogin';
+import SubDistribute from './components/substitution/SubDistribute';
+import SubTeachers from './components/substitution/SubTeachers';
+import SubStats from './components/substitution/SubStats';
+import SubPrint from './components/substitution/SubPrint';
 import './App.css';
+
+const SubRoute = ({ children }) => {
+  const token = localStorage.getItem('subToken');
+  return token ? children : <Navigate to="/substitution/login" replace />;
+};
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('teacherToken');
@@ -91,6 +101,11 @@ function App() {
             <Route path="/teacher/quiz/:quizId/results" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/grade" element={<ProtectedRoute><GradeAnswers /></ProtectedRoute>} />
             <Route path="/teacher/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/substitution/login" element={<SubLogin />} />
+            <Route path="/substitution" element={<SubRoute><SubDistribute /></SubRoute>} />
+            <Route path="/substitution/teachers" element={<SubRoute><SubTeachers /></SubRoute>} />
+            <Route path="/substitution/stats" element={<SubRoute><SubStats /></SubRoute>} />
+            <Route path="/substitution/print/:date" element={<SubRoute><SubPrint /></SubRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
