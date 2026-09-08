@@ -858,7 +858,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         para(data["school_name"], 14, bold=True)
         para(f"توزيع الاحتياط ليوم {data['day_name']} — {data['date_ar']}", 13, bold=True)
 
-        headers = ["م", "المعلم الغائب", "الحصة", "الصف", "المادة", "المعلم البديل", "التوقيع"]
+        headers = ["م", "المعلم الغائب", "الحصة", "الصف", "المادة", "المعلم البديل", "عدد حصص الاحتياط"]
         table = doc.add_table(rows=1, cols=len(headers)); table.style = "Table Grid"; table.alignment = WD_TABLE_ALIGNMENT.CENTER
         tblPr = table._tbl.tblPr
         bidi = OxmlElement("w:bidiVisual"); tblPr.append(bidi)
@@ -868,9 +868,14 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             r = p.add_run(h); r.bold = True; r.font.size = Pt(11)
             shd = OxmlElement("w:shd"); shd.set(qn("w:fill"), "E8E8E8"); c._tc.get_or_add_tcPr().append(shd)
         group_start = {}
+        sub_counts = {}
+        for a in data["assignments"]:
+            if a.get("substitute_id"):
+                sub_counts[a["substitute_id"]] = sub_counts.get(a["substitute_id"], 0) + 1
         for i, a in enumerate(data["assignments"], 1):
             row = table.add_row().cells
-            vals = [str(i), a["absent_name"], str(a["period"]), a.get("class") or "", a.get("subject") or "", a["substitute_name"], ""]
+            sub_count = str(sub_counts.get(a.get("substitute_id"), "")) if a.get("substitute_id") else ""
+            vals = [str(i), a["absent_name"], str(a["period"]), a.get("class") or "", a.get("subject") or "", a["substitute_name"], sub_count]
             for ci, v in enumerate(vals):
                 p = row[ci].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)
                 r = p.add_run(v); r.font.size = Pt(11)

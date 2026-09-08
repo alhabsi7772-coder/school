@@ -32,6 +32,10 @@ export default function SubPrint() {
   };
 
   const rows = day?.assignments || [];
+  const subCounts = rows.reduce((acc, r) => {
+    if (r.substitute_id) acc[r.substitute_id] = (acc[r.substitute_id] || 0) + 1;
+    return acc;
+  }, {});
   return (
     <div className={`sub-root py-6 px-3 ${themeClass(getSubTheme())}`} data-testid="sub-print-page">
       <div className="sub-no-print max-w-[210mm] mx-auto flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -56,7 +60,7 @@ export default function SubPrint() {
 
         <table style={{ marginTop: 22 }} data-testid="sub-print-table">
           <thead>
-            <tr><th style={{ width: 36 }}>م</th><th>المعلم الغائب</th><th style={{ width: 56 }}>الحصة</th><th style={{ width: 60 }}>الصف</th><th>المادة</th><th>المعلم البديل</th><th style={{ width: 110 }}>التوقيع</th></tr>
+            <tr><th style={{ width: 36 }}>م</th><th>المعلم الغائب</th><th style={{ width: 56 }}>الحصة</th><th style={{ width: 60 }}>الصف</th><th>المادة</th><th>المعلم البديل</th><th style={{ width: 110 }}>عدد حصص الاحتياط</th></tr>
           </thead>
           <tbody>
             {rows.map((r, i) => {
@@ -66,7 +70,8 @@ export default function SubPrint() {
                 <tr key={r.id}>
                   <td>{i + 1}</td>
                   {first && <td rowSpan={span} style={{ textAlign: 'right', fontWeight: 700, background: '#FAFAFA' }}>{r.absent_name}</td>}
-                  <td>{r.period}</td><td>{r.class}</td><td>{r.subject}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.substitute_name}</td><td></td>
+                  <td>{r.period}</td><td>{r.class}</td><td>{r.subject}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.substitute_name}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.substitute_id ? subCounts[r.substitute_id] : ''}</td>
                 </tr>
               );
             })}
