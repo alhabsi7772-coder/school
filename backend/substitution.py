@@ -492,7 +492,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         for a in sorted(doc["assignments"], key=lambda x: (order.get(x["absent_id"], 99), x["period"])):
             at, st = tmap.get(a["absent_id"], {}), tmap.get(a.get("substitute_id"), {})
             rows.append({**a, "subject": a.get("subject") or at.get("subject", ""), "absent_name": at.get("name", ""), "substitute_name": st.get("name", ""), "substitute_subject": st.get("subject", ""),
-                         "substitute_supervisor": sup_roles.get(a.get("substitute_id")), "time": PERIOD_TIMES[a["period"] - 1]})
+                         "substitute_supervisor": sup_roles.get(a.get("substitute_id")), "time": PERIOD_TIMES[a["period"] - 1],
+                         "substitute_subs_year": sub_year.get(a.get("substitute_id"), 0)})
         is_school = bool(doc["day_name"])
         sup_day = next((x for x in resolved if x["day"] == doc["day_name"]), None)
         return {"date": doc["date"], "day_name": doc["day_name"], "is_school_day": is_school, "date_ar": fmt_date_ar(doc["date"]),
@@ -868,13 +869,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             r = p.add_run(h); r.bold = True; r.font.size = Pt(11)
             shd = OxmlElement("w:shd"); shd.set(qn("w:fill"), "E8E8E8"); c._tc.get_or_add_tcPr().append(shd)
         group_start = {}
-        sub_counts = {}
-        for a in data["assignments"]:
-            if a.get("substitute_id"):
-                sub_counts[a["substitute_id"]] = sub_counts.get(a["substitute_id"], 0) + 1
         for i, a in enumerate(data["assignments"], 1):
             row = table.add_row().cells
-            sub_count = str(sub_counts.get(a.get("substitute_id"), "")) if a.get("substitute_id") else ""
+            sub_count = str(a["substitute_subs_year"]) if a.get("substitute_id") else ""
             vals = [str(i), a["absent_name"], str(a["period"]), a.get("class") or "", a.get("subject") or "", a["substitute_name"], sub_count]
             for ci, v in enumerate(vals):
                 p = row[ci].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)

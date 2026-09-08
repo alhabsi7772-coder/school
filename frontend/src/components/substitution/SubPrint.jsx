@@ -32,10 +32,6 @@ export default function SubPrint() {
   };
 
   const rows = day?.assignments || [];
-  const subCounts = rows.reduce((acc, r) => {
-    if (r.substitute_id) acc[r.substitute_id] = (acc[r.substitute_id] || 0) + 1;
-    return acc;
-  }, {});
   return (
     <div className={`sub-root py-6 px-3 ${themeClass(getSubTheme())}`} data-testid="sub-print-page">
       <div className="sub-no-print max-w-[210mm] mx-auto flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -71,7 +67,7 @@ export default function SubPrint() {
                   <td>{i + 1}</td>
                   {first && <td rowSpan={span} style={{ textAlign: 'right', fontWeight: 700, background: '#FAFAFA' }}>{r.absent_name}</td>}
                   <td>{r.period}</td><td>{r.class}</td><td>{r.subject}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{r.substitute_name}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.substitute_id ? subCounts[r.substitute_id] : ''}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.substitute_id ? r.substitute_subs_year : ''}</td>
                 </tr>
               );
             })}
