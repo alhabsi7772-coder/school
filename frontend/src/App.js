@@ -41,6 +41,7 @@ import SubStats from './components/substitution/SubStats';
 import SubPrint from './components/substitution/SubPrint';
 import SubStatsPrint from './components/substitution/SubStatsPrint';
 import SubSettings from './components/substitution/SubSettings';
+import SubSupervisionPrint from './components/substitution/SubSupervisionPrint';
 import './App.css';
 
 const SubRoute = ({ children }) => {
@@ -110,6 +111,7 @@ function App() {
             <Route path="/substitution/settings" element={<SubRoute><SubSettings /></SubRoute>} />
             <Route path="/substitution/print/:date" element={<SubRoute><SubPrint /></SubRoute>} />
             <Route path="/substitution/stats/print" element={<SubRoute><SubStatsPrint /></SubRoute>} />
+            <Route path="/substitution/supervision/print" element={<SubRoute><SubSupervisionPrint /></SubRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

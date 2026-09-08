@@ -13,6 +13,8 @@ export default function SubDistribute() {
   const [cands, setCands] = useState([]);
   const [candLoading, setCandLoading] = useState(false);
   const [autoBusy, setAutoBusy] = useState(false);
+  const [excludeSup, setExcludeSup] = useState(() => localStorage.getItem('subExcludeSup') === '1');
+  const toggleExcludeSup = () => setExcludeSup((v) => { localStorage.setItem('subExcludeSup', v ? '0' : '1'); return !v; });
 
   const setDate = (v) => {
     const next = typeof v === 'number' ? shiftDate(date, v) : v;
@@ -83,7 +85,7 @@ export default function SubDistribute() {
   const auto = async () => {
     setAutoBusy(true);
     try {
-      const r = await subApi.post(`/day/${date}/auto`);
+      const r = await subApi.post(`/day/${date}/auto`, null, { params: { exclude_supervisors: excludeSup } });
       applyDay(r.data);
       toast.success(`تم توزيع ${r.data.filled} حصة${r.data.unfilled ? ` — ${r.data.unfilled} بلا بديل متاح` : ''}`);
       if (selected && period) loadCands(selected, period);
@@ -114,7 +116,8 @@ export default function SubDistribute() {
             <div className="sub-card p-6 text-center font-bold" style={{ color: 'var(--sub-red)' }} data-testid="sub-weekend-note">هذا اليوم عطلة — اختر يوماً من الأحد إلى الخميس</div>
           )}
           <PeriodStrip absent={absentObj} selectedPeriod={period} onPick={pickPeriod} />
-          <CandidateList absent={absentObj} period={period} candidates={cands} loading={candLoading} onAssign={assign} onUnassign={(p) => assign(p, null)} />
+          <CandidateList absent={absentObj} period={period} candidates={cands} loading={candLoading} onAssign={assign} onUnassign={(p) => assign(p, null)}
+            excludeSup={excludeSup} onToggleExcludeSup={toggleExcludeSup} />
         </div>
       </div>
       <div className="mt-5">

@@ -289,6 +289,30 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-print-sheet table { width: 100%; border-collapse: collapse; }
 .sub-print-sheet th, .sub-print-sheet td { border: 1px solid #333; padding: 7px 6px; text-align: center; font-size: 13px; }
 .sub-print-sheet th { background: #ECECEC; font-weight: 800; }
+.sub-print-sheet .sub-sup-print-table th { color: #B91C1C; background: #fff; font-size: 15px; }
+.sub-print-sheet .sub-sup-print-table td { vertical-align: middle; padding: 10px 8px; }
+
+/* جدول الإشراف */
+.sub-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--sub-surface-2); border: 1px solid var(--sub-line); }
+.sub-tabs button { padding: 7px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; color: var(--sub-muted); border: none; background: transparent; cursor: pointer; transition: background-color .15s, color .15s; display: inline-flex; align-items: center; gap: 6px; }
+.sub-tabs button.active { background: var(--sub-navy); color: var(--sub-on-navy); }
+.sub-sup-title { text-align: center; font-weight: 900; font-size: 1.05rem; color: var(--sub-red-ink); margin-bottom: 12px; }
+.sub-sup-table { width: 100%; border-collapse: collapse; }
+.sub-sup-table th { border: 1.5px solid var(--sub-line-2); padding: 8px; text-align: center; color: var(--sub-red-ink); font-weight: 900; background: var(--sub-surface-2); }
+.sub-sup-table td { border: 1.5px solid var(--sub-line-2); padding: 10px; vertical-align: middle; }
+.sub-sup-table td.sub-sup-day { text-align: center; font-weight: 900; font-size: 1rem; color: var(--sub-red-ink); white-space: nowrap; }
+.sub-sup-table td.sub-sup-leader { text-align: center; font-weight: 900; font-size: 1rem; color: var(--sub-ink); }
+.sub-sup-list { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.sub-sup-name { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; border-radius: 8px; font-size: 0.92rem; font-weight: 700; color: var(--sub-ink); border: 1px solid transparent; }
+.sub-sup-name.unmatched { background: var(--sub-amber-soft); color: var(--sub-amber-ink); border-color: var(--sub-amber-line); }
+.sub-sup-name .rm { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: none; background: rgba(0,0,0,0.08); color: inherit; cursor: pointer; }
+.sub-cand.free.is-supervisor { border-style: dashed; }
+.sub-cand.free.is-supervisor .rank { background: var(--sub-red); }
+.sub-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: var(--sub-ink); user-select: none; }
+.sub-switch .track { width: 34px; height: 20px; border-radius: 999px; background: var(--sub-line-2); position: relative; transition: background-color .15s; flex-shrink: 0; }
+.sub-switch .track::after { content: ''; position: absolute; top: 3px; right: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+.sub-switch.on .track { background: var(--sub-red); }
+.sub-switch.on .track::after { transform: translateX(-14px); }
 @media print {
   @page { size: A4 portrait; margin: 8mm; }
   html, body { background: #fff !important; }

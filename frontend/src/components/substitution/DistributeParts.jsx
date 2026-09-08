@@ -1,4 +1,4 @@
-import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users, AlertTriangle } from 'lucide-react';
+import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { fmtAr } from './subApi';
 
 export function DateCard({ date, setDate, day }) {
@@ -46,6 +46,13 @@ export function AbsentCard({ teachers, day, selected, onSelect, onAdd, onRemove,
           </span>
         ))}
       </div>
+      {day?.supervision && (day.supervision.leader?.name || day.supervision.supervisors?.length > 0) && (
+        <div className="mt-4 pt-3 text-[11px] font-semibold" style={{ borderTop: '1px dashed var(--sub-line)', color: 'var(--sub-muted)' }} data-testid="sub-day-supervision">
+          <span className="inline-flex items-center gap-1 font-extrabold" style={{ color: 'var(--sub-red-ink)' }}><ShieldCheck className="w-3.5 h-3.5" /> إشراف {day.day_name}:</span>
+          {day.supervision.leader?.name && <> قائد الإشراف <b style={{ color: 'var(--sub-ink)' }}>{day.supervision.leader.name}</b> ·</>}
+          {' '}{day.supervision.supervisors.length} مشرفاً
+        </div>
+      )}
     </div>
   );
 }
@@ -86,7 +93,7 @@ export function PeriodStrip({ absent, selectedPeriod, onPick }) {
   );
 }
 
-export function CandidateList({ absent, period, candidates, loading, onAssign, onUnassign }) {
+export function CandidateList({ absent, period, candidates, loading, onAssign, onUnassign, excludeSup, onToggleExcludeSup }) {
   if (!absent || !period) {
     return (
       <div className="sub-card p-8 text-center sub-rise" data-testid="sub-candidates-empty">
@@ -96,8 +103,10 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
     );
   }
   const slot = absent.periods[period - 1];
-  const free = candidates.filter((c) => c.free);
+  const free = candidates.filter((c) => c.free && !(excludeSup && c.supervisor));
+  const excluded = excludeSup ? candidates.filter((c) => c.free && c.supervisor) : [];
   const busy = candidates.filter((c) => !c.free);
+  const supLabel = (c) => (c.supervisor === 'leader' ? 'قائد الإشراف اليوم' : 'مشرف اليوم');
   return (
     <div className="sub-card p-5 sub-rise" data-testid="sub-candidates">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -105,7 +114,11 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
           <span className="ic" style={{ background: 'var(--sub-green-soft)' }}><Users className="w-4 h-4" style={{ color: 'var(--sub-green-ink)' }} /></span>
           المعلمون البدلاء المتاحون
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <label className={`sub-switch ${excludeSup ? 'on' : ''}`} title="إخفاء المعلمين الذين لديهم إشراف في هذا اليوم من قائمة البدلاء (يشمل التوزيع التلقائي)" data-testid="sub-exclude-sup-toggle">
+            <input type="checkbox" className="hidden" checked={excludeSup} onChange={onToggleExcludeSup} />
+            <span className="track" /> استثناء مشرفي اليوم
+          </label>
           <span className="sub-badge sub-badge-amber">الحصة {period} · {slot?.class}</span>
           <span className="sub-badge sub-badge-gray">{slot?.time}</span>
         </div>
@@ -128,12 +141,13 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
             <span className="sub-dot amber" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }} /> متاح · نصابه عالٍ جداً
           </p>
           {free.map((c, i) => (
-            <div key={c.id} className={`sub-cand free ${c.high_quota ? 'high-quota' : ''} ${c.consecutive_alert ? 'streak-alert' : ''}`} data-testid={`sub-cand-${c.id}`}>
+            <div key={c.id} className={`sub-cand free ${c.high_quota ? 'high-quota' : ''} ${c.consecutive_alert ? 'streak-alert' : ''} ${c.supervisor ? 'is-supervisor' : ''}`} data-testid={`sub-cand-${c.id}`}>
               <span className="rank">{i + 1}</span>
               <span className={`sub-dot ${c.high_quota ? 'amber' : 'green'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="font-extrabold text-sm" style={{ color: 'var(--sub-ink)' }}>{c.name}</span>
+                  {c.supervisor && <span className="sub-badge sub-badge-red" data-testid={`sub-cand-supervisor-${c.id}`}><ShieldCheck className="w-3 h-3" /> {supLabel(c)}</span>}
                   {c.least_quota && <span className="sub-badge sub-badge-teal">أقل نصاب</span>}
                   {c.least_subs && <span className="sub-badge sub-badge-green">أقل احتياط</span>}
                   {c.high_quota && <span className="sub-badge sub-badge-amber" data-testid={`sub-cand-highquota-${c.id}`}><AlertTriangle className="w-3 h-3" /> نصاب عالي جداً</span>}
@@ -149,6 +163,24 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
             </div>
           ))}
           {free.length === 0 && <p className="text-sm font-bold text-center py-4" style={{ color: 'var(--sub-red-ink)' }}>لا يوجد معلم متاح في هذه الحصة</p>}
+          {excluded.length > 0 && (
+            <details className="pt-2" data-testid="sub-excluded-supervisors">
+              <summary className="text-xs font-bold cursor-pointer" style={{ color: 'var(--sub-red-ink)' }}>مشرفو اليوم المستثنون ({excluded.length})</summary>
+              <div className="space-y-2 mt-2">
+                {excluded.map((c) => (
+                  <div key={c.id} className="sub-cand busy" data-testid={`sub-excluded-${c.id}`}>
+                    <span className="rank"><ShieldCheck className="w-3.5 h-3.5" /></span>
+                    <span className="sub-dot gray" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-sm">{c.name}</span>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>{supLabel(c)} · {c.subject} · نصاب: {c.quota}</p>
+                    </div>
+                    <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={() => onAssign(period, c.id)} data-testid={`sub-assign-${c.id}`}><Plus className="w-3.5 h-3.5" /> تكليف رغم الإشراف</button>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
           {busy.length > 0 && (
             <details className="pt-2">
               <summary className="text-xs font-bold cursor-pointer" style={{ color: 'var(--sub-muted)' }}>المعلمون المشغولون في هذه الحصة ({busy.length})</summary>
@@ -228,7 +260,7 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
                     <td className="text-xs" dir="ltr">{r.time}</td>
                     <td className="font-bold">{r.class}</td>
                     <td className="text-xs">{r.subject}</td>
-                    <td className="font-bold" style={{ color: 'var(--sub-green-ink)' }}>{r.substitute_name} {r.auto && <span className="sub-badge sub-badge-gray">تلقائي</span>}</td>
+                    <td className="font-bold" style={{ color: 'var(--sub-green-ink)' }}>{r.substitute_name} {r.substitute_supervisor && <span className="sub-badge sub-badge-red" title={r.substitute_supervisor === 'leader' ? 'قائد الإشراف اليوم' : 'مشرف اليوم'} data-testid={`sub-report-supervisor-${i}`}><ShieldCheck className="w-3 h-3" /> مشرف</span>} {r.auto && <span className="sub-badge sub-badge-gray">تلقائي</span>}</td>
                     <td><button className="p-1.5 rounded-lg hover:bg-red-50" style={{ color: 'var(--sub-red-ink)' }} onClick={() => onRemove(r)} title="إزالة" data-testid={`sub-report-remove-${i}`}><X className="w-4 h-4" /></button></td>
                   </tr>,
                 ];

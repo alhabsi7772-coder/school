@@ -4,6 +4,7 @@ import io
 import json
 import os
 import random
+import re
 import uuid
 from datetime import datetime, timezone, timedelta, date as ddate
 from pathlib import Path
@@ -15,7 +16,7 @@ from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-from substitution_parser import parse_teacher_pdf, parse_general_pdf, parse_timing_text, DAYS
+from substitution_parser import parse_teacher_pdf, parse_general_pdf, parse_timing_text, parse_supervision_pdf, DAYS
 
 ROOT = Path(__file__).parent
 SEED_FILE = ROOT / "data" / "substitution_seed.json"
@@ -31,6 +32,48 @@ security = HTTPBearer()
 
 def _key(name: str) -> str:
     return name.replace(" ", "").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه").replace("ى", "ي").replace("ّ", "")
+
+
+def _tokens(name: str):
+    toks = [t for t in re.split(r"\s+", name.strip()) if t]
+    out = []
+    for t in toks:
+        k = _key(t).replace("ؤ", "و")
+        if k in ("بن", "بنت"):
+            continue
+        if out and out[-1] in ("عبد", "ابو"):
+            out[-1] += k
+        else:
+            out.append(k)
+    return out, "".join(out)
+
+
+def _is_subseq(a, b):
+    it = iter(b)
+    return all(any(x == y for y in it) for x in a)
+
+
+def match_teacher(name: str, tlist):
+    """يطابق اسم مشرف من جدول الإشراف مع معلم من قائمة المعلمين (مطابقة تامة ثم تسلسل الأسماء ثم احتواء)."""
+    st, sk = _tokens(name)
+    if not st:
+        return None
+    best, best_rank = None, None
+    for t in tlist:
+        tt, tk = _tokens(t["name"])
+        if not tt or st[0] != tt[0]:
+            continue
+        if sk == tk:
+            rank = (0, 0)
+        elif _is_subseq(st, tt) or _is_subseq(tt, st):
+            rank = (1, abs(len(tt) - len(st)))
+        elif len(min(sk, tk, key=len)) >= 6 and (sk in tk or tk in sk):
+            rank = (2, abs(len(tk) - len(sk)))
+        else:
+            continue
+        if best_rank is None or rank < best_rank:
+            best, best_rank = t, rank
+    return best
 
 
 def now_iso():
@@ -106,12 +149,48 @@ class SettingsReq(BaseModel):
     period_times: Optional[List[dict]] = None
 
 
+class SupervisionDay(BaseModel):
+    day: str
+    leader: str = ""
+    supervisors: List[str] = []
+
+
+class SupervisionReq(BaseModel):
+    days: List[SupervisionDay]
+
+
 def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_algorithm):
     router = APIRouter(prefix="/substitution")
     users = db.sub_users
     teachers = db.sub_teachers
     days = db.sub_days
     settings = db.sub_settings
+    supervision = db.sub_supervision
+
+    async def load_supervision():
+        doc = await supervision.find_one({"id": "main"}, {"_id": 0})
+        if not doc:
+            doc = {"id": "main", "days": [{"day": d, "leader": "", "supervisors": []} for d in DAYS], "updated_at": None}
+        return doc
+
+    def resolve_supervision(doc, tlist):
+        """يُرجع أيام الإشراف مع ربط كل اسم بمعلم من القائمة إن وُجد."""
+        out = []
+        for d in doc["days"]:
+            leader = match_teacher(d["leader"], tlist) if d.get("leader") else None
+            sups = [{"name": n, "teacher_id": (m or {}).get("id")} for n in d.get("supervisors", []) for m in [match_teacher(n, tlist)]]
+            out.append({"day": d["day"], "leader": {"name": d.get("leader", ""), "teacher_id": (leader or {}).get("id")}, "supervisors": sups})
+        return out
+
+    def supervisors_of_day(resolved, day_name):
+        """{teacher_id: 'leader'|'member'} لليوم المحدد."""
+        for d in resolved:
+            if d["day"] == day_name:
+                roles = {s["teacher_id"]: "member" for s in d["supervisors"] if s["teacher_id"]}
+                if d["leader"]["teacher_id"]:
+                    roles[d["leader"]["teacher_id"]] = "leader"
+                return roles
+        return {}
 
     async def get_settings():
         doc = await settings.find_one({"id": "main"}, {"_id": 0, "timing_data": 0})
@@ -322,11 +401,12 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     return True
         return False
 
-    async def rank_candidates(doc, tmap, absent_id, period, exclude_busy=True):
+    async def rank_candidates(doc, tmap, absent_id, period, exclude_busy=True, exclude_supervisors=False):
         d = doc["date"]
         day_name = doc["day_name"]
         y0, y1 = academic_range(d)
         _, sub_year = await load_counts(y0, y1)
+        sup_roles = supervisors_of_day(resolve_supervision(await load_supervision(), list(tmap.values())), day_name)
         today_subs = {}
         taken_this_period = set()
         for a in doc["assignments"]:
@@ -343,6 +423,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         for t in tmap.values():
             if not t.get("active", True) or t["id"] in doc["absent"]:
                 continue
+            role = sup_roles.get(t["id"])
+            if exclude_supervisors and role:
+                continue
             slot = slot_of(t, day_name, period)
             free = slot is None and t["id"] not in taken_this_period
             if exclude_busy and not free:
@@ -358,6 +441,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "high_quota": hq_threshold > 0 and t.get("quota", 0) >= hq_threshold,
                 "day_periods": day_periods,
                 "consecutive_alert": consecutive_alert,
+                "supervisor": role,
             })
         out.sort(key=lambda c: (not c["free"], c["quota"], not c["same_class"], c["subs_today"], c["subs_year"], c["name"]))
         if out:
@@ -403,12 +487,17 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                            "absences_year": abs_year.get(tid, 0), "periods": periods})
         rows = []
         order = {tid: i for i, tid in enumerate(doc["absent"])}
+        resolved = resolve_supervision(await load_supervision(), list(tmap.values()))
+        sup_roles = supervisors_of_day(resolved, doc["day_name"])
         for a in sorted(doc["assignments"], key=lambda x: (order.get(x["absent_id"], 99), x["period"])):
             at, st = tmap.get(a["absent_id"], {}), tmap.get(a.get("substitute_id"), {})
-            rows.append({**a, "subject": a.get("subject") or at.get("subject", ""), "absent_name": at.get("name", ""), "substitute_name": st.get("name", ""), "substitute_subject": st.get("subject", ""), "time": PERIOD_TIMES[a["period"] - 1]})
+            rows.append({**a, "subject": a.get("subject") or at.get("subject", ""), "absent_name": at.get("name", ""), "substitute_name": st.get("name", ""), "substitute_subject": st.get("subject", ""),
+                         "substitute_supervisor": sup_roles.get(a.get("substitute_id")), "time": PERIOD_TIMES[a["period"] - 1]})
         is_school = bool(doc["day_name"])
+        sup_day = next((x for x in resolved if x["day"] == doc["day_name"]), None)
         return {"date": doc["date"], "day_name": doc["day_name"], "is_school_day": is_school, "date_ar": fmt_date_ar(doc["date"]),
-                "absent": absent, "assignments": rows, "school_name": cfg["school_name"], "period_times": PERIOD_TIMES, "updated_at": doc.get("updated_at")}
+                "absent": absent, "assignments": rows, "school_name": cfg["school_name"], "period_times": PERIOD_TIMES, "updated_at": doc.get("updated_at"),
+                "supervision": sup_day}
 
     # ---------------- teachers ----------------
     @router.get("/teachers")
@@ -533,6 +622,56 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         result["settings"] = await get_settings()
         return result
 
+    # ---------------- supervision ----------------
+    async def supervision_view():
+        doc = await load_supervision()
+        tlist = [t async for t in teachers.find({}, {"_id": 0, "id": 1, "name": 1})]
+        resolved = resolve_supervision(doc, tlist)
+        total = sum(len(d["supervisors"]) + (1 if d["leader"]["name"] else 0) for d in resolved)
+        matched = sum(len([s for s in d["supervisors"] if s["teacher_id"]]) + (1 if d["leader"]["teacher_id"] else 0) for d in resolved)
+        cfg = await get_settings()
+        y0, _ = academic_range(ddate.today().isoformat())
+        return {"days": resolved, "updated_at": doc.get("updated_at"), "total": total, "matched": matched,
+                "school_name": cfg["school_name"], "year_label": f"{int(y0[:4])}/{int(y0[:4]) + 1}"}
+
+    @router.get("/supervision")
+    async def get_supervision(u=Depends(current_user)):
+        return await supervision_view()
+
+    @router.put("/supervision")
+    async def put_supervision(req: SupervisionReq, u=Depends(current_user)):
+        by_day = {d.day: d for d in req.days}
+        days_out = [{"day": d, "leader": (by_day[d].leader if d in by_day else "").strip(),
+                     "supervisors": [s.strip() for s in (by_day[d].supervisors if d in by_day else []) if s.strip()]} for d in DAYS]
+        await supervision.update_one({"id": "main"}, {"$set": {"days": days_out, "updated_at": now_iso()}}, upsert=True)
+        return await supervision_view()
+
+    @router.delete("/supervision")
+    async def delete_supervision(u=Depends(current_user)):
+        await supervision.delete_one({"id": "main"})
+        return await supervision_view()
+
+    @router.post("/supervision/import")
+    async def import_supervision(file: UploadFile = File(...), u=Depends(current_user)):
+        if not (file.filename or "").lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="جدول الإشراف: يجب أن يكون ملف PDF")
+        tmp = ROOT / "data" / f"_import_{uuid.uuid4().hex}.pdf"
+        tmp.write_bytes(await file.read())
+        try:
+            parsed = parse_supervision_pdf(str(tmp))
+        except Exception:
+            raise HTTPException(status_code=400, detail="جدول الإشراف: تعذّر قراءة الملف")
+        finally:
+            tmp.unlink(missing_ok=True)
+        if not parsed:
+            raise HTTPException(status_code=400, detail="جدول الإشراف: لم يُعثر على أي يوم بقائد إشراف ومشرفين")
+        by_day = {p["day"]: p for p in parsed}
+        days_out = [{"day": d, "leader": by_day.get(d, {}).get("leader", ""), "supervisors": by_day.get(d, {}).get("supervisors", [])} for d in DAYS]
+        await supervision.update_one({"id": "main"}, {"$set": {"days": days_out, "updated_at": now_iso(), "source": file.filename}}, upsert=True)
+        out = await supervision_view()
+        out["imported_days"] = len(parsed)
+        return out
+
     # ---------------- day ----------------
     @router.get("/days")
     async def list_days(from_date: str, to_date: str, u=Depends(current_user)):
@@ -558,10 +697,10 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         return await enrich_day(doc)
 
     @router.get("/day/{d}/candidates")
-    async def candidates(d: str, absent_id: str, period: int, u=Depends(current_user)):
+    async def candidates(d: str, absent_id: str, period: int, exclude_supervisors: bool = False, u=Depends(current_user)):
         doc = await get_or_new_day(d)
         tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
-        return await rank_candidates(doc, tmap, absent_id, period, exclude_busy=False)
+        return await rank_candidates(doc, tmap, absent_id, period, exclude_busy=False, exclude_supervisors=exclude_supervisors)
 
     @router.post("/day/{d}/assign")
     async def assign(d: str, req: AssignReq, u=Depends(current_user)):
@@ -587,7 +726,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         return await enrich_day(doc)
 
     @router.post("/day/{d}/auto")
-    async def auto_distribute(d: str, u=Depends(current_user)):
+    async def auto_distribute(d: str, exclude_supervisors: bool = False, u=Depends(current_user)):
         doc = await get_or_new_day(d)
         if not doc["absent"]:
             raise HTTPException(status_code=400, detail="حدّد المعلمين الغائبين أولاً")
@@ -606,7 +745,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         slots.sort(key=lambda s: s[0])
         filled = 0
         for p, tid, cell in slots:
-            cands = await rank_candidates(doc, tmap, tid, p, exclude_busy=True)
+            cands = await rank_candidates(doc, tmap, tid, p, exclude_busy=True, exclude_supervisors=exclude_supervisors)
             best = pick_fair_candidate(cands)
             if not best:
                 continue

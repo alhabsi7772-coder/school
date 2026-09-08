@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Search, Pencil, Trash2, Check, X, CalendarDays, UserPlus } from 'lucide-react';
+import { Upload, Search, Pencil, Trash2, Check, X, CalendarDays, UserPlus, Users, ShieldCheck } from 'lucide-react';
 import SubLayout from './SubLayout';
 import { subApi, errMsg } from './subApi';
 import ImportModal from './ImportModal';
+import SubSupervision from './SubSupervision';
 
 function WeekModal({ t, days, onClose }) {
   return (
@@ -63,6 +64,8 @@ export default function SubTeachers() {
   const [week, setWeek] = useState(null);
   const [add, setAdd] = useState(false);
   const [imp, setImp] = useState(false);
+  const [tab, setTab] = useState(() => localStorage.getItem('subTeachersTab') || 'teachers');
+  const switchTab = (t) => { setTab(t); localStorage.setItem('subTeachersTab', t); };
 
   const load = () => subApi.get('/teachers').then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
@@ -93,8 +96,8 @@ export default function SubTeachers() {
   };
 
   return (
-    <SubLayout title="المعلمون والأنصبة" subtitle={`العام الدراسي ${data.academic_range[0]?.slice(0, 4) || ''}/${data.academic_range[1]?.slice(0, 4) || ''} · ${data.teachers.length} معلماً`}
-      actions={
+    <SubLayout title={tab === 'supervision' ? 'جدول الإشراف' : 'المعلمون والأنصبة'} subtitle={`العام الدراسي ${data.academic_range[0]?.slice(0, 4) || ''}/${data.academic_range[1]?.slice(0, 4) || ''} · ${data.teachers.length} معلماً`}
+      actions={tab === 'teachers' && (
         <>
           <button className="sub-btn sub-btn-ghost" onClick={() => setAdd(true)} data-testid="sub-add-teacher-btn"><UserPlus className="w-4 h-4" /> إضافة معلم</button>
           <button className="sub-btn sub-btn-primary" onClick={() => setImp(true)} data-testid="sub-import-btn">
@@ -104,7 +107,15 @@ export default function SubTeachers() {
             <Trash2 className="w-4 h-4" /> حذف الجميع
           </button>
         </>
-      }>
+      )}>
+      <div className="mb-4 sub-tabs" data-testid="sub-teachers-tabs">
+        <button type="button" className={tab === 'teachers' ? 'active' : ''} onClick={() => switchTab('teachers')} data-testid="sub-tab-teachers"><Users className="w-4 h-4" /> المعلمون والأنصبة</button>
+        <button type="button" className={tab === 'supervision' ? 'active' : ''} onClick={() => switchTab('supervision')} data-testid="sub-tab-supervision"><ShieldCheck className="w-4 h-4" /> جدول الإشراف</button>
+      </div>
+
+      {tab === 'supervision' && <SubSupervision />}
+
+      {tab === 'teachers' && <>
       <div className="sub-card p-4 mb-4 flex flex-wrap gap-3 items-center sub-rise">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--sub-muted)' }} />
@@ -160,6 +171,7 @@ export default function SubTeachers() {
           </tbody>
         </table>
       </div>
+      </>}
 
       {week && <WeekModal t={week} days={data.days} onClose={() => setWeek(null)} />}
       {add && <AddModal onClose={() => setAdd(false)} onAdded={load} />}

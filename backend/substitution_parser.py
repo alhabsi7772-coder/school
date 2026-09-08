@@ -125,6 +125,53 @@ def parse_general_pdf(path: str):
     return teachers
 
 
+def _bbox_lines(page, bbox, gap=1.5):
+    """نص خلية بالاعتماد على مواضع الحروف (يمين→يسار) — يعالج الحروف المنفصلة وربطة لا/الله بشكل صحيح."""
+    x0, top, x1, bottom = bbox
+    chars = [c for c in page.chars if c["text"].strip() and x0 <= (c["x0"] + c["x1"]) / 2 <= x1 and top <= (c["top"] + c["bottom"]) / 2 <= bottom]
+    rows = []
+    for c in sorted(chars, key=lambda c: c["top"]):
+        if rows and abs(rows[-1][0] - c["top"]) <= 3:
+            rows[-1][1].append(c)
+        else:
+            rows.append([c["top"], [c]])
+    lines = []
+    for _, cs in rows:
+        cs.sort(key=lambda c: -c["x0"])
+        out = ""
+        for i, c in enumerate(cs):
+            if i and cs[i - 1]["x0"] - c["x1"] > gap:
+                out += " "
+            out += unicodedata.normalize("NFKC", c["text"])
+        out = re.sub(r"\s+", " ", out).strip()
+        if _AR.search(out):
+            lines.append(out)
+    return lines
+
+
+def parse_supervision_pdf(path: str):
+    """جدول الإشراف: لكل يوم قائد إشراف وقائمة مشرفين. الأعمدة بصرياً: المشرفون | قائد الإشراف | اليوم."""
+    out = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            for tbl in page.find_tables():
+                if not tbl.rows or len(tbl.rows[0].cells) < 2:
+                    continue
+                for row in tbl.rows:
+                    cells = [c for c in row.cells if c]
+                    if len(cells) < 2:
+                        continue
+                    cells.sort(key=lambda c: c[0])
+                    sups = _bbox_lines(page, cells[0])
+                    leader = " ".join(_bbox_lines(page, cells[1]))
+                    if not sups or not leader:
+                        continue
+                    if len(out) >= len(DAYS):
+                        break
+                    out.append({"day": DAYS[len(out)], "leader": leader, "supervisors": sups})
+    return out
+
+
 AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 
 
