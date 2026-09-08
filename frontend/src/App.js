@@ -39,6 +39,7 @@ import SubDistribute from './components/substitution/SubDistribute';
 import SubTeachers from './components/substitution/SubTeachers';
 import SubStats from './components/substitution/SubStats';
 import SubPrint from './components/substitution/SubPrint';
+import SubStatsPrint from './components/substitution/SubStatsPrint';
 import SubSettings from './components/substitution/SubSettings';
 import './App.css';
 
@@ -108,6 +109,7 @@ function App() {
             <Route path="/substitution/stats" element={<SubRoute><SubStats /></SubRoute>} />
             <Route path="/substitution/settings" element={<SubRoute><SubSettings /></SubRoute>} />
             <Route path="/substitution/print/:date" element={<SubRoute><SubPrint /></SubRoute>} />
+            <Route path="/substitution/stats/print" element={<SubRoute><SubStatsPrint /></SubRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

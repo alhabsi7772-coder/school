@@ -3,6 +3,7 @@ import base64
 import io
 import json
 import os
+import random
 import uuid
 from datetime import datetime, timezone, timedelta, date as ddate
 from pathlib import Path
@@ -295,6 +296,23 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         sched = t.get("schedule", {}).get(day_name) or [None] * 8
         return sched[period - 1] if 1 <= period <= 8 else None
 
+    def prev_school_date(d: str) -> str:
+        cur = ddate.fromisoformat(d)
+        while True:
+            cur -= timedelta(days=1)
+            if WEEKDAY_TO_DAY.get(cur.weekday()):
+                return cur.isoformat()
+
+    async def prev_sub_sets(d: str, n: int = 3):
+        """مجموعات معرّفات المعلمين الذين كُلِّفوا باحتياط في آخر n أيام دراسية سابقة (0=الأمس)."""
+        out = []
+        cur = d
+        for _ in range(n):
+            cur = prev_school_date(cur)
+            doc = await days.find_one({"date": cur}, {"_id": 0, "assignments": 1})
+            out.append({a.get("substitute_id") for a in (doc or {}).get("assignments", []) if a.get("substitute_id")})
+        return out
+
     async def rank_candidates(doc, tmap, absent_id, period, exclude_busy=True):
         d = doc["date"]
         day_name = doc["day_name"]
@@ -310,6 +328,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         absent_t = tmap.get(absent_id) or {}
         active_quotas = sorted((t.get("quota", 0) for t in tmap.values() if t.get("active", True)), reverse=True)
         hq_threshold = active_quotas[max(0, int(len(active_quotas) * 0.2) - 1)] if active_quotas else 0
+        streak_sets = await prev_sub_sets(d, 3)
         out = []
         for t in tmap.values():
             if not t.get("active", True) or t["id"] in doc["absent"]:
@@ -318,6 +337,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             free = slot is None and t["id"] not in taken_this_period
             if exclude_busy and not free:
                 continue
+            day_periods = sum(1 for c in (t.get("schedule", {}).get(day_name) or []) if c)
+            consecutive_alert = t["id"] in streak_sets[0] and t["id"] in streak_sets[1] and t["id"] not in streak_sets[2]
             out.append({
                 "id": t["id"], "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0),
                 "subs_year": sub_year.get(t["id"], 0), "subs_today": today_subs.get(t["id"], 0),
@@ -325,6 +346,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "same_subject": bool(absent_t.get("subject")) and t.get("subject") == absent_t.get("subject"),
                 "already_taken": t["id"] in taken_this_period,
                 "high_quota": hq_threshold > 0 and t.get("quota", 0) >= hq_threshold,
+                "day_periods": day_periods,
+                "consecutive_alert": consecutive_alert,
             })
         out.sort(key=lambda c: (not c["free"], c["subs_today"], c["subs_year"], c["quota"], c["name"]))
         if out:
@@ -336,6 +359,19 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     c["least_quota"] = c["quota"] == min_q
                     c["least_subs"] = c["subs_year"] == min_s
         return out
+
+    def pick_fair_candidate(cands):
+        """يختار بديلاً بعدالة مع تنويع النتيجة بين كل تشغيل للتوزيع التلقائي."""
+        free = [c for c in cands if c["free"]]
+        if not free:
+            return None
+        top = (free[0]["subs_today"], free[0]["subs_year"], free[0]["quota"])
+        pool = [c for c in free if (c["subs_today"], c["subs_year"], c["quota"]) == top]
+        if len(pool) < 3:
+            near = [c for c in free if c not in pool and c["subs_today"] == top[0]
+                    and c["subs_year"] - top[1] <= 1 and c["quota"] - top[2] <= 3]
+            pool += near[: max(0, 3 - len(pool))]
+        return random.choice(pool)
 
     async def enrich_day(doc):
         tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
@@ -395,6 +431,12 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if not r.matched_count:
             raise HTTPException(status_code=404, detail="المعلم غير موجود")
         return await teachers.find_one({"id": tid}, {"_id": 0})
+
+    @router.delete("/teachers/all")
+    async def delete_all_teachers(u=Depends(current_user)):
+        n = await teachers.count_documents({})
+        await teachers.delete_many({})
+        return {"message": "تم حذف جميع المعلمين", "deleted": n}
 
     @router.delete("/teachers/{tid}")
     async def delete_teacher(tid: str, u=Depends(current_user)):
@@ -541,6 +583,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if not doc["absent"]:
             raise HTTPException(status_code=400, detail="حدّد المعلمين الغائبين أولاً")
         tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
+        doc["assignments"] = [a for a in doc["assignments"] if not a.get("auto")]
         slots = []
         for tid in doc["absent"]:
             t = tmap.get(tid)
@@ -555,9 +598,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         filled = 0
         for p, tid, cell in slots:
             cands = await rank_candidates(doc, tmap, tid, p, exclude_busy=True)
-            if not cands:
+            best = pick_fair_candidate(cands)
+            if not best:
                 continue
-            best = cands[0]
             doc["assignments"].append({"id": str(uuid.uuid4()), "absent_id": tid, "period": p, "class": cell.get("class"),
                                        "subject": cell.get("subject"), "substitute_id": best["id"], "auto": True})
             filled += 1
@@ -581,7 +624,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
     # ---------------- stats ----------------
     @router.get("/stats")
-    async def stats(from_date: str, to_date: str, u=Depends(current_user)):
+    async def stats(from_date: str, to_date: str, teacher_id: Optional[str] = None, u=Depends(current_user)):
         abs_c, sub_c = await load_counts(from_date, to_date)
         per_day = []
         day_count = 0
@@ -604,10 +647,31 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             s["absences"] += t["absences"]; s["subs"] += t["subs"]; s["teachers"] += 1
         top_subs = sorted([t for t in per_teacher if t["subs"]], key=lambda x: -x["subs"])[:5]
         top_abs = sorted([t for t in per_teacher if t["absences"]], key=lambda x: -x["absences"])[:5]
-        return {"from": from_date, "to": to_date, "days": day_count, "total_absences": total_abs, "total_subs": total_sub,
-                "per_day": per_day, "per_teacher": per_teacher, "by_subject": list(by_subject.values()), "top_subs": top_subs, "top_abs": top_abs}
+        result = {"from": from_date, "to": to_date, "days": day_count, "total_absences": total_abs, "total_subs": total_sub,
+                  "per_day": per_day, "per_teacher": per_teacher, "by_subject": list(by_subject.values()), "top_subs": top_subs, "top_abs": top_abs}
+        if teacher_id:
+            t = await teachers.find_one({"id": teacher_id}, {"_id": 0, "schedule": 0})
+            cfg = await get_settings()
+            period_labels = cfg["period_labels"]
+            names = {tt["id"]: tt["name"] async for tt in teachers.find({}, {"_id": 0, "id": 1, "name": 1})}
+            rows = []
+            async for dd in days.find({"date": {"$gte": from_date, "$lte": to_date}}, {"_id": 0}).sort("date", 1):
+                for a in dd.get("assignments", []):
+                    if a.get("substitute_id") == teacher_id:
+                        rows.append({"date": dd["date"], "date_ar": fmt_date_ar(dd["date"]), "day_name": dd["day_name"], "period": a["period"],
+                                    "time": period_labels[a["period"] - 1] if a["period"] - 1 < len(period_labels) else "",
+                                    "class": a.get("class"), "subject": a.get("subject"), "absent_name": names.get(a["absent_id"], "")})
+            result["teacher"] = t
+            result["teacher_rows"] = rows
+        return result
 
-    # ---------------- export ----------------
+    @router.delete("/system/reset")
+    async def system_reset(u=Depends(current_user)):
+        n = await days.count_documents({})
+        await days.delete_many({})
+        return {"message": "تم تصفير سجلات الغياب والتوزيع بنجاح", "deleted": n}
+
+
     @router.get("/day/{d}/export")
     async def export_docx(d: str, u=Depends(current_user)):
         from docx import Document

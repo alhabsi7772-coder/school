@@ -128,7 +128,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
             <span className="sub-dot amber" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }} /> متاح · نصابه عالٍ جداً
           </p>
           {free.map((c, i) => (
-            <div key={c.id} className={`sub-cand free ${c.high_quota ? 'high-quota' : ''}`} data-testid={`sub-cand-${c.id}`}>
+            <div key={c.id} className={`sub-cand free ${c.high_quota ? 'high-quota' : ''} ${c.consecutive_alert ? 'streak-alert' : ''}`} data-testid={`sub-cand-${c.id}`}>
               <span className="rank">{i + 1}</span>
               <span className={`sub-dot ${c.high_quota ? 'amber' : 'green'}`} />
               <div className="flex-1 min-w-0">
@@ -137,10 +137,11 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
                   {c.least_quota && <span className="sub-badge sub-badge-teal">أقل نصاب</span>}
                   {c.least_subs && <span className="sub-badge sub-badge-green">أقل احتياط</span>}
                   {c.high_quota && <span className="sub-badge sub-badge-amber" data-testid={`sub-cand-highquota-${c.id}`}><AlertTriangle className="w-3 h-3" /> نصاب عالي جداً</span>}
+                  {c.consecutive_alert && <span className="sub-badge sub-badge-red" data-testid={`sub-cand-streak-${c.id}`}><AlertTriangle className="w-3 h-3" /> احتياط يومين متتاليين</span>}
                   {c.same_subject && <span className="sub-badge sub-badge-navy">نفس التخصص</span>}
                   {c.subs_today > 0 && <span className="sub-badge sub-badge-amber">له احتياط اليوم: {c.subs_today}</span>}
                 </div>
-                <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · احتياط هذا العام: {c.subs_year}</p>
+                <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · حصصه اليوم: {c.day_periods} · احتياط هذا العام: {c.subs_year}</p>
               </div>
               <button className="sub-btn sub-btn-green sub-btn-sm" onClick={() => onAssign(period, c.id)} disabled={slot?.substitute_id === c.id} data-testid={`sub-assign-${c.id}`}>
                 <Plus className="w-3.5 h-3.5" /> تكليف
@@ -198,7 +199,7 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
           <span className="sub-badge sub-badge-navy">{rows.length} حصة</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="sub-btn sub-btn-amber sub-btn-sm" onClick={onAuto} disabled={autoBusy || !day?.absent?.length} data-testid="sub-auto-btn"><Sparkles className="w-3.5 h-3.5" /> {autoBusy ? 'جارٍ التوزيع...' : 'توزيع تلقائي عادل'}</button>
+          <button className="sub-btn sub-btn-amber sub-btn-sm" onClick={onAuto} disabled={autoBusy || !day?.absent?.length} title="اضغط مرة أخرى للحصول على توزيع بديل بنفس العدالة" data-testid="sub-auto-btn"><Sparkles className="w-3.5 h-3.5" /> {autoBusy ? 'جارٍ التوزيع...' : 'توزيع تلقائي عادل'}</button>
           <a className="sub-btn sub-btn-primary sub-btn-sm" href={`/substitution/print/${date}`} target="_blank" rel="noreferrer" data-testid="sub-print-btn"><Printer className="w-3.5 h-3.5" /> طباعة / PDF</a>
           <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={word} disabled={!rows.length} data-testid="sub-word-btn"><FileDown className="w-3.5 h-3.5" /> Word</button>
           <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={copy} disabled={!rows.length} data-testid="sub-copy-btn"><Copy className="w-3.5 h-3.5" /> نسخ</button>

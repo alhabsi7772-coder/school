@@ -218,6 +218,8 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-cand.busy { opacity: 0.55; background: var(--sub-surface-2); }
 .sub-cand.free.high-quota { border-color: var(--sub-amber-line); background: var(--sub-amber-soft); }
 .sub-cand.free.high-quota:hover { border-color: var(--sub-amber); background: var(--sub-amber-soft); }
+.sub-cand.free.streak-alert { border-color: var(--sub-red-line); background: var(--sub-red-soft); }
+.sub-cand.free.streak-alert:hover { border-color: var(--sub-red); background: var(--sub-red-soft); }
 .sub-cand .rank { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; color: var(--sub-on-navy); background: var(--sub-navy); flex-shrink: 0; }
 .sub-cand.free .rank { background: var(--sub-green); color: #fff; }
 .sub-cand.free.high-quota .rank { background: var(--sub-amber); }

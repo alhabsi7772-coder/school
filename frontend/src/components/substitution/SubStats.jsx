@@ -1,48 +1,57 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, UserX, ArrowLeftRight, TrendingUp, Printer } from 'lucide-react';
+import { CalendarDays, UserX, ArrowLeftRight, TrendingUp, Printer, FileDown } from 'lucide-react';
 import SubLayout from './SubLayout';
 import { subApi, errMsg, todayISO, academicRange } from './subApi';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-function rangeFor(mode, v) {
-  if (mode === 'day') return [v, v];
+function rangeFor(mode, val) {
+  if (mode === 'day') return [val.day, val.day];
   if (mode === 'month') {
-    const [y, m] = v.split('-').map(Number);
+    const [y, m] = val.month.split('-').map(Number);
     const last = new Date(y, m, 0).getDate();
-    return [`${v}-01`, `${v}-${String(last).padStart(2, '0')}`];
+    return [`${val.month}-01`, `${val.month}-${String(last).padStart(2, '0')}`];
   }
-  return [`${v}-09-01`, `${Number(v) + 1}-08-31`];
+  if (mode === 'custom') return [val.from, val.to];
+  return [`${val.year}-09-01`, `${Number(val.year) + 1}-08-31`];
 }
 
 export default function SubStats() {
   const today = todayISO();
   const [mode, setMode] = useState('month');
-  const [val, setVal] = useState({ day: today, month: today.slice(0, 7), year: academicRange(today)[0].slice(0, 4) });
+  const [val, setVal] = useState({ day: today, month: today.slice(0, 7), year: academicRange(today)[0].slice(0, 4), from: today, to: today });
   const [data, setData] = useState(null);
   const [sort, setSort] = useState('subs');
+  const [teacherId, setTeacherId] = useState('');
+  const [allTeachers, setAllTeachers] = useState([]);
 
-  const [from, to] = rangeFor(mode, val[mode]);
+  const [from, to] = rangeFor(mode, val);
+  useEffect(() => { subApi.get('/teachers').then((r) => setAllTeachers(r.data.teachers)).catch(() => {}); }, []);
   useEffect(() => {
-    subApi.get('/stats', { params: { from_date: from, to_date: to } }).then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e)));
-  }, [from, to]);
+    if (mode === 'custom' && (!from || !to || from > to)) return;
+    subApi.get('/stats', { params: { from_date: from, to_date: to, teacher_id: teacherId || undefined } }).then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e)));
+  }, [from, to, teacherId, mode]);
 
   const teachers = useMemo(() => {
     if (!data) return [];
-    const arr = data.per_teacher.filter((t) => t.active !== false);
+    let arr = data.per_teacher.filter((t) => t.active !== false);
+    if (teacherId) arr = arr.filter((t) => t.id === teacherId);
     return [...arr].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'ar') : (b[sort] - a[sort]) || a.quota - b.quota));
-  }, [data, sort]);
+  }, [data, sort, teacherId]);
   const maxSubs = Math.max(1, ...teachers.map((t) => t.subs));
 
-  const label = mode === 'day' ? `يوم ${val.day}` : mode === 'month' ? `${MONTHS[Number(val.month.split('-')[1]) - 1]} ${val.month.split('-')[0]}` : `العام الدراسي ${val.year}/${Number(val.year) + 1}`;
+  const label = mode === 'day' ? `يوم ${val.day}` : mode === 'month' ? `${MONTHS[Number(val.month.split('-')[1]) - 1]} ${val.month.split('-')[0]}`
+    : mode === 'custom' ? `من ${from} إلى ${to}` : `العام الدراسي ${val.year}/${Number(val.year) + 1}`;
+
+  const printUrl = `/substitution/stats/print?from=${from}&to=${to}${teacherId ? `&teacher_id=${teacherId}` : ''}`;
 
   return (
-    <SubLayout title="الإحصائيات" subtitle="متابعة الغياب وحصص الاحتياط حسب اليوم أو الشهر أو العام الدراسي">
+    <SubLayout title="الإحصائيات" subtitle="متابعة الغياب وحصص الاحتياط حسب اليوم أو الشهر أو العام الدراسي أو فترة مخصصة">
       <div className="sub-card p-4 mb-5 flex flex-wrap items-center gap-3 sub-rise" data-testid="sub-stats-filter">
         <div className="flex rounded-full p-1" style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
-          {[['day', 'يوم'], ['month', 'شهر'], ['year', 'عام دراسي']].map(([m, l]) => (
+          {[['day', 'يوم'], ['month', 'شهر'], ['year', 'عام دراسي'], ['custom', 'فترة مخصصة']].map(([m, l]) => (
             <button key={m} onClick={() => setMode(m)} className="px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
               style={mode === m ? { background: 'var(--sub-navy)', color: 'var(--sub-on-navy)' } : { color: 'var(--sub-muted)' }} data-testid={`sub-stats-mode-${m}`}>{l}</button>
           ))}
@@ -54,7 +63,21 @@ export default function SubStats() {
             {[2025, 2026, 2027, 2028, 2029].map((y) => <option key={y} value={y}>{y}/{y + 1}</option>)}
           </select>
         )}
-        <span className="text-sm font-bold mr-auto" style={{ color: 'var(--sub-muted)' }}>{label}</span>
+        {mode === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input type="date" className="sub-input w-auto" value={val.from} onChange={(e) => e.target.value && setVal({ ...val, from: e.target.value })} data-testid="sub-stats-from" />
+            <span className="text-xs font-bold" style={{ color: 'var(--sub-muted)' }}>إلى</span>
+            <input type="date" className="sub-input w-auto" value={val.to} onChange={(e) => e.target.value && setVal({ ...val, to: e.target.value })} data-testid="sub-stats-to" />
+          </div>
+        )}
+        <select className="sub-input w-auto min-w-[200px]" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} data-testid="sub-stats-teacher-filter">
+          <option value="">كل المعلمين</option>
+          {allTeachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <span className="text-sm font-bold" style={{ color: 'var(--sub-muted)' }}>{label}</span>
+        <a className="sub-btn sub-btn-primary sub-btn-sm mr-auto" href={printUrl} target="_blank" rel="noreferrer" data-testid="sub-stats-pdf-btn">
+          <FileDown className="w-3.5 h-3.5" /> تنزيل كشف PDF
+        </a>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { KeyRound, Clock, Image as ImageIcon, Save, Upload, School, Sun, Moon, Sparkles } from 'lucide-react';
+import { KeyRound, Clock, Image as ImageIcon, Save, Upload, School, Sun, Moon, Sparkles, AlertOctagon, Trash2 } from 'lucide-react';
 import SubLayout from './SubLayout';
 import { subApi, errMsg } from './subApi';
 import { useSubTheme } from './subTheme';
@@ -125,6 +125,34 @@ function ThemeCard() {
   );
 }
 
+function DangerZoneCard() {
+  const [busy, setBusy] = useState(false);
+  const reset = async () => {
+    const typed = window.prompt('سيتم حذف جميع سجلات الغياب والتوزيع والإحصائيات بشكل نهائي (لن يتم حذف قائمة المعلمين أو الإعدادات).\nهذا الإجراء لا يمكن التراجع عنه. اكتب كلمة "تصفير" للتأكيد:');
+    if (typed === null) return;
+    if (typed.trim() !== 'تصفير') return toast.error('لم يتم التأكيد بشكل صحيح — لم يُصفَّر أي شيء');
+    setBusy(true);
+    try {
+      const r = await subApi.delete('/system/reset');
+      toast.success(r.data.message || 'تم تصفير النظام');
+    } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <div className="sub-card p-5 space-y-3 sub-rise sub-rise-3" style={{ borderColor: 'var(--sub-red-line)' }} data-testid="sub-danger-card">
+      <div className="sub-card-title" style={{ color: 'var(--sub-red-ink)' }}>
+        <span className="ic" style={{ background: 'var(--sub-red-soft)' }}><AlertOctagon className="w-4 h-4" style={{ color: 'var(--sub-red-ink)' }} /></span>
+        منطقة الخطر
+      </div>
+      <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>
+        تصفير النظام يحذف نهائياً كل سجلات الغياب والتوزيع والإحصائيات من البداية، دون التأثير على قائمة المعلمين أو إعدادات التوقيت. هذا الإجراء لا يمكن التراجع عنه.
+      </p>
+      <button className="sub-btn sub-btn-danger" onClick={reset} disabled={busy} data-testid="sub-system-reset-btn">
+        <Trash2 className="w-4 h-4" /> {busy ? 'جارٍ التصفير...' : 'تصفير النظام من البداية'}
+      </button>
+    </div>
+  );
+}
+
 export default function SubSettings() {
   const [cfg, setCfg] = useState(null);
   const load = () => subApi.get('/settings').then((r) => setCfg(r.data)).catch((e) => toast.error(errMsg(e)));
@@ -135,6 +163,7 @@ export default function SubSettings() {
         <AccountCard />
         <ThemeCard />
         <div className="xl:col-span-2">{cfg && <TimingCard cfg={cfg} reload={load} />}</div>
+        <div className="xl:col-span-2"><DangerZoneCard /></div>
       </div>
     </SubLayout>
   );

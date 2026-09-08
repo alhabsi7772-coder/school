@@ -84,6 +84,13 @@ export default function SubTeachers() {
     if (!window.confirm(`حذف ${t.name} نهائياً؟`)) return;
     try { await subApi.delete(`/teachers/${t.id}`); load(); } catch (e) { toast.error(errMsg(e)); }
   };
+  const deleteAll = async () => {
+    if (data.teachers.length === 0) return;
+    const typed = window.prompt(`سيتم حذف جميع المعلمين (${data.teachers.length}) نهائياً ولا يمكن التراجع عن ذلك.\nاكتب كلمة "حذف" للتأكيد:`);
+    if (typed === null) return;
+    if (typed.trim() !== 'حذف') return toast.error('لم يتم التأكيد بشكل صحيح — لم يُحذف أي معلم');
+    try { await subApi.delete('/teachers/all'); toast.success('تم حذف جميع المعلمين'); load(); } catch (e) { toast.error(errMsg(e)); }
+  };
 
   return (
     <SubLayout title="المعلمون والأنصبة" subtitle={`العام الدراسي ${data.academic_range[0]?.slice(0, 4) || ''}/${data.academic_range[1]?.slice(0, 4) || ''} · ${data.teachers.length} معلماً`}
@@ -92,6 +99,9 @@ export default function SubTeachers() {
           <button className="sub-btn sub-btn-ghost" onClick={() => setAdd(true)} data-testid="sub-add-teacher-btn"><UserPlus className="w-4 h-4" /> إضافة معلم</button>
           <button className="sub-btn sub-btn-primary" onClick={() => setImp(true)} data-testid="sub-import-btn">
             <Upload className="w-4 h-4" /> استيراد الجداول والتوقيت
+          </button>
+          <button className="sub-btn sub-btn-danger" onClick={deleteAll} disabled={!data.teachers.length} data-testid="sub-delete-all-teachers-btn">
+            <Trash2 className="w-4 h-4" /> حذف الجميع
           </button>
         </>
       }>
