@@ -359,7 +359,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "day_periods": day_periods,
                 "consecutive_alert": consecutive_alert,
             })
-        out.sort(key=lambda c: (not c["free"], not c["same_class"], c["subs_today"], c["subs_year"], c["quota"], c["name"]))
+        out.sort(key=lambda c: (not c["free"], c["quota"], not c["same_class"], c["subs_today"], c["subs_year"], c["name"]))
         if out:
             frees = [c for c in out if c["free"]]
             if frees:
@@ -371,15 +371,14 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         return out
 
     def pick_fair_candidate(cands):
-        """يختار بديلاً بعدالة مع تنويع النتيجة بين كل تشغيل للتوزيع التلقائي."""
+        """يختار بديلاً بعدالة (الأولوية للأقل نصاباً) مع تنويع النتيجة بين كل تشغيل للتوزيع التلقائي."""
         free = [c for c in cands if c["free"]]
         if not free:
             return None
-        top = (free[0]["subs_today"], free[0]["subs_year"], free[0]["quota"])
-        pool = [c for c in free if (c["subs_today"], c["subs_year"], c["quota"]) == top]
+        top_quota = free[0]["quota"]
+        pool = [c for c in free if c["quota"] == top_quota]
         if len(pool) < 3:
-            near = [c for c in free if c not in pool and c["subs_today"] == top[0]
-                    and c["subs_year"] - top[1] <= 1 and c["quota"] - top[2] <= 3]
+            near = [c for c in free if c not in pool and c["quota"] - top_quota <= 3]
             pool += near[: max(0, 3 - len(pool))]
         return random.choice(pool)
 
