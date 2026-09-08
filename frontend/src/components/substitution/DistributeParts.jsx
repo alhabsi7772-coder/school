@@ -138,7 +138,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
                   {c.least_subs && <span className="sub-badge sub-badge-green">أقل احتياط</span>}
                   {c.high_quota && <span className="sub-badge sub-badge-amber" data-testid={`sub-cand-highquota-${c.id}`}><AlertTriangle className="w-3 h-3" /> نصاب عالي جداً</span>}
                   {c.consecutive_alert && <span className="sub-badge sub-badge-red" data-testid={`sub-cand-streak-${c.id}`}><AlertTriangle className="w-3 h-3" /> احتياط يومين متتاليين</span>}
-                  {c.same_subject && <span className="sub-badge sub-badge-navy">نفس التخصص</span>}
+                  {c.same_class && <span className="sub-badge sub-badge-navy" data-testid={`sub-cand-sameclass-${c.id}`}>يُدرّس هذا الصف</span>}
                   {c.subs_today > 0 && <span className="sub-badge sub-badge-amber">له احتياط اليوم: {c.subs_today}</span>}
                 </div>
                 <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · حصصه اليوم: {c.day_periods} · احتياط هذا العام: {c.subs_year}</p>

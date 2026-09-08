@@ -145,7 +145,7 @@ class TestDay:
             slot = (tmap[c["id"]]["schedule"].get(day["day_name"]) or [None]*8)[period-1]
             assert slot is None, f"{c['name']} not actually free"
             assert c["id"] not in [a["id"] for a in day["absent"]]
-        for k in ("least_quota", "least_subs", "same_subject"):
+        for k in ("least_quota", "least_subs", "same_class"):
             assert k in frees[0]
 
     def test_assign_and_negative(self, H, teachers):

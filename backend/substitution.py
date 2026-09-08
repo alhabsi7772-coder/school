@@ -313,6 +313,15 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             out.append({a.get("substitute_id") for a in (doc or {}).get("assignments", []) if a.get("substitute_id")})
         return out
 
+    def teaches_class(t, klass):
+        if not klass:
+            return False
+        for day_cells in t.get("schedule", {}).values():
+            for c in day_cells:
+                if c and c.get("class") == klass:
+                    return True
+        return False
+
     async def rank_candidates(doc, tmap, absent_id, period, exclude_busy=True):
         d = doc["date"]
         day_name = doc["day_name"]
@@ -326,6 +335,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 if a["period"] == period:
                     taken_this_period.add(a["substitute_id"])
         absent_t = tmap.get(absent_id) or {}
+        target_class = (slot_of(absent_t, day_name, period) or {}).get("class")
         active_quotas = sorted((t.get("quota", 0) for t in tmap.values() if t.get("active", True)), reverse=True)
         hq_threshold = active_quotas[max(0, int(len(active_quotas) * 0.2) - 1)] if active_quotas else 0
         streak_sets = await prev_sub_sets(d, 3)
@@ -343,13 +353,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "id": t["id"], "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0),
                 "subs_year": sub_year.get(t["id"], 0), "subs_today": today_subs.get(t["id"], 0),
                 "free": free, "busy_class": (slot or {}).get("class") if slot else None,
-                "same_subject": bool(absent_t.get("subject")) and t.get("subject") == absent_t.get("subject"),
+                "same_class": teaches_class(t, target_class),
                 "already_taken": t["id"] in taken_this_period,
                 "high_quota": hq_threshold > 0 and t.get("quota", 0) >= hq_threshold,
                 "day_periods": day_periods,
                 "consecutive_alert": consecutive_alert,
             })
-        out.sort(key=lambda c: (not c["free"], c["subs_today"], c["subs_year"], c["quota"], c["name"]))
+        out.sort(key=lambda c: (not c["free"], not c["same_class"], c["subs_today"], c["subs_year"], c["quota"], c["name"]))
         if out:
             frees = [c for c in out if c["free"]]
             if frees:
