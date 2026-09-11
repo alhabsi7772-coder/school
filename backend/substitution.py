@@ -361,6 +361,16 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     sub_c[sid] = sub_c.get(sid, 0) + 1
         return abs_c, sub_c
 
+    async def load_period_subs(from_d: str, to_d: str, period: int):
+        """عدد حصص الاحتياط في حصة معينة (مثل الحصة الثامنة) لكل معلم ضمن فترة."""
+        c = {}
+        async for d in days.find({"date": {"$gte": from_d, "$lte": to_d}}, {"_id": 0, "assignments": 1}):
+            for a in d.get("assignments", []):
+                sid = a.get("substitute_id")
+                if sid and a.get("period") == period:
+                    c[sid] = c.get(sid, 0) + 1
+        return c
+
     async def get_or_new_day(d: str):
         doc = await days.find_one({"date": d}, {"_id": 0})
         if not doc:
@@ -406,6 +416,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         day_name = doc["day_name"]
         y0, y1 = academic_range(d)
         _, sub_year = await load_counts(y0, y1)
+        p8_subs = await load_period_subs(y0, y1, 8)
         sup_roles = supervisors_of_day(resolve_supervision(await load_supervision(), list(tmap.values())), day_name)
         today_subs = {}
         taken_this_period = set()
@@ -435,6 +446,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             out.append({
                 "id": t["id"], "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0),
                 "subs_year": sub_year.get(t["id"], 0), "subs_today": today_subs.get(t["id"], 0),
+                "subs_year_p8": p8_subs.get(t["id"], 0),
                 "free": free, "busy_class": (slot or {}).get("class") if slot else None,
                 "same_class": teaches_class(t, target_class),
                 "already_taken": t["id"] in taken_this_period,
@@ -442,6 +454,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "day_periods": day_periods,
                 "consecutive_alert": consecutive_alert,
                 "supervisor": role,
+                "schedule": t.get("schedule", {}),
             })
         out.sort(key=lambda c: (not c["free"], c["quota"], not c["same_class"], c["subs_today"], c["subs_year"], c["name"]))
         if out:

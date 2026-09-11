@@ -1,5 +1,27 @@
+import { useState } from 'react';
 import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { fmtAr } from './subApi';
+
+const SUB_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+
+function ScheduleMini({ schedule }) {
+  return (
+    <div className="w-full mt-2 pt-2 overflow-x-auto" style={{ borderTop: '1px dashed var(--sub-line)' }} data-testid="sub-cand-schedule-mini">
+      <div className="sub-week" style={{ fontSize: '0.68rem', minWidth: 420 }}>
+        <div className="h">اليوم</div>
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => <div key={p} className="h">{p}</div>)}
+        {SUB_DAYS.map((d) => (
+          <>
+            <div key={d} className="d">{d}</div>
+            {(schedule?.[d] || Array(8).fill(null)).map((c, i) => (
+              <div key={`${d}-${i}`} className={`c ${c ? '' : 'empty'}`} title={c?.subject || ''}>{c ? c.class : '—'}</div>
+            ))}
+          </>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function DateCard({ date, setDate, day }) {
   return (
@@ -94,6 +116,7 @@ export function PeriodStrip({ absent, selectedPeriod, onPick }) {
 }
 
 export function CandidateList({ absent, period, candidates, loading, onAssign, onUnassign, excludeSup, onToggleExcludeSup }) {
+  const [openSchedule, setOpenSchedule] = useState(null);
   if (!absent || !period) {
     return (
       <div className="sub-card p-8 text-center sub-rise" data-testid="sub-candidates-empty">
@@ -147,6 +170,12 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="font-extrabold text-sm" style={{ color: 'var(--sub-ink)' }}>{c.name}</span>
+                  <button type="button" className="p-1 rounded-lg hover:bg-black/5" title="عرض جدول المعلم"
+                    onMouseEnter={() => setOpenSchedule(c.id)} onMouseLeave={() => setOpenSchedule(null)}
+                    onClick={(e) => { e.stopPropagation(); setOpenSchedule((o) => (o === c.id ? null : c.id)); }}
+                    data-testid={`sub-cand-schedule-icon-${c.id}`}>
+                    <CalendarDays className="w-3.5 h-3.5" style={{ color: 'var(--sub-navy-ink)' }} />
+                  </button>
                   {c.supervisor && <span className="sub-badge sub-badge-red" data-testid={`sub-cand-supervisor-${c.id}`}><ShieldCheck className="w-3 h-3" /> {supLabel(c)}</span>}
                   {c.least_quota && <span className="sub-badge sub-badge-teal">أقل نصاب</span>}
                   {c.least_subs && <span className="sub-badge sub-badge-green">أقل احتياط</span>}
@@ -155,7 +184,8 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
                   {c.same_class && <span className="sub-badge sub-badge-navy" data-testid={`sub-cand-sameclass-${c.id}`}>يُدرّس هذا الصف</span>}
                   {c.subs_today > 0 && <span className="sub-badge sub-badge-amber">له احتياط اليوم: {c.subs_today}</span>}
                 </div>
-                <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · حصصه اليوم: {c.day_periods} · احتياط هذا العام: {c.subs_year}</p>
+                <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · حصصه اليوم: {c.day_periods} · احتياط هذا العام: {c.subs_year} · احتياط الحصة الثامنة: {c.subs_year_p8}</p>
+                {openSchedule === c.id && <ScheduleMini schedule={c.schedule} />}
               </div>
               <button className="sub-btn sub-btn-green sub-btn-sm" onClick={() => onAssign(period, c.id)} disabled={slot?.substitute_id === c.id} data-testid={`sub-assign-${c.id}`}>
                 <Plus className="w-3.5 h-3.5" /> تكليف
