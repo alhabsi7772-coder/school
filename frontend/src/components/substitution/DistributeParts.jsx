@@ -19,7 +19,7 @@ function ScheduleMini({ schedule, dayName, period }) {
                 return (
                   <div key={`${d}-${i}`} className="c"
                     style={{ background: 'var(--sub-green-soft)', borderColor: 'var(--sub-green)', color: 'var(--sub-green-ink)', fontWeight: 800 }}>
-                    حصة الاحتياط
+                    احتياط
                   </div>
                 );
               }
