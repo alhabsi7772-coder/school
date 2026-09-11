@@ -117,7 +117,7 @@ export default function SubDistribute() {
           )}
           <PeriodStrip absent={absentObj} selectedPeriod={period} onPick={pickPeriod} />
           <CandidateList absent={absentObj} period={period} candidates={cands} loading={candLoading} onAssign={assign} onUnassign={(p) => assign(p, null)}
-            excludeSup={excludeSup} onToggleExcludeSup={toggleExcludeSup} />
+            excludeSup={excludeSup} onToggleExcludeSup={toggleExcludeSup} dayName={day?.day_name} />
         </div>
       </div>
       <div className="mt-5">

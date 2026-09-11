@@ -4,7 +4,7 @@ import { fmtAr } from './subApi';
 
 const SUB_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 
-function ScheduleMini({ schedule }) {
+function ScheduleMini({ schedule, dayName, period }) {
   return (
     <div className="w-full mt-2 pt-2 overflow-x-auto" style={{ borderTop: '1px dashed var(--sub-line)' }} data-testid="sub-cand-schedule-mini">
       <div className="sub-week" style={{ fontSize: '0.68rem', minWidth: 420 }}>
@@ -13,9 +13,23 @@ function ScheduleMini({ schedule }) {
         {SUB_DAYS.map((d) => (
           <>
             <div key={d} className="d">{d}</div>
-            {(schedule?.[d] || Array(8).fill(null)).map((c, i) => (
-              <div key={`${d}-${i}`} className={`c ${c ? '' : 'empty'}`} title={c?.subject || ''}>{c ? c.class : '—'}</div>
-            ))}
+            {(schedule?.[d] || Array(8).fill(null)).map((c, i) => {
+              const isAssignSlot = d === dayName && i + 1 === period;
+              if (isAssignSlot) {
+                return (
+                  <div key={`${d}-${i}`} className="c"
+                    style={{ background: 'var(--sub-green-soft)', borderColor: 'var(--sub-green)', color: 'var(--sub-green-ink)', fontWeight: 800 }}>
+                    حصة الاحتياط
+                  </div>
+                );
+              }
+              return (
+                <div key={`${d}-${i}`} className={`c ${c ? '' : 'empty'}`} title={c?.subject || ''}
+                  style={c ? { background: 'var(--sub-amber-soft)', borderColor: 'var(--sub-amber-line)' } : undefined}>
+                  {c ? c.class : '—'}
+                </div>
+              );
+            })}
           </>
         ))}
       </div>
@@ -115,7 +129,7 @@ export function PeriodStrip({ absent, selectedPeriod, onPick }) {
   );
 }
 
-export function CandidateList({ absent, period, candidates, loading, onAssign, onUnassign, excludeSup, onToggleExcludeSup }) {
+export function CandidateList({ absent, period, candidates, loading, onAssign, onUnassign, excludeSup, onToggleExcludeSup, dayName }) {
   const [openSchedule, setOpenSchedule] = useState(null);
   if (!absent || !period) {
     return (
@@ -185,7 +199,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
                   {c.subs_today > 0 && <span className="sub-badge sub-badge-amber">له احتياط اليوم: {c.subs_today}</span>}
                 </div>
                 <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{c.subject} · نصاب: {c.quota} · حصصه اليوم: {c.day_periods} · احتياط هذا العام: {c.subs_year} · احتياط الحصة الثامنة: {c.subs_year_p8}</p>
-                {openSchedule === c.id && <ScheduleMini schedule={c.schedule} />}
+                {openSchedule === c.id && <ScheduleMini schedule={c.schedule} dayName={dayName} period={period} />}
               </div>
               <button className="sub-btn sub-btn-green sub-btn-sm" onClick={() => onAssign(period, c.id)} disabled={slot?.substitute_id === c.id} data-testid={`sub-assign-${c.id}`}>
                 <Plus className="w-3.5 h-3.5" /> تكليف
