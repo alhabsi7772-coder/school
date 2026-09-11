@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Plus, X, UserX, CalendarDays, ChevronRight, ChevronLeft, Check, Ban, Printer, FileDown, Copy, MessageCircle, Trash2, Sparkles, Users, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { fmtAr } from './subApi';
 
@@ -11,8 +11,8 @@ function ScheduleMini({ schedule, dayName, period }) {
         <div className="h">اليوم</div>
         {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => <div key={p} className="h">{p}</div>)}
         {SUB_DAYS.map((d) => (
-          <>
-            <div key={d} className="d">{d}</div>
+          <Fragment key={d}>
+            <div className="d">{d}</div>
             {(schedule?.[d] || Array(8).fill(null)).map((c, i) => {
               const isAssignSlot = d === dayName && i + 1 === period;
               if (isAssignSlot) {
@@ -30,7 +30,7 @@ function ScheduleMini({ schedule, dayName, period }) {
                 </div>
               );
             })}
-          </>
+          </Fragment>
         ))}
       </div>
     </div>
@@ -171,7 +171,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
       {loading ? (
         <p className="text-sm font-semibold py-6 text-center" style={{ color: 'var(--sub-muted)' }}>جارٍ التحميل...</p>
       ) : (
-        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+        <div className="space-y-2 pr-1">
           <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--sub-muted)' }}>
             <span className="sub-dot green" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4 }} /> متاح · نصاب عادي
             &nbsp;&nbsp;
@@ -186,7 +186,7 @@ export function CandidateList({ absent, period, candidates, loading, onAssign, o
                   <span className="font-extrabold text-sm" style={{ color: 'var(--sub-ink)' }}>{c.name}</span>
                   <button type="button" className="p-1 rounded-lg hover:bg-black/5" title="عرض جدول المعلم"
                     onMouseEnter={() => setOpenSchedule(c.id)} onMouseLeave={() => setOpenSchedule(null)}
-                    onClick={(e) => { e.stopPropagation(); setOpenSchedule((o) => (o === c.id ? null : c.id)); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenSchedule(c.id); }}
                     data-testid={`sub-cand-schedule-icon-${c.id}`}>
                     <CalendarDays className="w-3.5 h-3.5" style={{ color: 'var(--sub-navy-ink)' }} />
                   </button>

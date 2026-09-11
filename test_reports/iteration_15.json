@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only visual verification of substitution DistributeParts CandidateList schedule mini-table clipping fix. Logged into /substitution, set date to 2026-10-25 (3 absent, 22 free candidates for period 5), verified schedule mini renders fully visible (all 5 days x 8 periods = 54 cells) for BOTH the first candidate and the LAST candidate at position #22 (which is high_quota amber-styled). Ancestor overflow chain confirms no max-height/overflow restriction. Green 'احتياط' cell (bg rgb(220,252,231)) present at correct day+period slot. All badges (أقل نصاب, أقل احتياط, نصاب عالي جداً, يُدرّس هذا الصف, له احتياط اليوم, مشرف اليوم) render. 'احتياط الحصة الثامنة' text present. Mouseleave hides schedule correctly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DistributeParts.CandidateList schedule icon", "issue": "Click-to-toggle for touch devices is broken: onMouseEnter fires before onClick in the same tap sequence, so onMouseEnter sets openSchedule=c.id, then onClick sees o===c.id and toggles back to null. Net result: tap on a closed schedule icon opens-then-immediately-closes it (invisible flicker). Only reliably works via hover on desktop. Suggested fix: separate touch handling (onTouchStart) or track hover vs click state, or remove onMouseEnter setting when already open. Priority: MEDIUM (feature still works via hover on desktop; user request explicitly asked to verify touch/click toggle).", "selector": "[data-testid^=\"sub-cand-schedule-icon-\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "critical_code_review_comments": [
+    "DistributeParts.jsx ScheduleMini (~line 14): uses React short fragment `<>` with a `key` prop inside .map – key is silently dropped and React emits 'Each child in a list should have a unique key prop' warning in console. Replace with `<React.Fragment key={d}>...</React.Fragment>`.",
+    "Click-toggle race with onMouseEnter (see ui_bugs above) – prevents true touch-device support that the review request explicitly asked to verify."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Fix React key warning in ScheduleMini by using React.Fragment with key instead of `<>`.",
+    "Fix click-toggle for touch devices: currently onMouseEnter+onClick race causes tap to open+immediately close schedule. Consider using onPointerDown or gating onMouseEnter to only-fire when openSchedule is null and separating desktop hover from tap toggle logic."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "95%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The primary reported clipping bug (schedule mini cut off for candidates near end of list, especially amber/high_quota ones) is FIXED and visually verified via screenshots for candidate #1 and #22. Remaining findings are minor (React key warning, hover+click race on touch tap).",
+  "rca of the issue": "Original clipping: parent container had `max-h-[520px] overflow-y-auto` creating a nested scroll region; expanded inline schedule for bottom candidates was clipped by that fixed max-height. Removing the class allowed natural page growth. Ancestor overflow chain verification post-fix shows overflow:visible up through .sub-card and beyond, no clipping context anywhere."
+}
