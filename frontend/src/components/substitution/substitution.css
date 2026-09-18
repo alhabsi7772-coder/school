@@ -1,41 +1,45 @@
 /* ===== نظام حصص الاحتياط — ثيم ورقي فاتح (افتراضي) + ليلي + لوكس AI ===== */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap');
+
 .sub-root {
-  --sub-bg: #F3F0E8;
+  --sub-font-body: 'Noto Sans Arabic', 'Tajawal', sans-serif;
+  --sub-font-heading: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif;
+  --sub-bg: #F1F5F9;
   --sub-surface: #FFFFFF;
-  --sub-surface-2: #FAF8F2;
-  --sub-ink: #1A1F2E;
-  --sub-muted: #6B7280;
-  --sub-line: #E6E1D6;
-  --sub-line-2: #C4C8D0;
-  --sub-navy: #1F2A44;
-  --sub-navy-2: #2E3D63;
+  --sub-surface-2: #F8FAFC;
+  --sub-ink: #0F172A;
+  --sub-muted: #64748B;
+  --sub-line: #E2E8F0;
+  --sub-line-2: #CBD5E1;
+  --sub-navy: #1E293B;
+  --sub-navy-2: #334155;
   --sub-on-navy: #FFFFFF;
-  --sub-navy-soft: #E3E8F5;
-  --sub-navy-ink: #1F2A44;
+  --sub-navy-soft: #E2E8F0;
+  --sub-navy-ink: #1E293B;
   --sub-amber: #D97706;
   --sub-amber-soft: #FEF3C7;
   --sub-amber-line: #FCD34D;
   --sub-amber-ink: #92400E;
-  --sub-green: #15803D;
+  --sub-green: #16A34A;
   --sub-green-soft: #DCFCE7;
   --sub-green-line: #86EFAC;
   --sub-green-ink: #15803D;
-  --sub-red: #B91C1C;
+  --sub-red: #DC2626;
   --sub-red-soft: #FEE2E2;
   --sub-red-line: #FECACA;
   --sub-red-ink: #B91C1C;
-  --sub-teal: #0E7490;
-  --sub-teal-soft: #CFFAFE;
-  --sub-teal-ink: #0E7490;
+  --sub-teal: #0D9488;
+  --sub-teal-soft: #CCFBF1;
+  --sub-teal-ink: #0F766E;
   --sub-gray-soft: #EEF0F3;
   --sub-gray-ink: #4B5563;
-  --sub-hover: #FBFAF6;
-  --sub-header-bg: rgba(243, 240, 232, 0.85);
-  --sub-overlay: rgba(26, 31, 46, 0.45);
-  --sub-dots: rgba(31, 42, 68, 0.05);
-  --sub-shadow: 0 1px 2px rgba(26, 31, 46, 0.04), 0 8px 24px -12px rgba(26, 31, 46, 0.18);
+  --sub-hover: #F8FAFC;
+  --sub-header-bg: rgba(241, 245, 249, 0.85);
+  --sub-overlay: rgba(15, 23, 42, 0.45);
+  --sub-dots: rgba(30, 41, 59, 0.05);
+  --sub-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 34px -16px rgba(15, 23, 42, 0.18);
   --sub-blur: none;
-  font-family: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+  font-family: var(--sub-font-body);
   color: var(--sub-ink);
   background: var(--sub-bg);
   min-height: 100vh;
@@ -46,13 +50,13 @@
 
 /* ---- الوضع الليلي ---- */
 .sub-root.sub-dark {
-  --sub-bg: #0E1320;
-  --sub-surface: #161C2B;
+  --sub-bg: #0B111E;
+  --sub-surface: rgba(27, 35, 54, 0.78);
   --sub-surface-2: #1C2435;
-  --sub-ink: #E8ECF5;
-  --sub-muted: #98A2B8;
-  --sub-line: rgba(255, 255, 255, 0.09);
-  --sub-line-2: rgba(255, 255, 255, 0.22);
+  --sub-ink: #F1F5F9;
+  --sub-muted: #94A3B8;
+  --sub-line: rgba(148, 163, 184, 0.16);
+  --sub-line-2: rgba(148, 163, 184, 0.3);
   --sub-navy: #6D8DFF;
   --sub-navy-2: #86A1FF;
   --sub-on-navy: #0B1020;
@@ -76,11 +80,13 @@
   --sub-gray-soft: rgba(255, 255, 255, 0.07);
   --sub-gray-ink: #C3CAD8;
   --sub-hover: rgba(255, 255, 255, 0.03);
-  --sub-header-bg: rgba(14, 19, 32, 0.82);
+  --sub-header-bg: rgba(11, 17, 30, 0.82);
   --sub-overlay: rgba(0, 0, 0, 0.6);
   --sub-dots: rgba(255, 255, 255, 0.04);
-  --sub-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -14px rgba(0, 0, 0, 0.7);
+  --sub-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 38px -16px rgba(0, 0, 0, 0.7);
+  --sub-blur: blur(16px) saturate(130%);
 }
+.sub-root.sub-dark .sub-card, .sub-root.sub-dark .sub-stat { backdrop-filter: var(--sub-blur); -webkit-backdrop-filter: var(--sub-blur); border-color: rgba(148, 163, 184, 0.14); }
 
 /* ---- لوكس AI ---- */
 .sub-root.sub-lux {
@@ -135,20 +141,22 @@
 }
 .sub-root > * { position: relative; z-index: 1; }
 html.sub-app #root > div > canvas { display: none !important; }
-html.sub-app body { background: #F3F0E8; }
-html.sub-app.sub-app-dark body { background: #0E1320; }
+html.sub-app body { background: #F1F5F9; }
+html.sub-app.sub-app-dark body { background: #0B111E; }
 html.sub-app.sub-app-lux body { background: #050505; }
 .sub-root input[type="date"], .sub-root input[type="month"] { color-scheme: light; }
 .sub-root.sub-dark input[type="date"], .sub-root.sub-dark input[type="month"], .sub-root.sub-lux input[type="date"], .sub-root.sub-lux input[type="month"] { color-scheme: dark; }
+
+.sub-root h1, .sub-root h2 { font-family: var(--sub-font-heading); letter-spacing: -0.01em; }
 
 .sub-card {
   background: var(--sub-surface);
   border: 1px solid var(--sub-line);
   border-radius: 22px;
   box-shadow: var(--sub-shadow);
-  transition: border-color .2s, background-color .3s;
+  transition: border-color .2s, background-color .3s, transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s cubic-bezier(.2,.8,.2,1);
 }
-.sub-card-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--sub-navy-ink); }
+.sub-card-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--sub-navy-ink); font-family: var(--sub-font-heading); }
 .sub-card-title .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; }
 
 .sub-input {
@@ -159,16 +167,17 @@ html.sub-app.sub-app-lux body { background: #050505; }
 .sub-input::placeholder { color: var(--sub-muted); opacity: .8; }
 .sub-input:focus { outline: none; border-color: var(--sub-navy); box-shadow: 0 0 0 4px var(--sub-navy-soft); }
 select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 0.9rem center; padding-left: 2.4rem; }
-.sub-root.sub-dark select.sub-input option, .sub-root.sub-lux select.sub-input option { background: #161C2B; color: #E8ECF5; }
+.sub-root.sub-dark select.sub-input option, .sub-root.sub-lux select.sub-input option { background: #1B2336; color: #F1F5F9; }
 
 .sub-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 999px; padding: 0.65rem 1.25rem; font-weight: 700; font-size: 0.9rem;
   border: 1.5px solid transparent; cursor: pointer; font-family: inherit;
-  transition: transform .15s, box-shadow .15s, background-color .15s, opacity .15s;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s cubic-bezier(.2,.8,.2,1), background-color .15s, opacity .15s;
 }
 .sub-btn:hover { transform: translateY(-1px); }
-.sub-btn:active { transform: translateY(0); }
+.sub-btn:active { transform: translateY(0) scale(.98); }
+.sub-btn:focus-visible, .sub-input:focus-visible, .sub-cand.free:focus-visible { outline: 2px solid var(--sub-navy); outline-offset: 2px; }
 .sub-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .sub-btn-primary { background: var(--sub-navy); color: var(--sub-on-navy); box-shadow: 0 8px 18px -8px var(--sub-navy); }
 .sub-btn-primary:hover { background: var(--sub-navy-2); }
@@ -196,7 +205,7 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
   min-width: 0;
 }
 .sub-period:hover { transform: translateY(-2px); box-shadow: var(--sub-shadow); }
-.sub-period .num { font-weight: 900; font-size: 1.3rem; line-height: 1; color: var(--sub-navy-ink); }
+.sub-period .num { font-weight: 900; font-size: 1.3rem; line-height: 1; color: var(--sub-navy-ink); font-family: var(--sub-font-heading); }
 .sub-period .cls { font-size: 0.72rem; font-weight: 700; margin-top: 6px; color: var(--sub-muted); }
 .sub-period.free { cursor: default; opacity: 0.6; }
 .sub-period.free:hover { transform: none; box-shadow: none; }
@@ -251,14 +260,15 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 /* الهيدر */
 .sub-nav-link { display: inline-flex; align-items: center; gap: 8px; padding: 0.55rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; color: var(--sub-muted); transition: background-color .15s, color .15s; background: transparent; border: none; cursor: pointer; font-family: inherit; }
 .sub-nav-link:hover { color: var(--sub-navy-ink); background: var(--sub-navy-soft); }
-.sub-nav-link.active { background: var(--sub-navy); color: var(--sub-on-navy); }
+.sub-nav-link.active { background: var(--sub-navy); color: var(--sub-on-navy); font-family: var(--sub-font-heading); }
 
-.sub-stat { padding: 1.1rem 1.2rem; border-radius: 20px; background: var(--sub-surface); border: 1px solid var(--sub-line); box-shadow: var(--sub-shadow); }
-.sub-stat .v { font-size: 2rem; font-weight: 900; line-height: 1.1; color: var(--sub-navy-ink); }
+.sub-stat { padding: 1.1rem 1.2rem; border-radius: 20px; background: var(--sub-surface); border: 1px solid var(--sub-line); box-shadow: var(--sub-shadow); transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s cubic-bezier(.2,.8,.2,1); }
+.sub-stat:hover { transform: translateY(-3px); }
+.sub-stat .v { font-size: 2rem; font-weight: 900; line-height: 1.1; color: var(--sub-navy-ink); font-family: var(--sub-font-heading); }
 .sub-stat .l { font-size: 0.8rem; color: var(--sub-muted); font-weight: 600; margin-top: 4px; }
 
 .sub-bar { height: 10px; border-radius: 999px; background: var(--sub-gray-soft); overflow: hidden; }
-.sub-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--sub-navy); transition: width .4s ease; }
+.sub-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--sub-navy); transition: width .5s cubic-bezier(.2,.8,.2,1); }
 
 @keyframes sub-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .sub-rise { animation: sub-rise .35s ease both; }
@@ -267,7 +277,7 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 
 /* جدول المعلم الأسبوعي */
 .sub-week { display: grid; grid-template-columns: 90px repeat(8, 1fr); gap: 4px; font-size: 0.75rem; }
-.sub-week .h { background: var(--sub-navy); color: var(--sub-on-navy); border-radius: 8px; padding: 6px 4px; text-align: center; font-weight: 700; }
+.sub-week .h { background: var(--sub-navy); color: var(--sub-on-navy); border-radius: 8px; padding: 6px 4px; text-align: center; font-weight: 700; font-family: var(--sub-font-heading); }
 .sub-week .d { background: var(--sub-surface-2); border-radius: 8px; padding: 6px; font-weight: 700; display: flex; align-items: center; }
 .sub-week .c { border-radius: 8px; padding: 6px 2px; text-align: center; border: 1px solid var(--sub-line); background: var(--sub-surface); font-weight: 700; color: var(--sub-navy-ink); }
 .sub-week .c.empty { color: var(--sub-line-2); font-weight: 500; }
@@ -285,7 +295,7 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-theme-switch button.active { background: var(--sub-navy); color: var(--sub-on-navy); }
 
 /* ورقة الطباعة — تبقى بيضاء دائماً */
-.sub-print-sheet { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; color: #111; padding: 14mm 14mm 16mm; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.35); font-family: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif; }
+.sub-print-sheet { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; color: #111; padding: 14mm 14mm 16mm; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.35); font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif; }
 .sub-print-sheet table { width: 100%; border-collapse: collapse; }
 .sub-print-sheet th, .sub-print-sheet td { border: 1px solid #333; padding: 7px 6px; text-align: center; font-size: 13px; }
 .sub-print-sheet th { background: #ECECEC; font-weight: 800; }
