@@ -51,7 +51,7 @@ export default function SubLogin() {
   return (
     <div className={`sub-root flex items-center justify-center p-4 ${themeClass(theme)}`} data-testid="sub-login-page"
       style={theme === 'light' ? {
-        backgroundImage: "url('https://customer-assets-39nsmqrw.emergentagent.net/job_school-frontend-3/artifacts/4wzegaup_image%20%281%29.jpg')",
+        backgroundImage: "url('https://customer-assets-39nsmqrw.emergentagent.net/job_school-frontend-3/artifacts/4xt9hn7h_Digen_image_1789729700911.webp')",
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
       } : undefined}>
       {theme === 'lux' && <LuxParticles />}
