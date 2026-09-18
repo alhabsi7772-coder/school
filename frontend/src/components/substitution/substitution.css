@@ -60,7 +60,7 @@
   --sub-navy: #6D8DFF;
   --sub-navy-2: #86A1FF;
   --sub-on-navy: #0B1020;
-  --sub-navy-soft: rgba(109, 141, 255, 0.16);
+  --sub-navy-soft: rgba(109, 141, 255, 0.22);
   --sub-navy-ink: #A9BCFF;
   --sub-amber: #F59E0B;
   --sub-amber-soft: rgba(245, 158, 11, 0.16);
@@ -71,7 +71,7 @@
   --sub-green-line: rgba(34, 197, 94, 0.45);
   --sub-green-ink: #4ADE80;
   --sub-red: #EF4444;
-  --sub-red-soft: rgba(239, 68, 68, 0.16);
+  --sub-red-soft: rgba(239, 68, 68, 0.22);
   --sub-red-line: rgba(239, 68, 68, 0.4);
   --sub-red-ink: #F87171;
   --sub-teal: #22D3EE;

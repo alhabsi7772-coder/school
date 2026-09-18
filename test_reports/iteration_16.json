@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only visual refresh regression testing for the Arabic substitution system (/substitution). Verified login, all 3 theme modes (light/dark/lux AI), navigation to teachers/stats/settings, and the full core distribution flow (date selection → absent chip → period click → candidate list with schedule icons and assign buttons). New Google Fonts (Noto Kufi Arabic + Noto Sans Arabic) load correctly and render RTL Arabic cleanly. No functional regressions detected; data-testids intact; no invisible/broken text in screenshots across all 3 themes.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "sub-lux theme (dashboard)", "issues": ["Automated contrast audit flagged ~8 text-on-translucent-bg pairs with computed ratio <2.5 (e.g., emerald body text on rgba(255,255,255,0.035) card surface). However, this theme was explicitly NOT changed in this iteration and visually the black-page-behind composition renders as high contrast (bright green/cyan on near-black). Reporting as FYI only; not a regression from this CSS refresh."]},
+      {"screen": "sub-dark theme (dashboard)", "issues": ["Automated audit flagged 2 counter-badge chips (translucent blue/red pills like '0 حصة', 'مسح التوزيع') with computed ratio ~1.4-1.6. Visually these still read acceptably on the deep-navy card because bg is rgba() over a dark surface (audit doesn't composite alpha). Consider slightly darkening chip text or increasing alpha for stricter WCAG compliance if desired, but not blocking."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: In dark theme, the two small counter badges (absent-count pill, clear-distribution danger pill) have translucent colored backgrounds that composite to a low computed contrast against their (also translucent) parent card. Visually acceptable but could be tightened by using solid --sub-red-ink / --sub-navy-ink text over slightly more opaque badge backgrounds if the user wants strict WCAG AA. No other action needed — the visual refresh landed cleanly across all 3 themes and all pages."
+  ],
+  "critical_code_review_comments": [
+    "substitution.css line ~48: dark theme sets --sub-surface to rgba(27,35,54,0.78) with backdrop-filter blur. This works but relies on a solid page-level --sub-bg behind it; any nested translucent element (chips) then composites weakly against it, which is why WCAG-style automated audits flag counter chips. Consider adding a solid fallback --sub-surface-solid for chips.",
+    "Font import happens via @import inline CSS — for production, consider moving Google Fonts to index.html <link rel=preconnect> to avoid render-blocking. Non-critical."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100% (all tested flows pass)"},
+  "test_credentials": "substitution: ehtiyat / ehtiyat2026",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 16 verified the CSS-only visual refresh in /app/frontend/src/components/substitution/substitution.css. All 3 themes (sub-theme-light/dark/lux) toggle correctly. Distribution flow (date=2026-10-25, selected absent teacher, clicked period-1, got 22 candidates with schedule icons + assign buttons) is fully functional. Navigation across /substitution/teachers, /stats, /settings works. Fonts Noto Kufi Arabic (headings) + Noto Sans Arabic (body) render correctly. Only nitpick: two dark-theme translucent badges have low computed contrast but visually acceptable — not a regression."
+}
