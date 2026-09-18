@@ -49,7 +49,11 @@ export default function SubLogin() {
   };
 
   return (
-    <div className={`sub-root flex items-center justify-center p-4 ${themeClass(theme)}`} data-testid="sub-login-page">
+    <div className={`sub-root flex items-center justify-center p-4 ${themeClass(theme)}`} data-testid="sub-login-page"
+      style={theme === 'light' ? {
+        backgroundImage: "url('https://customer-assets-39nsmqrw.emergentagent.net/job_school-frontend-3/artifacts/4wzegaup_image%20%281%29.jpg')",
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      } : undefined}>
       {theme === 'lux' && <LuxParticles />}
       <div className="fixed top-4 left-4 z-20"><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
       <div className="w-full max-w-md sub-rise">
