@@ -1,0 +1,30 @@
+{
+  "summary": "Comprehensive backend + frontend testing of iteration-18 substitution features: (1) bulk teacher activate/deactivate/delete via new toolbar, (2) late-added absent tracking (late_ids + absent[].late flag), (3) stats subs_p8 column + teacher_absence_rows, (4) day export ?absent_id= addendum filter, (5) swap CRUD (POST/GET/DELETE/clear + candidates + docx export), (6) SubPrint page PDF/image/Word/browser-print buttons, (7) late-absent addendum print via ?late= query. Backend: 6/6 new pytest cases pass in /app/backend/tests/test_substitution_swap_bulk_late.py (iter18_swap.xml). Frontend Playwright: login OK; teachers page bulk toolbar tested — select-all checked 49 rows, deselect cleared, bulk-deactivate produced 2 غير نشط badges, bulk-activate cleared them back to 0; stats page table now shows ح٨ column (headers ['م','المعلم','المادة','النصاب','الغياب','الاحتياط','ح٨','التوزيع']); swap page full flow succeeded end-to-end — teacher A selected, period A picked, 25 candidates returned, candidate B picked, period B picked, تأكيد التبادل created a swap that appeared in the swap-report table (1 row); SubPrint page shows all four buttons in order (طباعة/حفظ PDF, تحميل PDF, تحميل كصورة, Word); late-absent warning icon renders on chip; opening /substitution/print/{date}?late={absent_id} renders the ملحق addendum note. Everything works.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_substitution_swap_bulk_late.py",
+    "/app/test_reports/pytest/iter18_swap.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/substitution.py is now 1121 lines (grew from 917 in iter-17, previously flagged >700 cap). Strongly recommend splitting into modules (auth, teachers, day, stats, swap, export, supervision, settings) — the new swap section (lines 965-1122) is a natural boundary.",
+    "SubTeachers.jsx WeekModal uses <> fragments inside a map without keys on the fragment; keys are on inner children which works in React 18 but produces a subtle warning surface. Minor.",
+    "SubSwap.jsx `word()` fetch does not check response.ok; a 4xx would silently download an error blob. Minor — same pattern as elsewhere in codebase, not a regression.",
+    "In DistributeParts.jsx the 'معلم متأخر — تحميل ملحق PDF' badge only renders on the group-header row when the late teacher already has at least one assignment. If a user marks a teacher late but never assigns a substitute, the addendum link never appears — this is a reasonable design but worth documenting (the warning icon on the chip is the only affordance in that state).",
+    "Late-flag semantics: `late_ids &= set(ids)` on set_absent means removing a late teacher and re-adding them AFTER distribution correctly re-flags them; however if the last existing substitute assignment is cleared (day becomes 'undistributed'), previously late teachers keep their late flag — because was_distributed only gates the addition path. Not a bug per se but a subtle stateful behavior worth a unit test."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_substitution_swap_bulk_late.py (NEW — 6 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (6/6 new tests; prior iter-17 47/49 unchanged)", "frontend": "100% (all iter-18 flows verified: bulk toolbar, stats ح٨ col, swap end-to-end, print buttons, late addendum ?late=)"},
+  "test_credentials": "ehtiyat/ehtiyat2026 (substitution) — as documented",
+  "seed_data_creation": "Test dates used and cleaned up in same run: 2026-11-15 (late), 2026-11-16 (swap), 2026-11-17 (stats). Frontend flow briefly added late absent 03439daf on 2026-10-26 and cleaned up. No orphan test data left.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Swap endpoints live under /api/substitution/swap/{date}. Swap candidates ranking key: same_class=True first (priority badge 'يُدرّس هذا الصف'). Backend enforces: cannot swap self, both teachers must have periods, if period_a != period_b both must be mutually free at the other's period. late_ids is tracked in day doc; enrich_day() surfaces it as absent[i].late. Stats: pass ?teacher_id=X to get teacher_absence_rows (list of {date, day_name}). All new UI testids follow sub-swap-* and sub-bulk-* prefixes. New frontend deps: jspdf + html2canvas — client-side PDF/image generation only."
+}
