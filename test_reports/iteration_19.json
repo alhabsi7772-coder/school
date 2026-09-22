@@ -1,0 +1,35 @@
+{
+  "summary": "Verified GPU-performance CSS fix on LoginVideoBackground: real-time filter (hue-rotate + saturate) removed from playing <video> element. Tested /teacher/login (green accent) and /student/join (purple accent) via public URL. Video's computed filter is now 'none' on both pages; the compensating mix-blend-overlay tint layer with accentRgb radial-gradient is present and correctly changes color per theme (green on teacher, purple on student). Visual result remains cinematic (Ken Burns, vignette, letterbox bars, dust particles, poster fallback) with no layout regressions and no console errors related to video or the now-orphaned --login-video-hue custom property.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verifications": [
+    "getComputedStyle(video).filter === 'none' on /teacher/login (was hue-rotate/saturate before fix) — PASS",
+    "getComputedStyle(video).filter === 'none' on /student/join — PASS",
+    "video CSS transition no longer references 'filter' — PASS",
+    "Tint overlay div (mix-blend-overlay opacity-40, radial-gradient with rgba(accentRgb,...)) present and populated with correct accent color per theme — PASS",
+    "Accent color updates correctly per theme (green on teacher-login rgb(99,179,237→green variant), purple on student-join) — PASS, confirming theme accent still visible after removing per-frame video filter",
+    "No pageerrors; console has only benign React Router v7 future-flag warnings unrelated to this fix — PASS",
+    "--login-video-hue CSS var still set on :root (-39deg) but no longer consumed — harmless as noted in request",
+    "Ken Burns animation on wrapper .login-kenburns preserved; video keeps translateZ(0) + backface-visibility:hidden for cheap GPU layer promotion — PASS"
+  ],
+  "test_report_links": ["/app/test_reports/login_video_bg.png", "/app/test_reports/student_join.png"],
+  "action_items": [
+    "Optional cleanup (non-blocking): remove the now-unused --login-video-hue assignment in ThemeContext.jsx (~line 89) to keep code tidy.",
+    "Optional (non-blocking): the tint overlay div uses `transition-[background] duration-1000` on a radial-gradient background; gradient interpolation is not universally supported and typically snaps rather than transitions, so this transition is effectively a no-op — either remove it or switch to fading a second layer for a real crossfade."
+  ],
+  "critical_code_review_comments": [
+    "Fix is minimal, targeted, and correct: eliminates per-frame GPU filter cost on <video> — the single most likely cause of jank on low-end/integrated GPUs. Kept translateZ(0)+backface-visibility for compositor layer, which is the right trade-off.",
+    "Mobile media query already hides video (<=640px) — good defensive fallback for weak devices.",
+    "prefers-reduced-motion honored (Ken Burns + dust disabled) — good accessibility."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "GPU-perf fix on LoginVideoBackground fully verified via public URL on /teacher/login and /student/join. Filter removed from video, accent tint moved to cheap overlay layer which still updates per theme. No regressions."
+}

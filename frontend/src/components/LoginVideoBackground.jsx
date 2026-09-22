@@ -59,7 +59,7 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
 
       {/* لمسة لون بمحاذاة الثيم — طبقة تدرّج ثابتة (بدل فلتر حيّ على الفيديو) لتفادي التقطّع على أجهزة ضعيفة */}
       <div
-        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40 transition-[background] duration-1000"
+        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-40"
         style={{
           background:
             `radial-gradient(ellipse at 50% 60%, rgba(${accentRgb}, 0.5) 0%, rgba(${accentRgb}, 0.18) 45%, transparent 75%)`,
