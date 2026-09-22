@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ClipboardList, Plus, Trash2, Users, FileUp, X, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { ClipboardList, Plus, Trash2, Users, FileUp, X, AlertTriangle, ArrowLeft, Search } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders, sectionsOfGrade } from '../../utils';
-import { fileToBase64, GRADE_ORDER_NUM, themeOfGrade as themeOf } from '../../utils/gradebook';
+import { fileToBase64, GRADE_ORDER_NUM, themeOfGrade as themeOf, gbFields, totalScore, levelLetter, LEVEL_COLORS } from '../../utils/gradebook';
 
 const GRADE_OPTIONS = ['الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
 const GRADES_56 = ['الخامس', 'السادس'];
@@ -28,6 +28,32 @@ export default function Gradebooks() {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const fileRef = useRef(null);
+
+  // بحث سريع عن طالب في كل السجلات
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const searchBoxRef = useRef(null);
+
+  useEffect(() => {
+    if (!query.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await axios.get(`${API}/gradebooks/search-students`, { ...getAuthHeaders(), params: { q: query.trim() } });
+        setSearchResults(res.data);
+      } catch { /* silent */ }
+      finally { setSearching(false); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    const onClickOutside = (e) => { if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) setSearchResults([]); };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -154,6 +180,45 @@ export default function Gradebooks() {
             <span>سجل جديد</span>
           </button>
         </div>
+      </div>
+
+      {/* بحث سريع عن طالب في كل السجلات */}
+      <div className="relative mb-6" ref={searchBoxRef} data-testid="student-search-box">
+        <div className="quiz-card rounded-2xl p-3 flex items-center gap-3">
+          <Search className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+          <input
+            type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="بحث عن طالب بالاسم في كل الصفوف والشعب... (يعمل بدون تحديد صف)"
+            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-slate-500"
+            data-testid="student-search-input" />
+          {query && (
+            <button onClick={() => { setQuery(''); setSearchResults([]); }} data-testid="student-search-clear-btn">
+              <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+            </button>
+          )}
+        </div>
+        {query.trim() && (
+          <div className="absolute z-30 top-full mt-2 w-full quiz-card rounded-2xl p-2 max-h-96 overflow-y-auto shadow-2xl" data-testid="student-search-results">
+            {searching ? (
+              <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>جارٍ البحث...</p>
+            ) : searchResults.length === 0 ? (
+              <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>لا توجد نتائج مطابقة</p>
+            ) : searchResults.map((r) => {
+              const th = themeOf(r.grade);
+              return (
+                <button key={`${r.gradebook_id}-${r.student_id}`} onClick={() => { setSelectedStudent(r); setSearchResults([]); }}
+                  data-testid={`student-search-result-${r.student_id}`}
+                  className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl text-right transition-colors hover:bg-white/5">
+                  <span className="font-bold text-white text-sm">{r.name}</span>
+                  <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+                    style={{ background: `rgba(${th.rgb},0.15)`, color: th.hex }}>
+                    الصف {r.grade} / {r.section}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* List */}
@@ -321,6 +386,56 @@ export default function Gradebooks() {
                 نعم، احذف
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* بطاقة نتيجة الطالب — كل الأعمدة في الفصلين */}
+      {selectedStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} data-testid="student-quick-view-modal">
+          <div className="glass-modal rounded-3xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-white text-lg" data-testid="student-quick-view-name">{selectedStudent.name}</h3>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  الصف {selectedStudent.grade} / الشعبة {selectedStudent.section}
+                </p>
+              </div>
+              <button onClick={() => setSelectedStudent(null)} data-testid="student-quick-view-close">
+                <X className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+            {['1', '2'].map((sem) => {
+              const sc = selectedStudent.scores?.[sem] || {};
+              const fields = gbFields(selectedStudent.template);
+              const total = totalScore(sc, selectedStudent.template);
+              const letter = levelLetter(total);
+              return (
+                <div key={sem} className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-white">الفصل الدراسي {sem === '1' ? 'الأول' : 'الثاني'}</span>
+                    {total != null && (
+                      <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${LEVEL_COLORS[letter]}22`, color: LEVEL_COLORS[letter] }}>
+                        {total} — {letter}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" data-testid={`student-quick-view-sem-${sem}`}>
+                    {fields.map((f) => (
+                      <div key={f.key} className="rounded-xl p-2 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{f.label}</p>
+                        <p className="font-bold text-white text-sm">{sc[f.key] != null ? sc[f.key] : '—'}<span className="opacity-50 text-[10px]"> /{f.max}</span></p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <button onClick={() => navigate(`/teacher/gradebooks/${selectedStudent.gradebook_id}`)}
+              data-testid="student-quick-view-open-full"
+              className="btn-primary w-full mt-2">
+              فتح السجل الكامل للصف
+            </button>
           </div>
         </div>
       )}

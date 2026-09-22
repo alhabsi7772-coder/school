@@ -1219,6 +1219,7 @@ GB_FIELDS_78 = [
 GB_MAX_78 = {k: m for k, _, m in GB_FIELDS_78}
 GB_XL_COLS_78 = [(3, "d1"), (4, "d2"), (6, "p1"), (7, "p2"), (9, "q1"), (10, "q2"), (12, "proj")]
 GB_TEMPLATES = ("5-6", "7-10")
+GRADE_ORDER_NUM_BACKEND = {'الخامس': 1, 'السادس': 2, 'السابع': 3, 'الثامن': 4, 'التاسع': 5, 'العاشر': 6}
 
 
 def gb_template(gb) -> str:
@@ -1349,6 +1350,34 @@ async def create_gradebook(data: GradebookCreate, t=Depends(get_teacher)):
     await db.gradebooks.insert_one(gb)
     gb.pop("_id", None)
     return gb
+
+
+@api_router.get("/gradebooks/search-students")
+async def search_students(q: str = "", t=Depends(get_teacher)):
+    q = q.strip()
+    if not q:
+        return []
+    nq = _norm_ar(q)
+    gbs = await db.gradebooks.find({"owner_id": t["teacher_id"], "year": teacher_year(t)}, {"_id": 0}).to_list(200)
+    results = []
+    for gb in gbs:
+        tpl = gb_template(gb)
+        for st in gb.get("students", []):
+            if nq in _norm_ar(st["name"]):
+                results.append({
+                    "student_id": st["id"],
+                    "name": st["name"],
+                    "grade": gb.get("grade", ""),
+                    "section": gb.get("section", ""),
+                    "gradebook_id": gb["id"],
+                    "template": tpl,
+                    "scores": {
+                        "1": gb.get("scores", {}).get("1", {}).get(st["id"], {}),
+                        "2": gb.get("scores", {}).get("2", {}).get(st["id"], {}),
+                    },
+                })
+    results.sort(key=lambda r: (GRADE_ORDER_NUM_BACKEND.get(r["grade"], 99), r["section"], r["name"]))
+    return results[:40]
 
 
 @api_router.get("/gradebooks/{gid}")
