@@ -110,7 +110,7 @@ export default function SubStats() {
           </div>
           <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
             <table className="sub-table" data-testid="sub-stats-table">
-              <thead><tr><th>م</th><th>المعلم</th><th>المادة</th><th>النصاب</th><th>الغياب</th><th>الاحتياط</th><th style={{ minWidth: 140 }}>التوزيع</th></tr></thead>
+              <thead><tr><th>م</th><th>المعلم</th><th>المادة</th><th>النصاب</th><th>الغياب</th><th>الاحتياط</th><th>ح٨</th><th style={{ minWidth: 140 }}>التوزيع</th></tr></thead>
               <tbody>
                 {teachers.map((t, i) => (
                   <tr key={t.id}>
@@ -120,6 +120,7 @@ export default function SubStats() {
                     <td className="font-black">{t.quota}</td>
                     <td><span className={`sub-badge ${t.absences ? 'sub-badge-red' : 'sub-badge-gray'}`}>{t.absences}</span></td>
                     <td><span className={`sub-badge ${t.subs ? 'sub-badge-green' : 'sub-badge-gray'}`}>{t.subs}</span></td>
+                    <td><span className={`sub-badge ${t.subs_p8 ? 'sub-badge-amber' : 'sub-badge-gray'}`}>{t.subs_p8}</span></td>
                     <td><div className="sub-bar"><span style={{ width: `${(t.subs / maxSubs) * 100}%`, background: 'var(--sub-green)' }} /></div></td>
                   </tr>
                 ))}

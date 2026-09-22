@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeftRight, Users, BarChart3, LogOut, ExternalLink, Settings, Sun, Moon, Sparkles } from 'lucide-react';
+import { ArrowLeftRight, Repeat, Users, BarChart3, LogOut, ExternalLink, Settings, Sun, Moon, Sparkles } from 'lucide-react';
 import LuxParticles from '../LuxParticles';
 import { SCHOOL_NAME } from './subApi';
 import { useSubTheme, themeClass } from './subTheme';
@@ -8,6 +8,7 @@ import './substitution.css';
 
 const NAV = [
   { to: '/substitution', label: 'توزيع الاحتياط', icon: ArrowLeftRight, exact: true, tid: 'home' },
+  { to: '/substitution/swap', label: 'تبادل الحصص', icon: Repeat, tid: 'swap' },
   { to: '/substitution/teachers', label: 'المعلمون', icon: Users, tid: 'teachers' },
   { to: '/substitution/stats', label: 'الإحصائيات', icon: BarChart3, tid: 'stats' },
   { to: '/substitution/settings', label: 'الإعدادات', icon: Settings, tid: 'settings' },

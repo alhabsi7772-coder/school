@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Search, Pencil, Trash2, Check, X, CalendarDays, UserPlus, Users, ShieldCheck } from 'lucide-react';
+import { Upload, Search, Pencil, Trash2, Check, X, CalendarDays, UserPlus, Users, ShieldCheck, CheckSquare, Square } from 'lucide-react';
 import SubLayout from './SubLayout';
 import { subApi, errMsg } from './subApi';
 import ImportModal from './ImportModal';
@@ -66,6 +66,7 @@ export default function SubTeachers() {
   const [imp, setImp] = useState(false);
   const [tab, setTab] = useState(() => localStorage.getItem('subTeachersTab') || 'teachers');
   const switchTab = (t) => { setTab(t); localStorage.setItem('subTeachersTab', t); };
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const load = () => subApi.get('/teachers').then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
@@ -93,6 +94,20 @@ export default function SubTeachers() {
     if (typed === null) return;
     if (typed.trim() !== 'حذف') return toast.error('لم يتم التأكيد بشكل صحيح — لم يُحذف أي معلم');
     try { await subApi.delete('/teachers/all'); toast.success('تم حذف جميع المعلمين'); load(); } catch (e) { toast.error(errMsg(e)); }
+  };
+
+  const toggleSel = (id) => setSelectedIds((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allSelected = list.length > 0 && list.every((t) => selectedIds.has(t.id));
+  const selectAll = () => setSelectedIds(new Set(list.map((t) => t.id)));
+  const clearSel = () => setSelectedIds(new Set());
+  const bulkActivate = async (active) => {
+    if (!selectedIds.size) return;
+    try { await subApi.put('/teachers/bulk-active', { ids: [...selectedIds], active }); toast.success('تم التحديث'); clearSel(); load(); } catch (e) { toast.error(errMsg(e)); }
+  };
+  const bulkDelete = async () => {
+    if (!selectedIds.size) return;
+    if (!window.confirm(`حذف ${selectedIds.size} معلماً نهائياً؟`)) return;
+    try { await subApi.post('/teachers/bulk-delete', { ids: [...selectedIds] }); toast.success('تم الحذف'); clearSel(); load(); } catch (e) { toast.error(errMsg(e)); }
   };
 
   return (
@@ -129,14 +144,34 @@ export default function SubTeachers() {
         <span className="sub-badge sub-badge-gray">مجموع الأنصبة: {totalQuota}</span>
       </div>
 
+      <div className="sub-card p-3 mb-4 flex flex-wrap gap-2 items-center sub-rise" data-testid="sub-bulk-toolbar">
+        <button type="button" className="sub-btn sub-btn-ghost sub-btn-sm" onClick={selectAll} disabled={!list.length} data-testid="sub-select-all-btn">
+          <CheckSquare className="w-3.5 h-3.5" /> تحديد الكل
+        </button>
+        <button type="button" className="sub-btn sub-btn-ghost sub-btn-sm" onClick={clearSel} disabled={!selectedIds.size} data-testid="sub-deselect-all-btn">
+          <Square className="w-3.5 h-3.5" /> إلغاء التحديد
+        </button>
+        <span className="sub-badge sub-badge-navy">{selectedIds.size} محدَّد</span>
+        <button type="button" className="sub-btn sub-btn-green sub-btn-sm" onClick={() => bulkActivate(true)} disabled={!selectedIds.size} data-testid="sub-bulk-activate-btn">
+          <Check className="w-3.5 h-3.5" /> تنشيط المحدَّد
+        </button>
+        <button type="button" className="sub-btn sub-btn-ghost sub-btn-sm" onClick={() => bulkActivate(false)} disabled={!selectedIds.size} data-testid="sub-bulk-deactivate-btn">
+          <X className="w-3.5 h-3.5" /> تعطيل المحدَّد
+        </button>
+        <button type="button" className="sub-btn sub-btn-danger sub-btn-sm" onClick={bulkDelete} disabled={!selectedIds.size} data-testid="sub-bulk-delete-btn">
+          <Trash2 className="w-3.5 h-3.5" /> حذف المحدَّد
+        </button>
+      </div>
+
       <div className="sub-card overflow-x-auto sub-rise sub-rise-2">
         <table className="sub-table" data-testid="sub-teachers-table">
-          <thead><tr><th>م</th><th>المعلم</th><th>المادة</th><th>النصاب</th><th>أيام الغياب</th><th>حصص الاحتياط</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th style={{ width: 32 }}><input type="checkbox" checked={allSelected} onChange={() => (allSelected ? clearSel() : selectAll())} data-testid="sub-select-all-checkbox" /></th><th>م</th><th>المعلم</th><th>المادة</th><th>النصاب</th><th>أيام الغياب</th><th>حصص الاحتياط</th><th>الحالة</th><th></th></tr></thead>
           <tbody>
             {list.map((t, i) => {
               const ed = edit?.id === t.id;
               return (
                 <tr key={t.id} style={{ opacity: t.active === false ? 0.5 : 1 }} data-testid={`sub-teacher-row-${t.id}`}>
+                  <td><input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSel(t.id)} data-testid={`sub-teacher-select-${t.id}`} /></td>
                   <td>{i + 1}</td>
                   <td className="font-bold">{ed ? <input className="sub-input py-1.5" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} data-testid="sub-edit-name" /> : t.name}</td>
                   <td>{ed ? <input className="sub-input py-1.5" value={edit.subject} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} /> : <span className="sub-badge sub-badge-navy">{t.subject}</span>}</td>
@@ -167,7 +202,7 @@ export default function SubTeachers() {
                 </tr>
               );
             })}
-            {list.length === 0 && <tr><td colSpan={8} className="text-center py-8 font-bold" style={{ color: 'var(--sub-muted)' }}>لا توجد نتائج — استورد ملفات الجداول للبدء</td></tr>}
+            {list.length === 0 && <tr><td colSpan={9} className="text-center py-8 font-bold" style={{ color: 'var(--sub-muted)' }}>لا توجد نتائج — استورد ملفات الجداول للبدء</td></tr>}
           </tbody>
         </table>
       </div>

@@ -56,9 +56,26 @@ export default function SubStatsPrint() {
             <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 18, fontSize: 13, fontWeight: 700 }}>
               <span>المادة: {data.teacher.subject || '—'}</span>
               <span>النصاب: {data.teacher.quota}</span>
+              <span>أيام الغياب في الفترة: {data.teacher_absence_rows?.length || 0}</span>
               <span>عدد حصص الاحتياط في الفترة: {data.teacher_rows?.length || 0}</span>
             </div>
-            <table style={{ marginTop: 18 }} data-testid="sub-stats-print-detail-table">
+
+            {data.teacher_absence_rows?.length > 0 && (
+              <>
+                <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 20, textAlign: 'right' }}>أيام الغياب في هذه الفترة</h3>
+                <table style={{ marginTop: 8 }} data-testid="sub-stats-print-absence-table">
+                  <thead><tr><th style={{ width: 36 }}>م</th><th>التاريخ</th><th>اليوم</th></tr></thead>
+                  <tbody>
+                    {data.teacher_absence_rows.map((r, i) => (
+                      <tr key={i}><td>{i + 1}</td><td dir="ltr">{r.date_ar}</td><td>{r.day_name}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 20, textAlign: 'right' }}>حصص الاحتياط في هذه الفترة</h3>
+            <table style={{ marginTop: 8 }} data-testid="sub-stats-print-detail-table">
               <thead>
                 <tr><th style={{ width: 36 }}>م</th><th>التاريخ</th><th>اليوم</th><th style={{ width: 56 }}>الحصة</th><th>الوقت</th><th style={{ width: 60 }}>الصف</th><th>المادة</th><th>المعلم الغائب</th></tr>
               </thead>
@@ -87,7 +104,7 @@ export default function SubStatsPrint() {
               <span>عدد المعلمين: {teachers.length}</span>
             </div>
             <table style={{ marginTop: 18 }} data-testid="sub-stats-print-general-table">
-              <thead><tr><th style={{ width: 36 }}>م</th><th>المعلم</th><th>المادة</th><th style={{ width: 60 }}>النصاب</th><th style={{ width: 60 }}>الغياب</th><th style={{ width: 70 }}>الاحتياط</th></tr></thead>
+              <thead><tr><th style={{ width: 36 }}>م</th><th>المعلم</th><th>المادة</th><th style={{ width: 60 }}>النصاب</th><th style={{ width: 60 }}>الغياب</th><th style={{ width: 70 }}>الاحتياط</th><th style={{ width: 60 }}>ح٨</th></tr></thead>
               <tbody>
                 {teachers.map((t, i) => (
                   <tr key={t.id}>
@@ -97,9 +114,10 @@ export default function SubStatsPrint() {
                     <td>{t.quota}</td>
                     <td>{t.absences}</td>
                     <td style={{ fontWeight: 700 }}>{t.subs}</td>
+                    <td>{t.subs_p8}</td>
                   </tr>
                 ))}
-                {teachers.length === 0 && <tr><td colSpan={6} style={{ padding: 18, color: '#666' }}>لا توجد بيانات في هذه الفترة</td></tr>}
+                {teachers.length === 0 && <tr><td colSpan={7} style={{ padding: 18, color: '#666' }}>لا توجد بيانات في هذه الفترة</td></tr>}
               </tbody>
             </table>
           </>

@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Printer, FileDown, ArrowRight } from 'lucide-react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { Printer, FileDown, ArrowRight, FileImage } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { subApi, SCHOOL_NAME } from './subApi';
 import { getSubTheme, themeClass } from './subTheme';
 import './substitution.css';
 
 export default function SubPrint() {
   const { date } = useParams();
+  const [params] = useSearchParams();
+  const lateId = params.get('late') || '';
   const [day, setDay] = useState(null);
   const [err, setErr] = useState('');
 
@@ -19,25 +23,49 @@ export default function SubPrint() {
   useEffect(() => {
     if (!day?.day_name) return;
     const prevTitle = document.title;
-    document.title = `احتياط ${day.day_name} ${(day.date_ar || '').replace(/\//g, '-')}`;
+    document.title = `${lateId ? 'ملحق ' : ''}احتياط ${day.day_name} ${(day.date_ar || '').replace(/\//g, '-')}`;
     return () => { document.title = prevTitle; };
-  }, [day]);
+  }, [day, lateId]);
 
-  const fileName = () => `احتياط ${day?.day_name || ''} ${(day?.date_ar || date).replace(/\//g, '-')}.docx`;
+  const fileName = () => `${lateId ? 'ملحق ' : ''}احتياط ${day?.day_name || ''} ${(day?.date_ar || date).replace(/\//g, '-')}`;
 
   const word = async () => {
-    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/substitution/day/${date}/export`, { headers: { Authorization: `Bearer ${localStorage.getItem('subToken')}` } });
+    const url = `${process.env.REACT_APP_BACKEND_URL}/api/substitution/day/${date}/export${lateId ? `?absent_id=${lateId}` : ''}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem('subToken')}` } });
     const blob = await res.blob();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName(); a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${fileName()}.docx`; a.click();
   };
 
-  const rows = day?.assignments || [];
+  const downloadPdf = async () => {
+    const el = document.querySelector('.sub-print-sheet');
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+    const img = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const w = 210, h = (canvas.height * w) / canvas.width;
+    pdf.addImage(img, 'PNG', 0, 0, w, h);
+    pdf.save(`${fileName()}.pdf`);
+  };
+
+  const downloadImage = async () => {
+    const el = document.querySelector('.sub-print-sheet');
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+    const link = document.createElement('a');
+    link.download = `${fileName()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const allRows = day?.assignments || [];
+  const rows = lateId ? allRows.filter((r) => r.absent_id === lateId) : allRows;
+  const lateAbsent = lateId ? day?.absent?.find((a) => a.id === lateId) : null;
   return (
     <div className={`sub-root py-6 px-3 ${themeClass(getSubTheme())}`} data-testid="sub-print-page">
       <div className="sub-no-print max-w-[210mm] mx-auto flex flex-wrap items-center justify-between gap-2 mb-4">
         <Link to="/substitution" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="sub-print-back"><ArrowRight className="w-4 h-4" /> رجوع</Link>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={word} data-testid="sub-print-word"><FileDown className="w-4 h-4" /> تصدير Word</button>
+          <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={downloadPdf} data-testid="sub-print-pdf"><FileDown className="w-4 h-4" /> تحميل PDF</button>
+          <button className="sub-btn sub-btn-ghost sub-btn-sm" onClick={downloadImage} data-testid="sub-print-image"><FileImage className="w-4 h-4" /> تحميل كصورة</button>
           <button className="sub-btn sub-btn-primary sub-btn-sm" onClick={() => window.print()} data-testid="sub-print-now"><Printer className="w-4 h-4" /> طباعة / حفظ PDF</button>
         </div>
       </div>
@@ -52,6 +80,11 @@ export default function SubPrint() {
           <h2 style={{ fontSize: 17, fontWeight: 800, marginTop: 10, borderBottom: '2px solid #111', display: 'inline-block', paddingBottom: 4 }} data-testid="sub-print-title">
             توزيع الاحتياط ليوم {day?.day_name || ''} — الموافق {day?.date_ar || ''}
           </h2>
+          {lateId && (
+            <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#B45309', marginTop: 8 }} data-testid="sub-print-late-note">
+              ملحق إضافي — معلم غائب متأخر: {lateAbsent?.name || ''} (أُضيف بعد التوزيع الأصلي لهذا اليوم)
+            </p>
+          )}
         </div>
 
         <table style={{ marginTop: 22 }} data-testid="sub-print-table">
@@ -79,7 +112,7 @@ export default function SubPrint() {
         <div style={{ marginTop: 40, display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700 }}>
           <div>
             <p>عدد الحصص الموزَّعة: {rows.length}</p>
-            <p style={{ marginTop: 6 }}>عدد المعلمين الغائبين: {day?.absent?.length || 0}</p>
+            <p style={{ marginTop: 6 }}>عدد المعلمين الغائبين: {lateId ? 1 : (day?.absent?.length || 0)}</p>
           </div>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 14, fontWeight: 900 }}>اعتماد إدارة المدرسة</p>
