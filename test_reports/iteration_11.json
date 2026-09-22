@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 11: Validated new Substitution features — grouped ordering (backend + UI + print rowSpan), 3-file import (teachers_pdf + general_pdf + timing), Settings page (school_name, 8 period_times, timing image URL, no timing_data leak), timing-file public endpoint, /auth/account (wrong pwd 400, username change+restore, no-change 400), and 3 themes (light/dark/lux) with localStorage persistence + LuxParticles canvas. Backend pytest: 14/14 pass. Frontend UI: all critical assertions pass — theme switch on login and header, dark class + data-theme + html.sub-app-dark, reload persistence, lux canvas render, Settings page renders account/theme/timing cards with correct pre-filled values (username=ehtiyat, P1=7:25-8:05, P8=1:00-1:40), timing preview <img> shown, save-then-reload persists 7:30 and restore worked, wrong current password shows Arabic error toast, /substitution auto-distribute produces two group header rows with 'المعلم الغائب: <name>' + count badge, no 'المعلم الغائب' column in data thead, copy button non-crashing, /substitution/print/2026-09-20 shows rowspan=2 and rowspan=4 cells with the two absent teachers' names.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_substitution_v2.py",
+    "/app/backend/tests/test_substitution.py",
+    "/app/test_reports/pytest/sub_v2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "substitution.py is 684 lines — approaching the 700-line soft cap. Consider extracting settings/import/export helpers into modules for maintainability.",
+    "save_timing_file for PDFs parses text with parse_timing_text; if parse fails it silently returns detected=[] — acceptable but consider surfacing the error to UI.",
+    "read_pdf inside teachers_pdf import writes temp file under backend/data and unlinks — safe. However, when parse fails the message says 'aSc Timetables' which is specific; consider generic phrasing for general_pdf failures.",
+    "get_settings on first call inserts default doc including timing_data (b64) — good for seed. On subsequent PUT it always calls get_settings() first to ensure doc exists — safe idempotent behavior.",
+    "enrich_day sorts assignments by (absent-order, period) → grouped ordering is stable and reflects PUT /absent reordering (confirmed by test). Excellent.",
+    "DOCX export merges the absent-name column via python-docx cell merge for consecutive rows of same absent teacher; vMerge tokens confirmed present in generated XML.",
+    "settings/timing-file endpoint is public (no auth) — appropriate for embedding as <img src>. If leaking the image is a concern, gate via token; current behavior matches spec.",
+    "SubSettings.jsx TimingCard: 'save' handler passes period_times full array including any keystroke change → backend accepts trimmed strings; time format validation is minimal (frontend trusts free-form). Consider input mask like HH:MM."
+  ],
+  "updated_files": ["/app/backend/tests/test_substitution_v2.py"],
+  "success_rate": {"backend": "100% (14/14 new tests + 22/22 legacy)", "frontend": "100% of tested flows"},
+  "test_credentials": "ehtiyat / ehtiyat2026 (substitution admin)",
+  "seed_data_creation": "Created and cleaned day 2026-09-20 (delete via API). Uploaded and restored school_timing.jpeg. Final state verified: username=ehtiyat, password=ehtiyat2026, school_name='مدرسة الخيرات للبنين ٥-٨', P1=7:25-8:05, timing image size=359772 bytes (original school_timing.jpeg).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All new-iteration features verified end-to-end. Import modal UI (/substitution/teachers → sub-import-btn) was NOT clicked in browser (backend already covers 3-file import contract exhaustively in pytest — total=49, sources includes both, non-PDF general→400, no files→400, general-only preserves subjects). If retesting UI import, use sub-import-slot-teachers_pdf / general_pdf / timing with set_input_files. Login selectors: sub-username-input / sub-password-input / sub-login-btn (NOT input[type=text]).",
+  "rca of the issue": "n/a — no bugs found"
+}

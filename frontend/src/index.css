@@ -1110,7 +1110,11 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
   50%  { transform: scale(1.14) translate(-1.2%, -0.6%); }
   100% { transform: scale(1.08) translate(0,0); }
 }
-.login-kenburns { animation: login-kenburns 28s ease-in-out infinite; }
+.login-kenburns {
+  animation: login-kenburns 28s ease-in-out infinite;
+  will-change: transform;
+  transform: translateZ(0);
+}
 
 @keyframes login-glow-pulse {
   0%, 100% { box-shadow: 0 0 60px rgba(var(--theme-accent-rgb), 0.22), inset 0 1px 0 rgba(255,255,255,0.08); }
@@ -1184,12 +1188,29 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
 
 /* فيديو الدخول — يتلوّن ديناميكياً مع لون الثيم */
 .login-video-tinted {
+  /* فلتر مختصر (خطوتان بدل أربع) لتقليل كلفة المعالجة على كل إطار */
   filter:
     hue-rotate(var(--login-video-hue, 0deg))
-    saturate(1.5)
-    contrast(1.22)
-    brightness(0.95);
+    saturate(1.45);
   transition: filter 1.2s ease-in-out;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.login-bg-root { background-size: cover; background-position: 30% center; background-repeat: no-repeat; }
+
+/* الشاشات الصغيرة: صورة ثابتة بدل الفيديو — يمنع التقطّع ويوفّر البيانات */
+@media (max-width: 640px) {
+  .login-bg-root { background-size: cover; background-position: 30% center; }
+  .login-bg-root video { display: none; }
+  .login-kenburns { animation: none; }
+  .login-dust { display: none; }
+}
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  .login-kenburns { animation: none; }
+  .login-dust { display: none; }
 }
 
 

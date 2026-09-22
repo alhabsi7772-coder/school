@@ -254,7 +254,7 @@ export default function GradebookSyncButton({ quizId }) {
                           style={{ background: 'rgba(var(--theme-accent-rgb),0.07)', border: '1px solid rgba(var(--theme-accent-rgb),0.18)' }}
                           data-testid="sync-column-hint">
                           <span className="text-xs leading-relaxed" style={{ color: 'var(--theme-accent)' }}>
-                            💡 نسبة الطالب في الاختبار ستتحول تلقائياً إلى درجة من {maxMap[column]} — مثال: 80% = {Math.round(80 * maxMap[column] / 100 * 2) / 2} درجة
+                            💡 ستُنقل درجة الطالب الحقيقية من الاختبار كما هي، وتُقتصّ تلقائياً إذا تجاوزت الحد الأقصى لهذا العمود ({maxMap[column]} درجة). وإذا كررت النقل لاحقاً باختبار آخر لنفس العمود، تُستبدل القيمة القديمة بالجديدة تلقائياً.
                           </span>
                         </div>
                       </section>
@@ -283,7 +283,7 @@ export default function GradebookSyncButton({ quizId }) {
                     {matchData.proposals.map(p => {
                       const sid = mappings[p.id] || '';
                       const isDup = sid && dupCounts[sid] > 1;
-                      const scaled = Math.round(p.percentage * maxMap[column] / 100 * 2) / 2;
+                      const scaled = Math.round(Math.min(p.total_score ?? 0, maxMap[column]) * 100) / 100;
                       return (
                         <div key={p.id} data-testid={`sync-row-${p.id}`}
                           className="p-3 rounded-xl border transition-colors"

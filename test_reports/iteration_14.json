@@ -1,0 +1,20 @@
+{
+  "summary": "Backend validation of the quiz->gradebook sync scoring fix. Created 4 pytest cases covering (1) raw score transferred not percentage-scaled, (2) re-apply REPLACES previous value with a different quiz's raw score, (3) capping at column max when raw exceeds it, (4) same behavior across multiple column types (d1 max=10 and q1 max=5). All 4 tests PASS. Verified /api/gradebooks/{gid}/apply-quiz now uses total_score with min(raw, mx) (server.py L1493-1515) and MongoDB $set on dotted path scores.{sem}.{sid}.{col} correctly replaces prior value. Also code-reviewed the frontend: GradebookSyncButton.jsx L286 uses Math.min(total_score, maxMap[column]) for step-2 preview and L257 hint text describes 'raw, capped, replaced on re-sync' wording in Arabic - matches spec.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_gradebook_sync_scoring.py", "/app/test_reports/pytest/gradebook_sync_scoring.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix in server.py apply_quiz is correct and minimal (percentage math replaced by min(total_score, mx)).",
+    "MongoDB $set on scores.{semester}.{student_id}.{column} dotted path guarantees overwrite semantics on re-apply - confirmed by test_re_apply_replaces_previous_value (raw 1 -> raw 8 replace).",
+    "match_quiz still returns total_score/max_score/percentage fields so the frontend preview has enough data to render both raw and capped."
+  ],
+  "updated_files": ["/app/backend/tests/test_gradebook_sync_scoring.py"],
+  "success_rate": {"backend": "100%", "frontend": "not tested (code review only, aligns with backend)"},
+  "test_credentials": "admin / teacher123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created and cleaned up gradebook (grade='الخامس', section='TEST', 1 student 'أحمد بن محمد التجريبي') plus per-test quizzes. Fixtures delete gradebook and quizzes at teardown.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression suite for this bug lives at /app/backend/tests/test_gradebook_sync_scoring.py. Uses admin/teacher123. Question text 'سؤال N؟' is used to identify questions after randomization (quiz creation defaults set randomize_questions=True).",
+  "rca of the issue": "Original bug: apply_quiz built pct_map from submissions.percentage and multiplied by column max, producing scaled values (e.g. 100% * 10 = 10 for a 1-point quiz). Fix replaces this with score_map from total_score capped by min(raw, mx). The reported 'replace not working' was a downstream symptom of the same bug: since both quizzes produced the same scaled value (max), it looked like no replacement occurred. With the fix, distinct raw scores flow through and $set on the dotted path replaces cleanly - verified by test_re_apply_replaces_previous_value."
+}

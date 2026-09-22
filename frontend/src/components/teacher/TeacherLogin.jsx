@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Lock, GraduationCap, Zap, User, Check } from 'lucide-react';
+import { Lock, GraduationCap, Zap, User, Check, ArrowLeftRight } from 'lucide-react';
 import { API } from '../../utils';
 import LoginVideoBackground from '../LoginVideoBackground';
 
@@ -204,6 +204,12 @@ export default function TeacherLogin() {
             <p className="text-center text-xs" style={{ color: 'var(--text-hint)' }}>
               ليس لديك حساب؟ تواصل مع مدير المنصة للحصول على حسابك الخاص
             </p>
+            <a href="/substitution/login" data-testid="substitution-link"
+              className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+              style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', border: '1px solid rgba(var(--theme-accent-rgb), 0.25)', color: 'var(--theme-accent)' }}>
+              <ArrowLeftRight className="w-4 h-4" />
+              نظام حصص الاحتياط (دخول مستقل)
+            </a>
           </div>
         </div>
       </div>

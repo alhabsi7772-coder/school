@@ -188,6 +188,7 @@ async def init_db():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await _substitution_router.init()
     yield
     client.close()
 
@@ -1499,14 +1500,15 @@ async def apply_quiz(gid: str, data: GBApplyReq, t=Depends(get_teacher)):
         raise HTTPException(400, "العمود غير صحيح أو غير متاح في نموذج هذا السجل")
     valid_ids = {s["id"] for s in gb.get("students", [])}
     sub_ids = [m.submission_id for m in data.mappings]
-    subs = await db.submissions.find({"id": {"$in": sub_ids}, "quiz_id": data.quiz_id}, {"_id": 0, "id": 1, "percentage": 1}).to_list(500)
-    pct_map = {s["id"]: s.get("percentage", 0) for s in subs}
+    subs = await db.submissions.find({"id": {"$in": sub_ids}, "quiz_id": data.quiz_id}, {"_id": 0, "id": 1, "total_score": 1}).to_list(500)
+    score_map = {s["id"]: s.get("total_score", 0) for s in subs}
     mx = float(mx_map[data.column])
     sets = {}
     for m in data.mappings:
-        if m.student_id not in valid_ids or m.submission_id not in pct_map:
+        if m.student_id not in valid_ids or m.submission_id not in score_map:
             continue
-        score = round(pct_map[m.submission_id] * mx / 100 * 2) / 2  # nearest 0.5
+        # ننقل الدرجة الفعلية للطالب كما هي في الاختبار، مع اقتصاصها على الحد الأقصى للعمود
+        score = round(min(float(score_map[m.submission_id]), mx), 2)
         sets[f"scores.{data.semester}.{m.student_id}.{data.column}"] = score
     if sets:
         await db.gradebooks.update_one({"id": gid}, {"$set": {**sets, "updated_at": now_iso()}})
@@ -3874,7 +3876,10 @@ async def bundle_download(code: str, rid: str, access_id: str):
 # =================================================================
 
 from lesson_plans import make_router as _make_lesson_plans_router
+from substitution import make_router as _make_substitution_router
 api_router.include_router(_make_lesson_plans_router(db, get_teacher))
+_substitution_router = _make_substitution_router(db, hash_password, verify_password, make_token, JWT_SECRET, JWT_ALGORITHM)
+api_router.include_router(_substitution_router)
 app.include_router(api_router)
 
 # ملفات ثابتة (صور بنك الأسئلة المستخرجة من الكتب) — تحت /api لتمر عبر الـ ingress
