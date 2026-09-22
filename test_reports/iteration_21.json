@@ -1,0 +1,45 @@
+{
+  "summary": "Tested new gradebook student search feature (backend endpoint /api/gradebooks/search-students + Gradebooks.jsx UI). All backend tests passed (8/8) and all UI flows validated. Found one minor UX defect on the click-outside behavior; the rest of the feature works exactly as specified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Gradebooks.jsx - student search dropdown",
+        "issue": "Click-outside handler only calls setSearchResults([]) but the dropdown container is rendered based on `query.trim()`, so clicking outside does NOT truly close the dropdown — it stays visible showing 'لا توجد نتائج مطابقة'. To match the stated 'click-outside closes dropdown' behavior, the handler should also blur/close via a separate flag (e.g. setDropdownOpen(false)) or clear the query, OR the render should be gated by both query AND an isOpen flag.",
+        "selector": "[data-testid=student-search-box] click-outside effect at Gradebooks.jsx ~line 52-56",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_gradebook_search.py",
+    "/app/test_reports/pytest/gradebook_search.xml"
+  ],
+  "action_items": [
+    "Fix click-outside close behavior on student search dropdown in Gradebooks.jsx (see ui_bugs entry). Simplest fix: add `const [isOpen, setIsOpen] = useState(false)`; setIsOpen(true) on input change; setIsOpen(false) in click-outside handler; gate dropdown by `query.trim() && isOpen`. Also open on focus."
+  ],
+  "critical_code_review_comments": [
+    "Backend endpoint /api/gradebooks/search-students correctly placed BEFORE /gradebooks/{gid} to avoid path collision — verified (test_search_not_confused_with_gradebook_id passes).",
+    "Arabic-normalized substring match via _norm_ar works for middle-token searches (e.g., searching 'خالد' finds 'أحمد بن سعيد بن سالم خالد البرواني').",
+    "Scores payload returned by search endpoint exactly matches GET /api/gradebooks/{gid} — verified.",
+    "Endpoint properly requires teacher auth (401 without token).",
+    "Endpoint respects per-teacher (owner_id) and per-year scoping in Mongo query.",
+    "MongoDB _id correctly excluded via projection ({'_id': 0}).",
+    "Results properly capped at 40 and sorted by grade order/section/name."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_gradebook_search.py (new test file, 8 tests)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~95% (1 minor UX bug)"},
+  "test_credentials": "admin / teacher123 (main teacher app) — from /app/memory/test_credentials.md",
+  "seed_data_creation": "Added 6 TEST_-prefixed Arabic student names across 2 existing gradebooks (grade الخامس/2 and السابع/4) via POST /api/gradebooks/{gid}/students to enable meaningful search testing (names include TEST خالد فهد السالم, TEST خالد محمد العتيبي, TEST عبدالله خالد الشمري, TEST محمد أحمد الزهراني, TEST خالد ناصر القحطاني, TEST سالم عبدالرحمن العنزي). Safe to delete via /api/gradebooks/{gid}/students/{sid} if needed. They demonstrated cross-grade search (results include both grade 5 and grade 7 hits when searching 'خالد').",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature is functional. Minor click-outside close bug documented. Backend test file /app/backend/tests/test_gradebook_search.py is regression-ready. Seeded TEST_ students remain in gradebooks e528fe45... (grade الخامس/2, 4 students) and 06aafcb0... (grade السابع/4, 2 students). All 8 backend tests pass in ~1.6s.",
+  "rca of the issue": "Click-outside handler at Gradebooks.jsx:52-56 sets `setSearchResults([])` but does not close the dropdown container, which is conditionally rendered by `{query.trim() && (...)}`. Since query text remains after click-outside, the dropdown panel keeps rendering — it just switches to the 'no results' state because searchResults is now empty. Mitigation: introduce an explicit `isOpen` state flag OR clear the query in click-outside handler."
+}

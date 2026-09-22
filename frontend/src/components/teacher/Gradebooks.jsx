@@ -34,10 +34,12 @@ export default function Gradebooks() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const searchBoxRef = useRef(null);
 
   useEffect(() => {
     if (!query.trim()) { setSearchResults([]); return; }
+    setSearchOpen(true);
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
@@ -50,7 +52,7 @@ export default function Gradebooks() {
   }, [query]);
 
   useEffect(() => {
-    const onClickOutside = (e) => { if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) setSearchResults([]); };
+    const onClickOutside = (e) => { if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) setSearchOpen(false); };
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
@@ -190,14 +192,15 @@ export default function Gradebooks() {
             type="text" value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="بحث عن طالب بالاسم في كل الصفوف والشعب... (يعمل بدون تحديد صف)"
             className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-slate-500"
+            onFocus={() => query.trim() && setSearchOpen(true)}
             data-testid="student-search-input" />
           {query && (
-            <button onClick={() => { setQuery(''); setSearchResults([]); }} data-testid="student-search-clear-btn">
+            <button onClick={() => { setQuery(''); setSearchResults([]); setSearchOpen(false); }} data-testid="student-search-clear-btn">
               <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
             </button>
           )}
         </div>
-        {query.trim() && (
+        {query.trim() && searchOpen && (
           <div className="absolute z-30 top-full mt-2 w-full quiz-card rounded-2xl p-2 max-h-96 overflow-y-auto shadow-2xl" data-testid="student-search-results">
             {searching ? (
               <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>جارٍ البحث...</p>
@@ -206,7 +209,7 @@ export default function Gradebooks() {
             ) : searchResults.map((r) => {
               const th = themeOf(r.grade);
               return (
-                <button key={`${r.gradebook_id}-${r.student_id}`} onClick={() => { setSelectedStudent(r); setSearchResults([]); }}
+                <button key={`${r.gradebook_id}-${r.student_id}`} onClick={() => { setSelectedStudent(r); setSearchResults([]); setSearchOpen(false); }}
                   data-testid={`student-search-result-${r.student_id}`}
                   className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl text-right transition-colors hover:bg-white/5">
                   <span className="font-bold text-white text-sm">{r.name}</span>
