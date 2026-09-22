@@ -307,6 +307,8 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 
 /* ورقة الطباعة — تبقى بيضاء دائماً */
 .sub-print-sheet { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; color: #111; padding: 14mm 14mm 16mm; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.35); font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif; }
+/* html2canvas (تحميل PDF/صورة) لا يعرض خط Noto Kufi Arabic بشكل صحيح (تشابك/تشويش الحروف العربية) — إبقاء العناوين هنا بخط Noto Sans Arabic دائماً */
+.sub-print-sheet h1, .sub-print-sheet h2 { font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif !important; letter-spacing: normal !important; }
 .sub-print-sheet table { width: 100%; border-collapse: collapse; }
 .sub-print-sheet th, .sub-print-sheet td { border: 1px solid #333; padding: 7px 6px; text-align: center; font-size: 13px; }
 .sub-print-sheet th { background: #ECECEC; font-weight: 800; }
