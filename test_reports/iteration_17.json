@@ -1,0 +1,38 @@
+{
+  "summary": "Post-branch-switch verification of conflict_090926_2250 import. Backend: 47/49 pytest cases pass across test_substitution.py (22/22), test_supervision.py (5/7 - two failures are pre-existing test-fixture issues expecting /tmp/supervision.pdf which is not shipped), test_substitution_new_features.py (6/6), test_substitution_v2.py (14/14). Substitution POST /api/substitution/auth/login now returns valid JWT (role=substitution) for ehtiyat/ehtiyat2026 after I fixed the .env (see 'rca of the issue'). Main /api/auth/login (admin/teacher123) works out of the box. Frontend: /substitution/login → dashboard with all sub-* testids present including the previously-missing sub-nav-home. End-to-end substitution flow verified on Monday 2026-10-26: absent teacher selected (زاهر), period grid rendered correctly (yellow=needs sub / green=assigned / disabled=free), candidate list shown with ranking chips (أقل احتياط, أقل نصاب, يُدرِس هذا الصف), manual تكليف turned period 4 green and appended a row to the sub-report. Supervision tab under /substitution/teachers renders جدول الإشراف with all 5 days (الأحد..الخميس), PDF import button, and empty rows correctly. Main teacher app: admin login → /teacher/dashboard renders, sidebar navigation to بنك الأسئلة / سجل الدرجات / التقييم السريع all navigate without errors. No <select> visual-edits bug observed (DISABLE_VISUAL_EDITS=true confirmed in frontend/.env; the absent-select dropdown shows real Arabic teacher names).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "tests/test_supervision.py test_1_import_pdf / test_7_delete_and_reimport", "issue": "Tests hard-code PDF_PATH='/tmp/supervision.pdf' which is not shipped with the repo. Not a runtime bug — only a test-fixture omission. Suggest guarding with pytest.skip(reason='fixture PDF missing') when the file is absent."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_substitution.py",
+    "/app/backend/tests/test_supervision.py",
+    "/app/backend/tests/test_substitution_new_features.py",
+    "/app/backend/tests/test_substitution_v2.py",
+    "/app/test_reports/pytest/iter17_sub.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: In /app/backend/tests/test_supervision.py, guard test_1_import_pdf and test_7_delete_and_reimport with pytest.skip(...) if /tmp/supervision.pdf does not exist, so the suite reports 47/47 instead of 47/49 on fresh imports.",
+    "OPTIONAL: Ship a sample supervision PDF under /app/backend/tests/fixtures/ and update PDF_PATH to reference it, so supervision-import coverage isn't lost."
+  ],
+  "critical_code_review_comments": [
+    "backend/substitution.py::init() only seeds the substitution admin user when both SUB_ADMIN_USERNAME and SUB_ADMIN_PASSWORD env vars are set — otherwise the login /api/substitution/auth/login returns 401 with no way to bootstrap. On a fresh /app clone (like this branch import) /app/backend/.env did NOT contain these vars, so the substitution system was un-loginnable until I added them. Recommend either (a) documenting these as required in memory/test_credentials.md AND the initial .env template, or (b) falling back to a hard-coded default seed (ehtiyat/ehtiyat2026) when the env vars are missing so the system self-bootstraps on first run. Currently there is a silent gap between test_credentials.md (which promises ehtiyat/ehtiyat2026) and reality.",
+    "backend/.env in the shipped repo had NO trailing newline after CORS_ORIGINS=\"*\", so appending SUB_ADMIN_USERNAME on the same line produced a python-dotenv parse warning ('could not parse statement starting at line 3'). Not fatal but worth fixing by ensuring the repo's .env ends with \\n.",
+    "substitution.py is now 917 lines (was 498 in iteration_10). It has grown past the 700-line soft cap. Consider splitting into modules: auth, teachers, day, stats, export, supervision, settings.",
+    "frontend/src/components/substitution/SubLayout.jsx: previous iteration_10 flagged the sub-nav-home testid mismatch — this is now FIXED (verified 'sub-nav-home' present in DOM). Good.",
+    "Frontend uses react-router v6 with future flags NOT enabled — two console warnings on every load. Enable v7_startTransition and v7_relativeSplatPath futures to silence and prepare for v7."
+  ],
+  "updated_files": [
+    "/app/backend/.env (added SUB_ADMIN_USERNAME, SUB_ADMIN_PASSWORD, JWT_SECRET; fixed missing newline after CORS_ORIGINS)"
+  ],
+  "success_rate": {"backend": "96% (47/49; the 2 failing tests are missing-fixture-file issues, not app bugs)", "frontend": "100%"},
+  "test_credentials": "admin/teacher123 (main); ehtiyat/ehtiyat2026 (substitution) — seeded via env vars added in this iteration",
+  "seed_data_creation": "During flow test, assigned substitute for zaher on 2026-10-26 period 4 (سليمان سليّم كخميس سليّم الجابري). Did NOT clean up — leaving as sample data for next agent. Substitution admin user 'ehtiyat' was seeded into db.sub_users by backend init() after env vars were set.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "This branch (conflict_090926_2250) requires SUB_ADMIN_USERNAME=ehtiyat and SUB_ADMIN_PASSWORD=ehtiyat2026 in /app/backend/.env for the substitution system login to work. Already added. If backend is restarted with a fresh DB, the user is re-seeded automatically by substitution.py init(). All substitution-system testids follow sub-* convention (sub-nav-home/teachers/stats/settings, sub-date-input, sub-absent-select, sub-period-1..8, sub-cand-*, sub-assign-*, sub-tab-supervision, sub-sup-import-btn). Main app teacher login testids: username-input/password-input/login-btn/substitution-link.",
+  "rca of the issue": "Substitution login failing on fresh import RCA: (1) /app/backend/.env shipped without SUB_ADMIN_USERNAME/PASSWORD → substitution.py init() skips user seeding (see line 212-217: 'if u and p:'). Reproduction: rsync fresh branch, curl POST /api/substitution/auth/login {ehtiyat, ehtiyat2026} → 401 'اسم المستخدم أو كلمة المرور غير صحيحة'. Mitigation applied: appended SUB_ADMIN_USERNAME=\"ehtiyat\", SUB_ADMIN_PASSWORD=\"ehtiyat2026\", JWT_SECRET=\"dev-secret-change-in-prod-please\" to backend/.env, restarted backend. Verified db.sub_users now contains {username:'ehtiyat'} and login returns a valid JWT. Long-term fix suggestion above in critical_code_review_comments."
+}
