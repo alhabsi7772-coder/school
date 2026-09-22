@@ -62,6 +62,7 @@ export default function RubricPrint() {
     <>
       {/* Print-only stylesheet */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap');
         @page { size: A4 portrait; margin: 0; }
         @media print {
           html, body { background: #fff !important; }
@@ -71,24 +72,25 @@ export default function RubricPrint() {
         }
         .print-page {
           width: 210mm; min-height: 297mm; padding: 14mm 12mm;
-          background: #fff; color: #1a1a1a; font-family: 'Tajawal', 'Cairo', sans-serif;
+          background: #fff; color: #1a1a1a; font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif;
           margin: 0 auto 12mm; box-shadow: 0 6px 28px rgba(0,0,0,0.35);
           box-sizing: border-box; position: relative;
           display: flex; flex-direction: column;
         }
         .print-header { text-align: center; margin-bottom: 6mm; }
-        .print-header .line-1 { font-weight: 800; font-size: 14pt; }
-        .print-header .line-2 { font-weight: 700; font-size: 13pt; margin-top: 1mm; }
-        .print-header .line-3 { font-weight: 700; font-size: 12pt; margin-top: 1mm; }
+        .print-header .moe-logo { width: 34mm; height: 34mm; object-fit: contain; margin: 0 auto 2mm; display: block; }
+        .print-header .line-1 { font-weight: 700; font-size: 13pt; color: #7A1E1E; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
+        .print-header .line-2 { font-weight: 500; font-size: 11pt; color: #444; margin-top: 1mm; }
+        .print-header .line-3 { font-weight: 900; font-size: 15pt; margin-top: 2mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
         .print-divider { border-top: 2px solid #1a1a1a; margin: 4mm 0 6mm; }
-        .print-title { text-align: center; font-weight: 800; font-size: 16pt; margin: 2mm 0 5mm; }
+        .print-title { text-align: center; font-weight: 800; font-size: 16pt; margin: 2mm 0 5mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
         .print-meta-row { display: flex; gap: 10mm; margin-bottom: 5mm; font-size: 12pt; font-weight: 600; }
         .print-meta-row .field { flex: 1; border-bottom: 1.5px dotted #1a1a1a; padding-bottom: 1mm; }
         .print-meta-row .field span.label { font-weight: 800; }
         .print-meta-row .field span.value { font-weight: 600; margin-right: 2mm; }
         .print-table { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 11.5pt; }
         .print-table th, .print-table td { border: 1.4px solid #1a1a1a; padding: 2.6mm 3mm; vertical-align: middle; }
-        .print-table th { background: #f0f0f0; font-weight: 800; text-align: center; }
+        .print-table th { background: #f0f0f0; font-weight: 800; text-align: center; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
         .print-table .col-no { width: 10mm; text-align: center; }
         .print-table .col-max { width: 22mm; text-align: center; }
         .print-table .col-score { width: 26mm; text-align: center; font-weight: 800; font-size: 13pt; }
@@ -231,8 +233,9 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section, schoo
 function Header({ schoolName }) {
   return (
     <div className="print-header">
-      <div className="line-1">سلطنة عمان</div>
-      <div className="line-2">وزارة التعليم</div>
+      <img src="/moe-logo.jpeg" alt="وزارة التعليم" className="moe-logo" />
+      <div className="line-1">سلطنة عمان — وزارة التعليم</div>
+      <div className="line-2">المديرية العامة للتعليم بمحافظة شمال الشرقية</div>
       <div className="line-3">{schoolName || 'مدرسة الخيرات للبنين للصفوف ٥-٨'}</div>
     </div>
   );

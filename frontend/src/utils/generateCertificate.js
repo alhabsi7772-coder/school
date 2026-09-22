@@ -301,7 +301,7 @@ function drawContent(ctx, W, H, t, student, quiz, schoolName) {
   ctx.fillStyle = t.bodyText; ctx.font = 'bold 14px Tajawal, Arial';
   ctx.fillText('مدير المدرسة', 100, 615);
   ctx.fillStyle = t.nameColor; ctx.font = 'bold 16px Tajawal, Arial';
-  ctx.fillText('قاسم العزري', 100, 640);
+  ctx.fillText('سيف الطوقي', 100, 640);
   ctx.beginPath(); ctx.moveTo(80, 662); ctx.lineTo(220, 662); ctx.stroke();
   ctx.fillStyle = t.subText; ctx.font = '11px Tajawal, Arial';
   ctx.fillText('التوقيع', 100, 675);
