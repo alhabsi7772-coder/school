@@ -917,7 +917,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         para("المديرية العامة للتعليم بمحافظة شمال الشرقية", 10)
         para(data["school_name"], 14, bold=True)
         if late_name:
-            para(f"ملحق إضافي — معلم غائب متأخر: {late_name}", 12, bold=True, color="B45309")
+            para(f"ملحق مستقل — حصص المعلم: {late_name}", 12, bold=True, color="1F2A44")
         para(f"توزيع الاحتياط ليوم {data['day_name']} — {data['date_ar']}", 13, bold=True)
 
         headers = ["م", "المعلم الغائب", "الحصة", "الصف", "المادة", "المعلم البديل", "عدد حصص الاحتياط"]

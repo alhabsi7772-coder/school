@@ -81,8 +81,8 @@ export default function SubPrint() {
             توزيع الاحتياط ليوم {day?.day_name || ''} — الموافق {day?.date_ar || ''}
           </h2>
           {lateId && (
-            <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#B45309', marginTop: 8 }} data-testid="sub-print-late-note">
-              ملحق إضافي — معلم غائب متأخر: {lateAbsent?.name || ''} (أُضيف بعد التوزيع الأصلي لهذا اليوم)
+            <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#1F2A44', marginTop: 8 }} data-testid="sub-print-late-note">
+              ملحق مستقل — حصص المعلم: {lateAbsent?.name || ''}
             </p>
           )}
         </div>

@@ -293,18 +293,15 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
             <tbody>
               {rows.map((r, i) => {
                 const first = i === 0 || rows[i - 1].absent_id !== r.absent_id;
-                const lateAbsent = first && day?.absent?.find((a) => a.id === r.absent_id)?.late;
                 return [
                   first && (
                     <tr key={`g-${r.absent_id}`} className="sub-group-row" data-testid={`sub-report-group-${r.absent_id}`}>
                       <td colSpan={7}>
                         المعلم الغائب: {r.absent_name} <span className="sub-badge sub-badge-red mr-2">{rows.filter((x) => x.absent_id === r.absent_id).length} حصة</span>
-                        {lateAbsent && (
-                          <a href={`/substitution/print/${date}?late=${r.absent_id}`} target="_blank" rel="noreferrer"
-                            className="sub-badge sub-badge-amber mr-2" data-testid={`sub-report-late-pdf-${r.absent_id}`}>
-                            <AlertTriangle className="w-3 h-3" /> معلم متأخر — تحميل ملحق PDF
-                          </a>
-                        )}
+                        <a href={`/substitution/print/${date}?late=${r.absent_id}`} target="_blank" rel="noreferrer"
+                          className="sub-badge sub-badge-navy mr-2" data-testid={`sub-report-teacher-pdf-${r.absent_id}`}>
+                          <FileDown className="w-3 h-3" /> تحميل ملحق PDF
+                        </a>
                       </td>
                     </tr>
                   ),
