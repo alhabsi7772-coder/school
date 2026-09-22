@@ -159,6 +159,22 @@ class SupervisionReq(BaseModel):
     days: List[SupervisionDay]
 
 
+class BulkIdsReq(BaseModel):
+    ids: List[str]
+
+
+class BulkActiveReq(BaseModel):
+    ids: List[str]
+    active: bool
+
+
+class SwapCreateReq(BaseModel):
+    teacher_a_id: str
+    period_a: int
+    teacher_b_id: str
+    period_b: int
+
+
 def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_algorithm):
     router = APIRouter(prefix="/substitution")
     users = db.sub_users
@@ -166,6 +182,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     days = db.sub_days
     settings = db.sub_settings
     supervision = db.sub_supervision
+    swaps = db.sub_swaps
 
     async def load_supervision():
         doc = await supervision.find_one({"id": "main"}, {"_id": 0})
@@ -374,7 +391,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def get_or_new_day(d: str):
         doc = await days.find_one({"date": d}, {"_id": 0})
         if not doc:
-            doc = {"date": d, "day_name": day_name_of(d), "absent": [], "assignments": [], "updated_at": now_iso()}
+            doc = {"date": d, "day_name": day_name_of(d), "absent": [], "assignments": [], "late_ids": [], "updated_at": now_iso()}
+        doc.setdefault("late_ids", [])
         return doc
 
     async def save_day(doc):
@@ -497,7 +515,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 periods.append({"period": i + 1, "time": PERIOD_TIMES[i], "class": (cell or {}).get("class"), "subject": (cell or {}).get("subject"),
                                 "substitute_id": (a or {}).get("substitute_id"), "substitute_name": tmap.get((a or {}).get("substitute_id"), {}).get("name")})
             absent.append({"id": tid, "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0),
-                           "absences_year": abs_year.get(tid, 0), "periods": periods})
+                           "absences_year": abs_year.get(tid, 0), "periods": periods, "late": tid in doc.get("late_ids", [])})
         rows = []
         order = {tid: i for i, tid in enumerate(doc["absent"])}
         resolved = resolve_supervision(await load_supervision(), list(tmap.values()))
@@ -534,6 +552,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         doc.pop("_id", None)
         return doc
 
+    @router.put("/teachers/bulk-active")
+    async def bulk_active(req: BulkActiveReq, u=Depends(current_user)):
+        r = await teachers.update_many({"id": {"$in": req.ids}}, {"$set": {"active": req.active}})
+        return {"updated": r.modified_count}
+
     @router.put("/teachers/{tid}")
     async def update_teacher(tid: str, req: TeacherUpdate, u=Depends(current_user)):
         upd = {k: v for k, v in req.model_dump().items() if v is not None}
@@ -549,6 +572,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         n = await teachers.count_documents({})
         await teachers.delete_many({})
         return {"message": "تم حذف جميع المعلمين", "deleted": n}
+
+    @router.post("/teachers/bulk-delete")
+    async def bulk_delete(req: BulkIdsReq, u=Depends(current_user)):
+        r = await teachers.delete_many({"id": {"$in": req.ids}})
+        return {"deleted": r.deleted_count}
 
     @router.delete("/teachers/{tid}")
     async def delete_teacher(tid: str, u=Depends(current_user)):
@@ -705,7 +733,15 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if not doc["day_name"]:
             raise HTTPException(status_code=400, detail="هذا اليوم ليس يوماً دراسياً")
         ids = list(dict.fromkeys(req.teacher_ids))
+        old_ids = doc["absent"]
+        was_distributed = any(a.get("substitute_id") for a in doc["assignments"])
+        new_ones = [i for i in ids if i not in old_ids]
+        late_ids = set(doc.get("late_ids", []))
+        if was_distributed:
+            late_ids.update(new_ones)
+        late_ids &= set(ids)
         doc["absent"] = ids
+        doc["late_ids"] = list(late_ids)
         doc["assignments"] = [a for a in doc["assignments"] if a["absent_id"] in ids and a.get("substitute_id") not in ids]
         await save_day(doc)
         return await enrich_day(doc)
@@ -788,6 +824,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     @router.get("/stats")
     async def stats(from_date: str, to_date: str, teacher_id: Optional[str] = None, u=Depends(current_user)):
         abs_c, sub_c = await load_counts(from_date, to_date)
+        p8_c = await load_period_subs(from_date, to_date, 8)
         per_day = []
         day_count = 0
         total_abs = total_sub = total_slots = 0
@@ -802,7 +839,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         per_teacher = []
         async for t in teachers.find({}, {"_id": 0, "schedule": 0}).sort("order", 1):
             per_teacher.append({"id": t["id"], "name": t["name"], "subject": t.get("subject", ""), "quota": t.get("quota", 0), "active": t.get("active", True),
-                                "absences": abs_c.get(t["id"], 0), "subs": sub_c.get(t["id"], 0)})
+                                "absences": abs_c.get(t["id"], 0), "subs": sub_c.get(t["id"], 0), "subs_p8": p8_c.get(t["id"], 0)})
         by_subject = {}
         for t in per_teacher:
             s = by_subject.setdefault(t["subject"] or "غير محدد", {"subject": t["subject"] or "غير محدد", "absences": 0, "subs": 0, "teachers": 0})
@@ -825,6 +862,10 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                                     "class": a.get("class"), "subject": a.get("subject"), "absent_name": names.get(a["absent_id"], "")})
             result["teacher"] = t
             result["teacher_rows"] = rows
+            abs_rows = []
+            async for dd in days.find({"date": {"$gte": from_date, "$lte": to_date}, "absent": teacher_id}, {"_id": 0}).sort("date", 1):
+                abs_rows.append({"date": dd["date"], "date_ar": fmt_date_ar(dd["date"]), "day_name": dd["day_name"]})
+            result["teacher_absence_rows"] = abs_rows
         return result
 
     @router.delete("/system/reset")
@@ -835,7 +876,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
 
     @router.get("/day/{d}/export")
-    async def export_docx(d: str, u=Depends(current_user)):
+    async def export_docx(d: str, absent_id: Optional[str] = None, u=Depends(current_user)):
         from docx import Document
         from docx.shared import Pt, Cm, RGBColor
         from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -844,6 +885,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         from docx.oxml import OxmlElement
 
         data = await enrich_day(await get_or_new_day(d))
+        late_name = None
+        if absent_id:
+            entry = next((a for a in data["absent"] if a["id"] == absent_id), None)
+            late_name = entry["name"] if entry else None
+            data = {**data, "assignments": [a for a in data["assignments"] if a["absent_id"] == absent_id]}
         doc = Document()
         sec = doc.sections[0]
         sec.left_margin = sec.right_margin = Cm(1.8)
@@ -870,6 +916,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         para("سلطنة عمان — وزارة التعليم", 11, color="7A1E1E")
         para("المديرية العامة للتعليم بمحافظة شمال الشرقية", 10)
         para(data["school_name"], 14, bold=True)
+        if late_name:
+            para(f"ملحق إضافي — معلم غائب متأخر: {late_name}", 12, bold=True, color="B45309")
         para(f"توزيع الاحتياط ليوم {data['day_name']} — {data['date_ar']}", 13, bold=True)
 
         headers = ["م", "المعلم الغائب", "الحصة", "الصف", "المادة", "المعلم البديل", "عدد حصص الاحتياط"]
@@ -908,9 +956,166 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         para("الاسم: .................................        التوقيع: .......................", 11, align=WD_ALIGN_PARAGRAPH.LEFT)
         buf = io.BytesIO(); doc.save(buf); buf.seek(0)
         import urllib.parse
-        fname_ar = f"احتياط {data['day_name']} {data['date_ar'].replace('/', '-')}.docx"
+        prefix = f"ملحق {late_name} - " if late_name else ""
+        fname_ar = f"{prefix}احتياط {data['day_name']} {data['date_ar'].replace('/', '-')}.docx"
         encoded = urllib.parse.quote(fname_ar)
         return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                  headers={"Content-Disposition": f"attachment; filename=substitution_{d}.docx; filename*=UTF-8''{encoded}"})
+
+    # ---------------- swap (تبادل الحصص) ----------------
+    async def enrich_swap_day(d: str):
+        doc_day = await get_or_new_day(d)
+        tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
+        cfg = await get_settings()
+        period_labels = cfg["period_labels"]
+        pairs = []
+        async for s in swaps.find({"date": d}, {"_id": 0}).sort("created_at", 1):
+            a = tmap.get(s["teacher_a_id"], {})
+            b = tmap.get(s["teacher_b_id"], {})
+            pairs.append({**s, "teacher_a_name": a.get("name", ""), "teacher_b_name": b.get("name", "")})
+        rows = []
+        for p in pairs:
+            rows.append({"swap_id": p["id"], "period": p["period_b"], "time": period_labels[p["period_b"] - 1], "class": p["class_b"], "subject": p["subject_b"],
+                        "original_name": p["teacher_b_name"], "covering_name": p["teacher_a_name"]})
+            rows.append({"swap_id": p["id"], "period": p["period_a"], "time": period_labels[p["period_a"] - 1], "class": p["class_a"], "subject": p["subject_a"],
+                        "original_name": p["teacher_a_name"], "covering_name": p["teacher_b_name"]})
+        return {"date": d, "day_name": doc_day["day_name"], "is_school_day": bool(doc_day["day_name"]), "date_ar": fmt_date_ar(d),
+               "school_name": cfg["school_name"], "swaps": pairs, "rows": rows}
+
+    @router.get("/swap/{d}")
+    async def get_swap_day(d: str, u=Depends(current_user)):
+        return await enrich_swap_day(d)
+
+    @router.get("/swap/{d}/candidates")
+    async def swap_candidates(d: str, teacher_id: str, period: int, u=Depends(current_user)):
+        doc_day = await get_or_new_day(d)
+        if not doc_day["day_name"]:
+            raise HTTPException(status_code=400, detail="هذا اليوم ليس يوماً دراسياً")
+        tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
+        t = tmap.get(teacher_id)
+        if not t:
+            raise HTTPException(status_code=404, detail="المعلم غير موجود")
+        target_class = (slot_of(t, doc_day["day_name"], period) or {}).get("class")
+        taken = {a["substitute_id"] for a in doc_day["assignments"] if a["period"] == period and a.get("substitute_id")}
+        async for s in swaps.find({"date": d}, {"_id": 0}):
+            if s["period_a"] == period:
+                taken.add(s["teacher_b_id"])
+            if s["period_b"] == period:
+                taken.add(s["teacher_a_id"])
+        out = []
+        for cand in tmap.values():
+            if cand["id"] == teacher_id or not cand.get("active", True) or cand["id"] in doc_day["absent"] or cand["id"] in taken:
+                continue
+            if slot_of(cand, doc_day["day_name"], period):
+                continue
+            out.append({"id": cand["id"], "name": cand["name"], "subject": cand.get("subject", ""), "same_class": teaches_class(cand, target_class)})
+        out.sort(key=lambda c: (not c["same_class"], c["name"]))
+        return out
+
+    @router.post("/swap/{d}")
+    async def create_swap(d: str, req: SwapCreateReq, u=Depends(current_user)):
+        doc_day = await get_or_new_day(d)
+        if not doc_day["day_name"]:
+            raise HTTPException(status_code=400, detail="هذا اليوم ليس يوماً دراسياً")
+        if req.teacher_a_id == req.teacher_b_id:
+            raise HTTPException(status_code=400, detail="لا يمكن التبادل مع نفس المعلم")
+        tmap = {t["id"]: t async for t in teachers.find({}, {"_id": 0})}
+        a, b = tmap.get(req.teacher_a_id), tmap.get(req.teacher_b_id)
+        if not a or not b:
+            raise HTTPException(status_code=404, detail="أحد المعلمين غير موجود")
+        slot_a = slot_of(a, doc_day["day_name"], req.period_a)
+        slot_b = slot_of(b, doc_day["day_name"], req.period_b)
+        if not slot_a:
+            raise HTTPException(status_code=400, detail=f"{a['name']} ليس لديه حصة في الحصة {req.period_a}")
+        if not slot_b:
+            raise HTTPException(status_code=400, detail=f"{b['name']} ليس لديه حصة في الحصة {req.period_b}")
+        if req.period_a != req.period_b:
+            if slot_of(b, doc_day["day_name"], req.period_a):
+                raise HTTPException(status_code=400, detail=f"{b['name']} مشغول في الحصة {req.period_a}")
+            if slot_of(a, doc_day["day_name"], req.period_b):
+                raise HTTPException(status_code=400, detail=f"{a['name']} مشغول في الحصة {req.period_b}")
+        swap_doc = {"id": str(uuid.uuid4()), "date": d, "day_name": doc_day["day_name"],
+               "teacher_a_id": a["id"], "period_a": req.period_a, "class_a": slot_a.get("class"), "subject_a": slot_a.get("subject"),
+               "teacher_b_id": b["id"], "period_b": req.period_b, "class_b": slot_b.get("class"), "subject_b": slot_b.get("subject"),
+               "created_at": now_iso()}
+        await swaps.insert_one(swap_doc)
+        return await enrich_swap_day(d)
+
+    @router.delete("/swap/{d}/{swap_id}")
+    async def delete_swap(d: str, swap_id: str, u=Depends(current_user)):
+        await swaps.delete_one({"id": swap_id, "date": d})
+        return await enrich_swap_day(d)
+
+    @router.delete("/swap/{d}")
+    async def clear_swap_day(d: str, u=Depends(current_user)):
+        await swaps.delete_many({"date": d})
+        return await enrich_swap_day(d)
+
+    @router.get("/swap/{d}/export")
+    async def export_swap_docx(d: str, u=Depends(current_user)):
+        from docx import Document
+        from docx.shared import Pt, Cm, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+
+        data = await enrich_swap_day(d)
+        doc = Document()
+        sec = doc.sections[0]
+        sec.left_margin = sec.right_margin = Cm(1.8)
+        sec.top_margin = Cm(1.2)
+        sec.bottom_margin = Cm(1.2)
+
+        def rtl(p):
+            pPr = p._p.get_or_add_pPr()
+            bidi = OxmlElement("w:bidi"); bidi.set(qn("w:val"), "1"); pPr.append(bidi)
+
+        def para(text, size=12, bold=False, align=WD_ALIGN_PARAGRAPH.CENTER, color=None):
+            p = doc.add_paragraph(); p.alignment = align; rtl(p)
+            r = p.add_run(text); r.font.size = Pt(size); r.bold = bold
+            r.font.name = "Arial"; r._element.rPr.rFonts.set(qn("w:cs"), "Arial")
+            if color:
+                r.font.color.rgb = RGBColor.from_string(color)
+            p.paragraph_format.space_after = Pt(2)
+            return p
+
+        logo = ROOT.parent / "frontend" / "public" / "moe-logo.jpeg"
+        if logo.exists():
+            lp = doc.add_paragraph(); lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            lp.add_run().add_picture(str(logo), width=Cm(3.2))
+        para("سلطنة عمان — وزارة التعليم", 11, color="7A1E1E")
+        para("المديرية العامة للتعليم بمحافظة شمال الشرقية", 10)
+        para(data["school_name"], 14, bold=True)
+        para(f"تبادل الحصص ليوم {data['day_name']} — {data['date_ar']}", 13, bold=True)
+
+        headers = ["م", "المعلم", "الحصة", "الصف", "المادة", "يُغطّيها"]
+        table = doc.add_table(rows=1, cols=len(headers)); table.style = "Table Grid"; table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tblPr = table._tbl.tblPr
+        bidi = OxmlElement("w:bidiVisual"); tblPr.append(bidi)
+        for i, h in enumerate(headers):
+            c = table.rows[0].cells[i]; c.text = ""
+            p = c.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)
+            r = p.add_run(h); r.bold = True; r.font.size = Pt(11)
+            shd = OxmlElement("w:shd"); shd.set(qn("w:fill"), "E8E8E8"); c._tc.get_or_add_tcPr().append(shd)
+        rows = data["rows"]
+        for i, rr in enumerate(rows, 1):
+            row = table.add_row().cells
+            vals = [str(i), rr["original_name"], str(rr["period"]), rr.get("class") or "", rr.get("subject") or "", rr["covering_name"]]
+            for ci, v in enumerate(vals):
+                p = row[ci].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p)
+                r = p.add_run(v); r.font.size = Pt(11)
+        if not rows:
+            row = table.add_row().cells
+            row[0].merge(row[-1]); p = row[0].paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER; rtl(p); p.add_run("لا توجد عمليات تبادل لهذا اليوم")
+        doc.add_paragraph()
+        para("اعتماد إدارة المدرسة", 12, bold=True, align=WD_ALIGN_PARAGRAPH.LEFT)
+        para("الاسم: .................................        التوقيع: .......................", 11, align=WD_ALIGN_PARAGRAPH.LEFT)
+        buf = io.BytesIO(); doc.save(buf); buf.seek(0)
+        import urllib.parse
+        fname_ar = f"تبادل حصص {data['day_name']} {data['date_ar'].replace('/', '-')}.docx"
+        encoded = urllib.parse.quote(fname_ar)
+        return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                 headers={"Content-Disposition": f"attachment; filename=swap_{d}.docx; filename*=UTF-8''{encoded}"})
 
     return router

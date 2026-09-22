@@ -77,6 +77,7 @@ export function AbsentCard({ teachers, day, selected, onSelect, onAdd, onRemove,
         {(day?.absent || []).length === 0 && <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>لم يُحدَّد أي معلم غائب بعد</p>}
         {(day?.absent || []).map((a) => (
           <span key={a.id} className={`sub-chip ${selected === a.id ? 'active' : ''}`} onClick={() => onSelect(a.id)} data-testid={`sub-absent-chip-${a.id}`}>
+            {a.late && <AlertTriangle className="w-3 h-3" title="أُضيف بعد التوزيع" data-testid={`sub-absent-late-${a.id}`} />}
             {a.name}
             <span className="x" onClick={(e) => { e.stopPropagation(); onRemove(a.id); }} data-testid={`sub-absent-remove-${a.id}`}><X className="w-3 h-3" /></span>
           </span>
@@ -292,10 +293,19 @@ export function ReportPanel({ day, date, onRemove, onClear, onAuto, autoBusy }) 
             <tbody>
               {rows.map((r, i) => {
                 const first = i === 0 || rows[i - 1].absent_id !== r.absent_id;
+                const lateAbsent = first && day?.absent?.find((a) => a.id === r.absent_id)?.late;
                 return [
                   first && (
                     <tr key={`g-${r.absent_id}`} className="sub-group-row" data-testid={`sub-report-group-${r.absent_id}`}>
-                      <td colSpan={7}>المعلم الغائب: {r.absent_name} <span className="sub-badge sub-badge-red mr-2">{rows.filter((x) => x.absent_id === r.absent_id).length} حصة</span></td>
+                      <td colSpan={7}>
+                        المعلم الغائب: {r.absent_name} <span className="sub-badge sub-badge-red mr-2">{rows.filter((x) => x.absent_id === r.absent_id).length} حصة</span>
+                        {lateAbsent && (
+                          <a href={`/substitution/print/${date}?late=${r.absent_id}`} target="_blank" rel="noreferrer"
+                            className="sub-badge sub-badge-amber mr-2" data-testid={`sub-report-late-pdf-${r.absent_id}`}>
+                            <AlertTriangle className="w-3 h-3" /> معلم متأخر — تحميل ملحق PDF
+                          </a>
+                        )}
+                      </td>
                     </tr>
                   ),
                   <tr key={r.id} data-testid={`sub-report-row-${i}`}>
