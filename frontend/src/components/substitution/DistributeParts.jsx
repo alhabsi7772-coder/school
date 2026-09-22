@@ -77,7 +77,6 @@ export function AbsentCard({ teachers, day, selected, onSelect, onAdd, onRemove,
         {(day?.absent || []).length === 0 && <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>لم يُحدَّد أي معلم غائب بعد</p>}
         {(day?.absent || []).map((a) => (
           <span key={a.id} className={`sub-chip ${selected === a.id ? 'active' : ''}`} onClick={() => onSelect(a.id)} data-testid={`sub-absent-chip-${a.id}`}>
-            {a.late && <AlertTriangle className="w-3 h-3" title="أُضيف بعد التوزيع" data-testid={`sub-absent-late-${a.id}`} />}
             {a.name}
             <span className="x" onClick={(e) => { e.stopPropagation(); onRemove(a.id); }} data-testid={`sub-absent-remove-${a.id}`}><X className="w-3 h-3" /></span>
           </span>
