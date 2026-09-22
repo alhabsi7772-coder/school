@@ -1,0 +1,28 @@
+{
+  "summary": "Verified CSS fix for html2canvas Arabic glyph corruption in substitution print exports. Downloaded actual PNG (328KB) and PDF (10.7MB) from /substitution/print/2026-10-25 and visually inspected the exported files: header text 'مدرسة الخيرات للبنين ٥-٨' and 'توزيع الاحتياط ليوم الأحد — الموافق 25/10/2026' render as fully connected, correctly-shaped Arabic in both exported files. Confirmed the CSS override rule `.sub-print-sheet h1, .sub-print-sheet h2 { letter-spacing: normal !important; font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif !important }` is applied to all 4 print-sheet routes (SubPrint, SubStatsPrint, SubSwapPrint, SubSupervisionPrint) via computed style checks. Regression: live dashboard h1 preserves original bold Noto Kufi Arabic + letter-spacing -0.3px styling — fix did not leak. No JS errors during downloads.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/.screenshots/downloads/print_2026-10-25.png",
+    "/app/.screenshots/downloads/print_2026-10-25.pdf",
+    "/app/.screenshots/downloads/print_2026-10-25_header.png",
+    "/app/.screenshots/downloads/pdf_page1_header.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Note: SubStatsPrint.jsx, SubSwapPrint.jsx, SubSupervisionPrint.jsx do NOT expose 'تحميل كصورة' / 'تحميل PDF' html2canvas download buttons — only browser print. So the html2canvas bug was only reproducible on SubPrint.jsx. Fix still correctly applies to all 4 pages via shared .sub-print-sheet class as a defensive measure. If future work adds html2canvas exports to those 3 pages, the fix will already be in place.",
+    "Minor: two 422 API responses observed on /substitution/stats/print and /substitution/swap/print/2026-10-25 (likely missing query params or no swap data). Unrelated to this fix but worth noting."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100%"},
+  "test_credentials": "ehtiyat / ehtiyat2026 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None — used existing 2026-10-25 distribution data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "CSS fix at /app/frontend/src/components/substitution/substitution.css line 311 verified working. Downloaded PNG+PDF header regions were saved at /app/.screenshots/downloads/ and inspected — Arabic letters render fully connected. Live dashboard's h1/h2 (outside .sub-print-sheet) still uses Noto Kufi Arabic + -0.3px letter-spacing as intended.",
+  "rca of the issue": "Root cause was global CSS rule `.sub-root h1, .sub-root h2 { letter-spacing: -0.01em; font-family: var(--sub-font-heading) /* Noto Kufi Arabic */ }` applying non-zero letter-spacing on Arabic headings. Non-zero letter-spacing breaks Arabic cursive letter-joining/shaping when captured by html2canvas (which is less robust than native browser DOM text layout for complex scripts). Fix: more-specific override rule `.sub-print-sheet h1, .sub-print-sheet h2 { letter-spacing: normal !important; font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif !important }` restores normal shaping only within print sheets. Verified by downloading actual PNG/PDF files and visually confirming headers render with properly-joined Arabic glyphs."
+}
