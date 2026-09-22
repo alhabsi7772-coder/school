@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend-only regression for iteration 18 (3 small visual/text fixes). (1) RubricPrint header verified live at /teacher/rubrics/{id}/print with 'blank' mode: MOE logo /moe-logo.jpeg loads (naturalWidth=554, complete=true); line-1 'سلطنة عمان — وزارة التعليم' bold 700, color rgb(122,30,30)=#7A1E1E, font 'Noto Kufi Arabic'; line-2 directorate subtitle; line-3 bold 900 'مدرسة الخيرات للبنين' in Noto Kufi Arabic. Layout has clean spacing (header bottom 371px, divider 409px, table 594px — no overlap). (2) Certificate name change verified by code inspection at /app/frontend/src/utils/generateCertificate.js line 304 — 'سيف الطوقي' now under 'مدير المدرسة' label (line 302). Date rendering intact at line 284 (`بتاريخ: ${dateStr}` using ar-OM locale). End-to-end certificate download not re-exercised (requires 100%-score student submission — deemed acceptable per review request). (3) Substitution print regression: /substitution/print/2026-10-25 renders correctly, all 4 buttons present (تصدير Word, تحميل PDF, تحميل كصورة, طباعة / حفظ PDF); 'تحميل كصورة' successfully downloaded 'احتياط الأحد 25-10-2026.png' and 'تحميل PDF' downloaded 'احتياط الأحد 25-10-2026.pdf' with no console errors (html2canvas debug logs only, benign Canvas2D willReadFrequently warning).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Certificate generator (generateCertificate.js) uses Canvas2D API — for consistency, consider passing willReadFrequently:true when creating context to silence the Chromium perf warning (non-blocking).",
+    "Certificate end-to-end flow (StudentResult download-cert-btn triggered on 100% score) was not re-exercised; verification was done via code inspection only. If future iterations touch the certificate template, re-exercise the download flow end-to-end."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "admin/teacher123 (main), ehtiyat/ehtiyat2026 (substitution)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 3 iter-18 visual/text fixes verified. Certificate download for 'سيف الطوقي' only inspected in code — main agent can self-test by completing a quiz with 100% score and clicking 'download-cert-btn' in StudentResult.jsx if further assurance needed."
+}
