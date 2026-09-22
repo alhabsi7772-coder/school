@@ -282,6 +282,17 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 .sub-week .c { border-radius: 8px; padding: 6px 2px; text-align: center; border: 1px solid var(--sub-line); background: var(--sub-surface); font-weight: 700; color: var(--sub-navy-ink); }
 .sub-week .c.empty { color: var(--sub-line-2); font-weight: 500; }
 
+.sub-swap-grid { width: 100%; border-collapse: separate; border-spacing: 5px; }
+.sub-swap-grid th { font-size: 0.68rem; font-weight: 800; color: var(--sub-muted); padding: 2px 3px; text-align: center; }
+.sub-swap-grid th.sw-corner { text-align: right; }
+.sub-swap-grid td.sw-name { text-align: right; font-weight: 800; padding: 8px 10px; white-space: nowrap; font-size: 0.85rem; color: var(--sub-navy-ink); }
+.sub-swap-grid td.sw-cell { border-radius: 10px; padding: 9px 3px; text-align: center; font-weight: 700; font-size: 0.75rem; border: 1px solid var(--sub-line); background: var(--sub-surface); transition: transform .15s, box-shadow .15s; }
+.sub-swap-grid td.sw-cell.empty { color: var(--sub-line-2); font-weight: 500; }
+.sub-swap-grid td.sw-cell.pick { cursor: pointer; background: var(--sub-amber-soft); border-color: var(--sub-amber-line); color: var(--sub-amber-ink); }
+.sub-swap-grid td.sw-cell.pick:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.12); }
+.sub-swap-grid td.sw-cell.selected { background: var(--sub-green); border-color: var(--sub-green); color: #fff; }
+.sub-swap-grid td.sw-cell.disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* منطقة رفع الملفات */
 .sub-drop { border: 2px dashed var(--sub-line-2); border-radius: 18px; padding: 1rem; text-align: center; cursor: pointer; transition: border-color .15s, background-color .15s; background: var(--sub-surface-2); }
 .sub-drop:hover, .sub-drop.ok { border-color: var(--sub-navy); background: var(--sub-navy-soft); }
