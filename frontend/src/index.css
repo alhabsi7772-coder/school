@@ -1186,13 +1186,9 @@ html.mode-light .gb-row:hover td { background: rgba(var(--theme-accent-rgb), 0.0
 .login-cinematic-bars::before { top: 0;    background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%); }
 .login-cinematic-bars::after  { bottom: 0; background: linear-gradient(0deg,   rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%); }
 
-/* فيديو الدخول — يتلوّن ديناميكياً مع لون الثيم */
+/* فيديو الدخول — طبقة GPU منفصلة بدون فلتر حي (الفلتر الحي يُعيد حساب كل إطار
+   ويسبّب تقطّعاً واضحاً على أجهزة ذات معالج رسومي ضعيف/متكامل، مثل أجهزة المدارس) */
 .login-video-tinted {
-  /* فلتر مختصر (خطوتان بدل أربع) لتقليل كلفة المعالجة على كل إطار */
-  filter:
-    hue-rotate(var(--login-video-hue, 0deg))
-    saturate(1.45);
-  transition: filter 1.2s ease-in-out;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
