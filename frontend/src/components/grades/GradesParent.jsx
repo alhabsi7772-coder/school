@@ -89,7 +89,8 @@ export default function GradesParent() {
                     <GraduationCap className="w-6 h-6" style={{ color: 'var(--sub-navy-ink)' }} />
                   </div>
                   <div>
-                    <h2 className="font-black text-xl" style={{ color: 'var(--sub-navy-ink)' }}>{data.student.name}</h2>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>مرحباً الطالب</p>
+                    <h2 className="font-black text-xl" style={{ color: 'var(--sub-navy-ink)' }} data-testid="grades-parent-student-name">{data.student.name}</h2>
                     <p className="text-sm font-semibold" style={{ color: 'var(--sub-muted)' }}>{data.student.grade} / شعبة {data.student.section}</p>
                   </div>
                 </div>

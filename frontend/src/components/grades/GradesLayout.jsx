@@ -37,6 +37,7 @@ export default function GradesLayout({ children, title, subtitle, actions }) {
   const navigate = useNavigate();
   const [theme, setTheme] = useGradesTheme();
   const role = localStorage.getItem('gradesRole') || 'teacher';
+  const userName = localStorage.getItem('gradesName') || '';
   const nav = role === 'admin' ? ADMIN_NAV : TEACHER_NAV;
 
   useEffect(() => {
@@ -76,6 +77,14 @@ export default function GradesLayout({ children, title, subtitle, actions }) {
           </nav>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {userName && (
+              <div className="hidden sm:block leading-tight text-left mr-1" data-testid="grades-welcome">
+                <p className="text-[10px] font-semibold" style={{ color: 'var(--sub-muted)' }}>مرحباً</p>
+                <p className="text-xs font-black max-w-[180px] truncate" style={{ color: 'var(--sub-navy-ink)' }}>
+                  {role === 'admin' ? userName : `الأستاذ ${userName}`}
+                </p>
+              </div>
+            )}
             <ThemeSwitch theme={theme} setTheme={setTheme} />
             <a href="/teacher/login" className="sub-nav-link" title="المنصة الرئيسية" data-testid="grades-main-site-link">
               <ExternalLink className="w-4 h-4" /><span className="hidden lg:inline">المنصة</span>
