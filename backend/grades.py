@@ -16,9 +16,7 @@ security = HTTPBearer()
 SCHOOL_NAME = "مدرسة الخيرات للبنين ٥-٨"
 GRADES = ["الخامس", "السادس", "السابع", "الثامن"]
 SUBJECTS = [
-    "التربية الإسلامية", "اللغة العربية", "اللغة الإنجليزية", "الرياضيات",
-    "العلوم", "الدراسات الاجتماعية", "التربية الصحية", "الحاسوب",
-    "المهارات الحياتية", "التربية الفنية", "التربية الموسيقية", "التربية البدنية",
+    "التربية الاسلامية", "اللغة العربية", "اللغة الانجليزية", "الرياضيات", "العلوم", "الدراسات الاجتماعية", "التربية البدنية والصحية", "تقنية المعلومات", "الفنون البصرية", "الفنون الموسيقية",
 ]
 SEMESTERS = ["1", "2"]
 SEMESTER_LABELS = {"1": "الفصل الدراسي الأول", "2": "الفصل الدراسي الثاني"}
@@ -201,6 +199,16 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         update = {k: v for k, v in req.dict().items() if v is not None}
         if "assignments" in update:
             update["assignments"] = [a.dict() for a in (req.assignments or [])]
+        if "employee_number" in update or "civil_number" in update:
+            cur = await db.grades_users.find_one({"id": tid, "role": "teacher"}) or {}
+            emp = update.get("employee_number", cur.get("employee_number", "")).strip()
+            civil = update.get("civil_number", cur.get("civil_number", "")).strip()
+            update["employee_number"], update["civil_number"] = emp, civil
+            new_username = emp or civil
+            if new_username and new_username != cur.get("username"):
+                if await db.grades_users.find_one({"username": new_username, "id": {"$ne": tid}}):
+                    raise HTTPException(400, "الرقم مستخدم لمعلم آخر")
+                update["username"] = new_username
         await db.grades_users.update_one({"id": tid}, {"$set": update})
         return {"ok": True}
 
@@ -242,6 +250,39 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "created_at": now_iso(),
         })
         return {"ok": True}
+
+    @router.post("/teachers/import-substitution")
+    async def import_from_substitution(u=Depends(require_admin)):
+        """استيراد المعلمين ومواده وصفوفهم وشعبهم من جداول نظام حصص الاحتياط."""
+        grade_names = {"5": "الخامس", "6": "السادس", "7": "السابع", "8": "الثامن"}
+        added, updated = 0, 0
+        async for st in db.sub_teachers.find({}, {"_id": 0}):
+            name = (st.get("name") or "").strip()
+            if not name:
+                continue
+            found = set()
+            for cells in (st.get("schedule") or {}).values():
+                for c in cells:
+                    if not c or not c.get("class") or "/" not in c["class"]:
+                        continue
+                    g, sec = c["class"].split("/", 1)
+                    if g in grade_names:
+                        found.add((c.get("subject") or st.get("subject") or "", grade_names[g], sec))
+            derived = [{"subject": a, "grade": b, "section": c} for a, b, c in sorted(found, key=lambda x: (x[1], int(x[2]) if x[2].isdigit() else 0, x[0]))]
+            existing = await db.grades_users.find_one({"name": name, "role": "teacher"})
+            if existing:
+                have = {(a["subject"], a["grade"], a["section"]) for a in existing.get("assignments", [])}
+                merged = existing.get("assignments", []) + [a for a in derived if (a["subject"], a["grade"], a["section"]) not in have]
+                await db.grades_users.update_one({"id": existing["id"]}, {"$set": {"assignments": merged}})
+                updated += 1
+            else:
+                await db.grades_users.insert_one({
+                    "id": str(uuid.uuid4()), "name": name, "employee_number": "", "civil_number": "",
+                    "username": f"t{uuid.uuid4().hex[:8]}", "password_hash": hash_password("123456"),
+                    "role": "teacher", "is_active": True, "assignments": derived, "created_at": now_iso(),
+                })
+                added += 1
+        return {"added": added, "updated": updated}
 
     @router.post("/teachers/import")
     async def import_teachers(file: UploadFile = File(...), u=Depends(require_admin)):

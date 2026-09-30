@@ -47,6 +47,17 @@ export default function GradesTeachers() {
     } catch (err) { toast.error(errMsg(err)); }
   };
 
+  const importFromSub = async () => {
+    if (!confirm('استيراد المعلمين ومواده وصفوفهم وشعبهم من نظام حصص الاحتياط؟')) return;
+    setImporting(true);
+    try {
+      const res = await gradesApi.post('/teachers/import-substitution');
+      toast.success(`تم الاستيراد — جديد ${res.data.added} · محدّث ${res.data.updated}`);
+      fetchTeachers();
+    } catch (e) { toast.error(errMsg(e)); }
+    finally { setImporting(false); }
+  };
+
   const deleteTeacher = async (id) => {
     if (!confirm('حذف هذا المعلم ودرجاته؟')) return;
     try {
@@ -58,8 +69,8 @@ export default function GradesTeachers() {
 
   const saveAssignments = async () => {
     try {
-      await gradesApi.put(`/teachers/${editAssign.id}`, { assignments: editAssign.assignments });
-      toast.success('تم حفظ التكليفات');
+      await gradesApi.put(`/teachers/${editAssign.id}`, { assignments: editAssign.assignments, employee_number: editAssign.employee_number || '', civil_number: editAssign.civil_number || '' });
+      toast.success('تم الحفظ');
       setEditAssign(null);
       fetchTeachers();
     } catch (e) { toast.error(errMsg(e)); }
@@ -72,6 +83,9 @@ export default function GradesTeachers() {
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={importFile} />
           <button onClick={() => setAddForm({ name: '', employee_number: '', civil_number: '' })} className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-add-teacher">
             <Plus className="w-4 h-4" /> إضافة معلم
+          </button>
+          <button onClick={importFromSub} disabled={importing} className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-import-sub">
+            <Users className="w-4 h-4" /> استيراد من نظام الاحتياط
           </button>
           <button onClick={() => fileRef.current?.click()} disabled={importing} className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-import-teachers">
             <FileUp className="w-4 h-4" /> {importing ? 'جارٍ الاستيراد...' : 'استيراد من Excel'}
@@ -139,10 +153,14 @@ export default function GradesTeachers() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={() => setEditAssign(null)}>
           <div className="sub-card p-6 w-full max-w-2xl sub-rise" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>تكليف: {editAssign.name}</h3>
+              <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>بيانات وتكليف: {editAssign.name}</h3>
               <button onClick={() => setEditAssign(null)} className="p-1.5 rounded-lg hover:bg-black/5"><X className="w-4 h-4" /></button>
             </div>
 
+            <div className="flex gap-2 mb-4">
+              <input className="sub-input flex-1" placeholder="الرقم الوظيفي" value={editAssign.employee_number || ''} onChange={(e) => setEditAssign({ ...editAssign, employee_number: e.target.value })} data-testid="edit-emp" />
+              <input className="sub-input flex-1" placeholder="الرقم المدني" value={editAssign.civil_number || ''} onChange={(e) => setEditAssign({ ...editAssign, civil_number: e.target.value })} data-testid="edit-civil" />
+            </div>
             <div className="space-y-3 mb-4">
               {editAssign.assignments.map((a, i) => (
                 <div key={i} className="flex gap-2 items-center">
@@ -166,7 +184,7 @@ export default function GradesTeachers() {
 
             <div className="flex justify-end gap-2">
               <button className="sub-btn sub-btn-ghost" onClick={() => setEditAssign(null)}>إلغاء</button>
-              <button className="sub-btn sub-btn-primary" onClick={saveAssignments}>حفظ التكليفات</button>
+              <button className="sub-btn sub-btn-primary" onClick={saveAssignments}>حفظ</button>
             </div>
           </div>
         </div>
