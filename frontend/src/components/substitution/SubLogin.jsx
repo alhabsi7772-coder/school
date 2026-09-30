@@ -105,6 +105,9 @@ export default function SubLogin() {
           <Link to="/teacher/login" className="flex items-center justify-center gap-1.5 text-xs font-bold pt-1" style={{ color: 'var(--sub-muted)' }} data-testid="sub-back-to-main">
             <ArrowRight className="w-3.5 h-3.5" /> العودة إلى المنصة الرئيسية
           </Link>
+          <Link to="/grades/login" className="flex items-center justify-center gap-1.5 text-xs font-bold" style={{ color: 'var(--sub-muted)' }} data-testid="sub-to-grades">
+            نظام درجات الخيرات
+          </Link>
         </form>
       </div>
     </div>
