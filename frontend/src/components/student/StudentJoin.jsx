@@ -246,6 +246,10 @@ export default function StudentJoin() {
             <a href="/teacher/login" style={{ color: 'rgba(0,229,255,0.6)' }} className="hover:text-cyan-300 transition-colors">
               دخول المعلم
             </a>
+            {' | '}
+            <a href="/grades/login" style={{ color: 'rgba(0,229,255,0.6)' }} className="hover:text-cyan-300 transition-colors">
+              نظام درجات الخيرات
+            </a>
           </p>
         )}
       </div>
