@@ -5,7 +5,7 @@
  *  - فينييت دائري + تدرّجات + لمسة لون الثيم + غبار ضوئي متطاير
  *  - شرائط سينمائية أعلى وأسفل لإطار أنيق (letterbox-style ناعم)
  */
-export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,179,237' }) {
+export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,179,237', src = '/login-bg-720.mp4', poster = '/login-bg-poster.jpg', fit = 'cover', position = '30% center' }) {
   // 8 جسيمات غبار ضوئي — عدد منخفض للحفاظ على سلاسة الفيديو
   const dust = Array.from({ length: 8 }).map((_, i) => ({
     left: `${(i * 12.7 + 6) % 100}%`,
@@ -17,7 +17,7 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
   return (
     <div className="fixed inset-0 z-0 overflow-hidden login-cinematic-bars login-bg-root"
       data-testid="login-video-bg"
-      style={{ '--accent-rgb': accentRgb, backgroundImage: 'url(/login-bg-poster.jpg)' }}>
+      style={{ position: 'fixed', zIndex: 0, backgroundColor: fit === 'contain' ? '#0b1120' : undefined, '--accent-rgb': accentRgb, backgroundImage: poster ? `url(${poster})` : undefined }}>
       {/* طبقة Ken Burns منفصلة عن الفيديو: الحركة على الحاوية والفلتر على الفيديو
           => المتصفح يخزّن الفيديو المفلتر كطبقة واحدة ويحرّكها فقط (بدون إعادة فلترة كل إطار) */}
       <div className="absolute inset-0 login-kenburns">
@@ -27,15 +27,15 @@ export default function LoginVideoBackground({ overlay = 0.45, accentRgb = '99,1
           muted
           playsInline
           preload="auto"
-          poster="/login-bg-poster.jpg"
+          poster={poster || undefined}
           disablePictureInPicture
           controlsList="nodownload nofullscreen noremoteplayback"
-          className="absolute inset-0 w-full h-full object-cover login-video-tinted"
-          style={{ objectPosition: '30% center' }}
+          className="absolute inset-0 w-full h-full login-video-tinted"
+          style={{ objectFit: fit, objectPosition: position }}
           onLoadedMetadata={(e) => { try { e.currentTarget.play(); } catch { /* autoplay blocked */ } }}
           onEnded={(e) => { e.currentTarget.currentTime = 0; e.currentTarget.play().catch(() => {}); }}
         >
-          <source src="/login-bg-720.mp4" type="video/mp4" />
+          <source src={src} type="video/mp4" />
         </video>
       </div>
 

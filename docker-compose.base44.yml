@@ -1,0 +1,79 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: on-failure
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=base44
+      - MONGO_INITDB_ROOT_PASSWORD=base44pass
+      - MONGO_INITDB_DATABASE=alkhairat
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    restart: on-failure
+    working_dir: /app/backend
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      # Local infra credentials — generated here, not user secrets
+      - MONGO_URL=mongodb://base44:base44pass@mongodb:27017/alkhairat?authSource=admin
+      - DB_NAME=alkhairat
+      - JWT_SECRET=base44-dev-jwt-secret-2026
+      - SUB_ADMIN_USERNAME=subadmin
+      - SUB_ADMIN_PASSWORD=subadmin123
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      # /api/app-settings is an existing unauthenticated GET that touches the DB
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/app-settings').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 35s
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/backend"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    restart: on-failure
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+    environment:
+      # Public URL of the backend API (separate origin; backend CORS allows all)
+      - REACT_APP_BACKEND_URL=https://8000-${BASE44_PUBLIC_HOST_SUFFIX}
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      - DISABLE_VISUAL_EDITS=true
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 90s
+    command: ["sh", "-ec", "npm install && exec npm start"]
+
+volumes:
+  mongo_data:
