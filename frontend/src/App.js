@@ -44,11 +44,30 @@ import SubSettings from './components/substitution/SubSettings';
 import SubSupervisionPrint from './components/substitution/SubSupervisionPrint';
 import SubSwap from './components/substitution/SubSwap';
 import SubSwapPrint from './components/substitution/SubSwapPrint';
+import GradesLogin from './components/grades/GradesLogin';
+import GradesAdmin from './components/grades/GradesAdmin';
+import GradesTeachers from './components/grades/GradesTeachers';
+import GradesStudents from './components/grades/GradesStudents';
+import GradesEnter from './components/grades/GradesEnter';
+import GradesStats from './components/grades/GradesStats';
+import GradesParent from './components/grades/GradesParent';
 import './App.css';
 
 const SubRoute = ({ children }) => {
   const token = localStorage.getItem('subToken');
   return token ? children : <Navigate to="/substitution/login" replace />;
+};
+
+const GradesRoute = ({ children }) => {
+  const token = localStorage.getItem('gradesToken');
+  return token ? children : <Navigate to="/grades/login" replace />;
+};
+
+const GradesAdminRoute = ({ children }) => {
+  const token = localStorage.getItem('gradesToken');
+  if (!token) return <Navigate to="/grades/login" replace />;
+  if (localStorage.getItem('gradesRole') !== 'admin') return <Navigate to="/grades" replace />;
+  return children;
 };
 
 const ProtectedRoute = ({ children }) => {
@@ -116,6 +135,13 @@ function App() {
             <Route path="/substitution/swap/print/:date" element={<SubRoute><SubSwapPrint /></SubRoute>} />
             <Route path="/substitution/stats/print" element={<SubRoute><SubStatsPrint /></SubRoute>} />
             <Route path="/substitution/supervision/print" element={<SubRoute><SubSupervisionPrint /></SubRoute>} />
+            <Route path="/grades/login" element={<GradesLogin />} />
+            <Route path="/grades/parent" element={<GradesParent />} />
+            <Route path="/grades" element={<GradesRoute>{localStorage.getItem('gradesRole') === 'admin' ? <GradesAdmin /> : <GradesEnter />}</GradesRoute>} />
+            <Route path="/grades/teachers" element={<GradesAdminRoute><GradesTeachers /></GradesAdminRoute>} />
+            <Route path="/grades/students" element={<GradesAdminRoute><GradesStudents /></GradesAdminRoute>} />
+            <Route path="/grades/enter" element={<GradesRoute><GradesEnter /></GradesRoute>} />
+            <Route path="/grades/stats" element={<GradesRoute><GradesStats /></GradesRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

@@ -189,6 +189,7 @@ async def init_db():
 async def lifespan(app: FastAPI):
     await init_db()
     await _substitution_router.init()
+    await _grades_router.init()
     yield
     client.close()
 
@@ -3906,9 +3907,12 @@ async def bundle_download(code: str, rid: str, access_id: str):
 
 from lesson_plans import make_router as _make_lesson_plans_router
 from substitution import make_router as _make_substitution_router
+from grades import make_router as _make_grades_router
 api_router.include_router(_make_lesson_plans_router(db, get_teacher))
 _substitution_router = _make_substitution_router(db, hash_password, verify_password, make_token, JWT_SECRET, JWT_ALGORITHM)
 api_router.include_router(_substitution_router)
+_grades_router = _make_grades_router(db, hash_password, verify_password, make_token, JWT_SECRET, JWT_ALGORITHM)
+api_router.include_router(_grades_router)
 app.include_router(api_router)
 
 # ملفات ثابتة (صور بنك الأسئلة المستخرجة من الكتب) — تحت /api لتمر عبر الـ ingress
