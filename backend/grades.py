@@ -1,4 +1,5 @@
 """نظام درجات الخيرات — نظام مستقل لإدارة درجات الاختبارات القصيرة."""
+import difflib
 import io
 import uuid
 from datetime import datetime, timezone
@@ -278,6 +279,14 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         await db.grades_users.update_one({"id": tid}, {"$set": update})
         return {"ok": True}
 
+    @router.delete("/teachers/all")
+    async def delete_all_teachers(u=Depends(require_admin)):
+        ids = [t["id"] async for t in db.grades_users.find({"role": "teacher"}, {"id": 1})]
+        res = await db.grades_users.delete_many({"role": "teacher"})
+        if ids:
+            await db.grades_scores.delete_many({"teacher_id": {"$in": ids}})
+        return {"ok": True, "deleted": res.deleted_count}
+
     @router.delete("/teachers/{tid}")
     async def delete_teacher(tid: str, u=Depends(require_admin)):
         await db.grades_users.delete_one({"id": tid, "role": "teacher"})
@@ -371,6 +380,131 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 suggested["civil"] = i
         sample = [[("" if c is None else str(c)) for c in row] for row in rows[:5]]
         return {"headers": header, "sample_rows": sample, "total_rows": len(rows), "suggested": suggested}
+
+    def _excel_cells(header, rows, name_col, emp_col, civil_col):
+        col_map = {}
+        if name_col not in (None, ""):
+            col_map["name"] = int(name_col)
+            if emp_col not in (None, ""):
+                col_map["emp"] = int(emp_col)
+            if civil_col not in (None, ""):
+                col_map["civil"] = int(civil_col)
+        else:
+            for i, h in enumerate(header):
+                hl = norm_ar(h)
+                if hl in ("الاسم", "اسمالمعلم", "اسم") and "name" not in col_map:
+                    col_map["name"] = i
+                elif "الوظيفي" in hl:
+                    col_map["emp"] = i
+                elif "المدني" in hl:
+                    col_map["civil"] = i
+        if "name" not in col_map:
+            raise HTTPException(400, "يجب تحديد عمود الاسم")
+
+        def cell(row, key):
+            i = col_map.get(key, -1)
+            v = row[i] if 0 <= i < len(row) else None
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            return str(v).strip() if v not in (None, "") else ""
+
+        return [(cell(r, "name"), cell(r, "emp"), cell(r, "civil")) for r in rows]
+
+    def _name_score(a: str, b: str) -> float:
+        ka, kb = name_key(a), name_key(b)
+        if not ka or not kb:
+            return 0.0
+        if ka == kb:
+            return 1.0
+        drop = {"بن", "بنت", "ابن"}
+        ta = [t for t in ka.split() if t not in drop] or ka.split()
+        tb = [t for t in kb.split() if t not in drop] or kb.split()
+        if ta == tb:
+            return 0.98
+        ratio = difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio()
+        common = len(set(ta) & set(tb))
+        token = (common / min(len(ta), len(tb))) * 0.7 + (common / max(len(ta), len(tb))) * 0.3 if common >= 2 else 0.0
+        prefix = 0.15 if ta[:2] == tb[:2] else 0.0
+        return min(1.0, max(ratio, token) * 0.85 + prefix)
+
+    @router.post("/teachers/import/match")
+    async def match_teachers_import(
+        file: UploadFile = File(...),
+        name_col: Optional[str] = Form(None),
+        emp_col: Optional[str] = Form(None),
+        civil_col: Optional[str] = Form(None),
+        u=Depends(require_admin),
+    ):
+        """مطابقة أسماء Excel مع المعلمين الموجودين تلقائياً (بدون إنشاء معلمين جدد)."""
+        header, rows = _parse_excel(await file.read())
+        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "id": 1, "name": 1, "subject": 1, "employee_number": 1, "civil_number": 1}).sort("name", 1).to_list(None)
+        out, seen, used = [], set(), set()
+        for idx, (name, emp, civil) in enumerate(_excel_cells(header, rows, name_col, emp_col, civil_col)):
+            if not name:
+                continue
+            key = name_key(name)
+            dup = key in seen
+            seen.add(key)
+            out.append({"row": idx, "name": name, "emp": emp, "civil": civil, "match_id": None,
+                        "confidence": "none", "score": 0.0, "duplicate": dup})
+        # المرحلة ١: المطابقات التامة أولاً، ثم المرحلة ٢: التقريبية للمتبقي
+        for pass_exact in (True, False):
+            for r in out:
+                if r["match_id"] or r["duplicate"]:
+                    continue
+                best, best_score = None, 0.0
+                for t in teachers:
+                    if t["id"] in used:
+                        continue
+                    s = _name_score(r["name"], t["name"])
+                    if s > best_score:
+                        best, best_score = t, s
+                r["score"] = max(r["score"], round(best_score, 2))
+                if best and ((pass_exact and best_score >= 0.98) or (not pass_exact and best_score >= 0.6)):
+                    used.add(best["id"])
+                    r["match_id"] = best["id"]
+                    r["score"] = round(best_score, 2)
+                    r["confidence"] = "exact" if best_score >= 0.98 else "high" if best_score >= 0.85 else "low"
+        return {"rows": out, "teachers": teachers}
+
+    class MatchApplyRow(BaseModel):
+        teacher_id: str
+        emp: str = ""
+        civil: str = ""
+
+    class MatchApplyBody(BaseModel):
+        rows: List[MatchApplyRow]
+
+    @router.post("/teachers/import/apply")
+    async def apply_teachers_match(body: MatchApplyBody, u=Depends(require_admin)):
+        """نقل الرقم المدني والوظيفي فقط إلى المعلمين المطابَقين."""
+        updated, skipped = 0, 0
+        seen = set()
+        for r in body.rows:
+            if r.teacher_id in seen:
+                skipped += 1
+                continue
+            seen.add(r.teacher_id)
+            cur = await db.grades_users.find_one({"id": r.teacher_id, "role": "teacher"}, {"_id": 0})
+            if not cur:
+                skipped += 1
+                continue
+            emp, civil = r.emp.strip(), r.civil.strip()
+            upd = {}
+            if emp:
+                upd["employee_number"] = emp
+            if civil:
+                upd["civil_number"] = civil
+            new_username = emp or civil
+            if new_username and new_username != cur.get("username") and \
+                    not await db.grades_users.find_one({"username": new_username, "id": {"$ne": cur["id"]}}):
+                upd["username"] = new_username
+            if upd:
+                await db.grades_users.update_one({"id": cur["id"]}, {"$set": upd})
+                updated += 1
+            else:
+                skipped += 1
+        return {"updated": updated, "skipped": skipped}
 
     @router.post("/teachers/import")
     async def import_teachers(

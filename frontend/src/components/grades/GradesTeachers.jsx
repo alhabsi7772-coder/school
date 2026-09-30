@@ -4,6 +4,7 @@ import { Users, FileUp, Trash2, Plus, Pencil } from 'lucide-react';
 import GradesLayout from './GradesLayout';
 import ImportMapModal from './ImportMapModal';
 import TeacherEditModal from './TeacherEditModal';
+import TeacherMatchModal from './TeacherMatchModal';
 import { gradesApi, errMsg, classLabel } from './gradesApi';
 
 const TEACHER_FIELDS = [
@@ -20,6 +21,7 @@ export default function GradesTeachers() {
   const [pendingFile, setPendingFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [mapping, setMapping] = useState({});
+  const [matchData, setMatchData] = useState(null);
   const fileRef = useRef(null);
 
   const fetchTeachers = async () => {
@@ -60,12 +62,31 @@ export default function GradesTeachers() {
       fd.append('name_col', mapping.name ?? '');
       fd.append('emp_col', mapping.emp ?? '');
       fd.append('civil_col', mapping.civil ?? '');
-      const res = await gradesApi.post('/teachers/import', fd);
-      toast.success(`تم الاستيراد — جديد ${res.data.added} · تمت مطابقته ${res.data.updated}${res.data.skipped ? ` · مكرر ${res.data.skipped}` : ''}`);
+      const res = await gradesApi.post('/teachers/import/match', fd);
       cancelImport();
+      setMatchData(res.data);
+    } catch (e) { toast.error(errMsg(e)); }
+    finally { setImporting(false); }
+  };
+
+  const applyMatch = async (rows) => {
+    setImporting(true);
+    try {
+      const res = await gradesApi.post('/teachers/import/apply', { rows });
+      toast.success(`تم نقل الأرقام إلى ${res.data.updated} معلم${res.data.skipped ? ` · تم تجاهل ${res.data.skipped}` : ''}`);
+      setMatchData(null);
       fetchTeachers();
     } catch (e) { toast.error(errMsg(e)); }
     finally { setImporting(false); }
+  };
+
+  const deleteAll = async () => {
+    if (!confirm(`حذف جميع المعلمين (${teachers.length}) مع درجاتهم؟ لا يمكن التراجع.`)) return;
+    try {
+      const res = await gradesApi.delete('/teachers/all');
+      toast.success(`تم حذف ${res.data.deleted} معلم`);
+      fetchTeachers();
+    } catch (e) { toast.error(errMsg(e)); }
   };
 
   const saveTeacher = async (form) => {
@@ -116,12 +137,17 @@ export default function GradesTeachers() {
           <button onClick={() => fileRef.current?.click()} disabled={importing} className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-import-teachers">
             <FileUp className="w-4 h-4" /> {importing ? 'جارٍ الاستيراد...' : 'استيراد من Excel'}
           </button>
+          {teachers.length > 0 && (
+            <button onClick={deleteAll} disabled={importing} className="sub-btn sub-btn-danger sub-btn-sm" data-testid="grades-delete-all-teachers">
+              <Trash2 className="w-4 h-4" /> حذف جميع المعلمين
+            </button>
+          )}
         </>
       }>
       {/* تنبيه صيغة الملف */}
       <div className="sub-card p-4 mb-5 sub-rise" style={{ background: 'var(--sub-amber-soft)', borderColor: 'var(--sub-amber-line)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--sub-amber-ink)' }}>
-          الخطوات: ١) استيراد من نظام الاحتياط (المادة والصفوف) ← ٢) استيراد من Excel (الاسم | الرقم الوظيفي | الرقم المدني) — تتم مطابقة المعلمين بالاسم فلا يتكرر أحد. كلمة المرور الافتراضية للمعلمين الجدد: 123456
+          الخطوات: ١) استيراد من نظام الاحتياط (الأسماء والمادة والصفوف) ← ٢) استيراد من Excel: تظهر نافذة مطابقة الأسماء تلقائياً ويدوياً، ويُنقل الرقم الوظيفي والرقم المدني فقط دون تكرار أي معلم. كلمة المرور الافتراضية للمعلمين الجدد: 123456
         </p>
       </div>
 
@@ -167,6 +193,10 @@ export default function GradesTeachers() {
         onCancel={cancelImport}
         confirming={importing}
       />
+
+      {matchData && (
+        <TeacherMatchModal data={matchData} onClose={() => setMatchData(null)} onApply={applyMatch} applying={importing} />
+      )}
 
       {editing && (
         <TeacherEditModal key={editing.id || 'new'} teacher={editing} title={editing.id ? `تعديل: ${editing.name}` : 'إضافة معلم'}
