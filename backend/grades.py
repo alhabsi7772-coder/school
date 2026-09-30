@@ -822,6 +822,35 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 })
         return {"stats": out}
 
+    @router.get("/full-marks")
+    async def full_marks(semester: Optional[str] = None, u=Depends(current_user)):
+        """الطلاب الحاصلون على الدرجة النهائية (٢٠/٢٠) — المعلم يرى درجاته فقط، والمدير يرى الجميع."""
+        q = {} if u["role"] == "admin" else {"teacher_id": u["uid"]}
+        if semester:
+            q["semester"] = semester
+        scores = await db.grades_scores.find(q, {"_id": 0}).to_list(None)
+        ids = {s["student_id"] for s in scores}
+        students = await db.grades_students.find({"id": {"$in": list(ids)}}, {"_id": 0}).to_list(None)
+        smap = {s["id"]: s for s in students}
+        rows = []
+        for s in scores:
+            total = (s.get("quiz1") or 0) + (s.get("quiz2") or 0)
+            if total < QUIZ_MAX * 2:
+                continue
+            st = smap.get(s["student_id"], {})
+            rows.append({
+                "student_name": st.get("name", "—"),
+                "grade": s.get("grade") or st.get("grade", ""),
+                "section": str(s.get("section") or st.get("section", "")),
+                "subject": s.get("subject", ""),
+                "semester": s.get("semester", ""),
+                "semester_label": SEMESTER_LABELS.get(s.get("semester", ""), ""),
+                "teacher_name": s.get("teacher_name", ""),
+                "total": total,
+            })
+        rows.sort(key=lambda r: (GRADE_NUM.get(r["grade"], "9"), r["section"], r["student_name"]))
+        return {"rows": rows, "count": len(rows), "max": QUIZ_MAX * 2}
+
     # ---- parent: results by civil number (public) ----
     @router.get("/parent/results")
     async def parent_results(civil_number: str):

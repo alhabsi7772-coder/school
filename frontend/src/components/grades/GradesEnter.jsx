@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { GraduationCap, Save, AlertTriangle, Lock, Check, Loader2 } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, GRADES_LIST, SUBJECTS, SEMESTERS, QUIZ_MAX, levelLetter, LEVEL_COLORS } from './gradesApi';
+import { gradesApi, errMsg, GRADES_LIST, SUBJECTS, SEMESTERS, QUIZ_MAX } from './gradesApi';
 
 const ALL_SECTIONS = ['1', '2', '3', '4', '5', '6', '7'];
 
@@ -201,36 +201,28 @@ export default function GradesEnter() {
               <table className="sub-table">
                 <thead>
                   <tr>
-                    <th>م</th><th>اسم الطالب</th><th>الرقم المدني</th>
+                    <th>م</th><th>اسم الطالب</th>
                     <th>اختبار قصير 1<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {QUIZ_MAX})</span></th>
                     <th>اختبار قصير 2<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {QUIZ_MAX})</span></th>
-                    <th>المجموع<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {QUIZ_MAX * 2})</span></th>
-                    <th>المستوى</th>
                   </tr>
                 </thead>
                 <tbody>
                   {students.map((s, i) => {
                     const sc = scores[s.id] || {};
                     const q1 = sc.quiz1, q2 = sc.quiz2;
-                    const total = (q1 != null || q2 != null) ? (q1 || 0) + (q2 || 0) : null;
-                    const pct = total != null ? (total / (QUIZ_MAX * 2)) * 100 : null;
-                    const lvl = levelLetter(pct);
                     return (
                       <tr key={s.id}>
                         <td>{i + 1}</td>
                         <td className="font-bold">{s.name}</td>
-                        <td className="text-xs" style={{ color: 'var(--sub-muted)' }}>{s.civil_number || '—'}</td>
                         <td><input type="number" min="0" max={QUIZ_MAX} step="0.5" disabled={settings.grades_locked}
                           className="sub-input w-20 text-center" value={q1 ?? ''} onChange={(e) => updateScore(s.id, 'quiz1', e.target.value)} onBlur={flush} data-testid={`grades-quiz1-${s.id}`} /></td>
                         <td><input type="number" min="0" max={QUIZ_MAX} step="0.5" disabled={settings.grades_locked}
                           className="sub-input w-20 text-center" value={q2 ?? ''} onChange={(e) => updateScore(s.id, 'quiz2', e.target.value)} onBlur={flush} data-testid={`grades-quiz2-${s.id}`} /></td>
-                        <td className="font-black">{total ?? '—'}</td>
-                        <td>{lvl ? <span className="sub-badge" style={{ background: `${LEVEL_COLORS[lvl]}22`, color: LEVEL_COLORS[lvl] }}>{lvl}</span> : '—'}</td>
                       </tr>
                     );
                   })}
                   {students.length === 0 && (
-                    <tr><td colSpan={7} className="text-center py-8" style={{ color: 'var(--sub-muted)' }}>
+                    <tr><td colSpan={4} className="text-center py-8" style={{ color: 'var(--sub-muted)' }}>
                       {grade && section ? 'لا يوجد طلاب في هذا الصف/الشعبة — استورد بيانات الطلاب' : 'اختر الفصل والصف والشعبة لعرض الطلاب'}
                     </td></tr>
                   )}
