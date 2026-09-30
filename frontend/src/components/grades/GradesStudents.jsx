@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { BookOpen, FileUp, Trash2, Search } from 'lucide-react';
+import { BookOpen, FileUp, Trash2, Search, Plus } from 'lucide-react';
 import GradesLayout from './GradesLayout';
 import { gradesApi, errMsg, GRADES_LIST } from './gradesApi';
 
@@ -9,6 +9,7 @@ export default function GradesStudents() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [filter, setFilter] = useState({ grade: '', section: '', q: '' });
+  const [addForm, setAddForm] = useState(null);
   const fileRef = useRef(null);
 
   const fetchStudents = async () => {
@@ -36,6 +37,16 @@ export default function GradesStudents() {
     finally { setImporting(false); }
   };
 
+  const addStudent = async (e) => {
+    e.preventDefault();
+    try {
+      await gradesApi.post('/students', addForm);
+      toast.success('تمت إضافة الطالب');
+      setAddForm(null);
+      fetchStudents();
+    } catch (err) { toast.error(errMsg(err)); }
+  };
+
   const deleteStudent = async (id) => {
     if (!confirm('حذف هذا الطالب ودرجاته؟')) return;
     try {
@@ -61,6 +72,9 @@ export default function GradesStudents() {
       actions={
         <>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={importFile} />
+          <button onClick={() => setAddForm({ name: '', grade: '', section: '', civil_number: '' })} className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-add-student">
+            <Plus className="w-4 h-4" /> إضافة طالب
+          </button>
           <button onClick={() => fileRef.current?.click()} disabled={importing} className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-import-students">
             <FileUp className="w-4 h-4" /> {importing ? 'جارٍ الاستيراد...' : 'استيراد من Excel'}
           </button>
@@ -108,6 +122,26 @@ export default function GradesStudents() {
           </table>
         </div>
       </div>
+      {addForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={() => setAddForm(null)}>
+          <form onSubmit={addStudent} className="sub-card p-6 w-full max-w-md sub-rise space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>إضافة طالب</h3>
+            <input className="sub-input" placeholder="اسم الطالب" required value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} data-testid="add-student-name" />
+            <div className="flex gap-2">
+              <select className="sub-input flex-1" required value={addForm.grade} onChange={(e) => setAddForm({ ...addForm, grade: e.target.value })}>
+                <option value="">الصف</option>
+                {GRADES_LIST.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <input className="sub-input w-24" placeholder="الشعبة" required value={addForm.section} onChange={(e) => setAddForm({ ...addForm, section: e.target.value })} />
+            </div>
+            <input className="sub-input" placeholder="الرقم المدني" value={addForm.civil_number} onChange={(e) => setAddForm({ ...addForm, civil_number: e.target.value })} />
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" className="sub-btn sub-btn-ghost" onClick={() => setAddForm(null)}>إلغاء</button>
+              <button type="submit" className="sub-btn sub-btn-primary" data-testid="add-student-save">حفظ</button>
+            </div>
+          </form>
+        </div>
+      )}
     </GradesLayout>
   );
 }

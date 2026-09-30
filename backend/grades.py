@@ -56,6 +56,19 @@ class Assignment(BaseModel):
     subject: str
 
 
+class TeacherCreate(BaseModel):
+    name: str
+    employee_number: str = ""
+    civil_number: str = ""
+
+
+class StudentCreate(BaseModel):
+    name: str
+    grade: str = ""
+    section: str = ""
+    civil_number: str = ""
+
+
 class TeacherUpdate(BaseModel):
     name: Optional[str] = None
     employee_number: Optional[str] = None
@@ -195,6 +208,39 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def delete_teacher(tid: str, u=Depends(require_admin)):
         await db.grades_users.delete_one({"id": tid, "role": "teacher"})
         await db.grades_scores.delete_many({"teacher_id": tid})
+        return {"ok": True}
+
+    @router.post("/teachers")
+    async def add_teacher(body: TeacherCreate, u=Depends(require_admin)):
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(400, "الاسم مطلوب")
+        emp, civil = body.employee_number.strip(), body.civil_number.strip()
+        username = emp or civil or f"t{uuid.uuid4().hex[:6]}"
+        if await db.grades_users.find_one({"username": username}):
+            raise HTTPException(400, "يوجد معلم بنفس الرقم الوظيفي/المدني")
+        await db.grades_users.insert_one({
+            "id": str(uuid.uuid4()), "name": name,
+            "employee_number": emp, "civil_number": civil,
+            "username": username, "password_hash": hash_password("123456"),
+            "role": "teacher", "is_active": True, "assignments": [],
+            "created_at": now_iso(),
+        })
+        return {"ok": True}
+
+    @router.post("/students")
+    async def add_student(body: StudentCreate, u=Depends(require_admin)):
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(400, "الاسم مطلوب")
+        civil = body.civil_number.strip()
+        if civil and await db.grades_students.find_one({"civil_number": civil}):
+            raise HTTPException(400, "يوجد طالب بنفس الرقم المدني")
+        await db.grades_students.insert_one({
+            "id": str(uuid.uuid4()), "name": name, "grade": body.grade.strip(),
+            "section": body.section.strip(), "civil_number": civil,
+            "created_at": now_iso(),
+        })
         return {"ok": True}
 
     @router.post("/teachers/import")

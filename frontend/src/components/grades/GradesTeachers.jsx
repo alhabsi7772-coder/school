@@ -9,6 +9,7 @@ export default function GradesTeachers() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [editAssign, setEditAssign] = useState(null);
+  const [addForm, setAddForm] = useState(null);
   const fileRef = useRef(null);
 
   const fetchTeachers = async () => {
@@ -36,6 +37,16 @@ export default function GradesTeachers() {
     finally { setImporting(false); }
   };
 
+  const addTeacher = async (e) => {
+    e.preventDefault();
+    try {
+      await gradesApi.post('/teachers', addForm);
+      toast.success('تمت إضافة المعلم — كلمة المرور الافتراضية 123456');
+      setAddForm(null);
+      fetchTeachers();
+    } catch (err) { toast.error(errMsg(err)); }
+  };
+
   const deleteTeacher = async (id) => {
     if (!confirm('حذف هذا المعلم ودرجاته؟')) return;
     try {
@@ -59,6 +70,9 @@ export default function GradesTeachers() {
       actions={
         <>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={importFile} />
+          <button onClick={() => setAddForm({ name: '', employee_number: '', civil_number: '' })} className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-add-teacher">
+            <Plus className="w-4 h-4" /> إضافة معلم
+          </button>
           <button onClick={() => fileRef.current?.click()} disabled={importing} className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-import-teachers">
             <FileUp className="w-4 h-4" /> {importing ? 'جارٍ الاستيراد...' : 'استيراد من Excel'}
           </button>
@@ -104,6 +118,21 @@ export default function GradesTeachers() {
           </table>
         </div>
       </div>
+
+      {addForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={() => setAddForm(null)}>
+          <form onSubmit={addTeacher} className="sub-card p-6 w-full max-w-md sub-rise space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>إضافة معلم</h3>
+            <input className="sub-input" placeholder="اسم المعلم" required value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} data-testid="add-teacher-name" />
+            <input className="sub-input" placeholder="الرقم الوظيفي" value={addForm.employee_number} onChange={(e) => setAddForm({ ...addForm, employee_number: e.target.value })} />
+            <input className="sub-input" placeholder="الرقم المدني" value={addForm.civil_number} onChange={(e) => setAddForm({ ...addForm, civil_number: e.target.value })} />
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" className="sub-btn sub-btn-ghost" onClick={() => setAddForm(null)}>إلغاء</button>
+              <button type="submit" className="sub-btn sub-btn-primary" data-testid="add-teacher-save">حفظ</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* نافذة التكليفات */}
       {editAssign && (
