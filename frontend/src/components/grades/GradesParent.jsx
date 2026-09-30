@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ParentVideoBackground from './ParentVideoBackground';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Search, GraduationCap, BookOpen, TrendingUp, Award, ArrowRight } from 'lucide-react';
@@ -6,7 +7,6 @@ import { gradesApi, errMsg, SCHOOL_NAME, QUIZ_MAX, levelLetter, LEVEL_COLORS } f
 import { useGradesTheme, themeClass } from './gradesTheme';
 import { ThemeSwitch } from './GradesLayout';
 import LuxParticles from '../LuxParticles';
-import LoginVideoBackground from '../LoginVideoBackground';
 import '../substitution/substitution.css';
 
 export default function GradesParent() {
@@ -40,7 +40,7 @@ export default function GradesParent() {
     <div className={`sub-root min-h-screen ${themeClass(theme)}`} data-testid="grades-parent-page">
       {theme === 'lux' && <LuxParticles />}
       {/* خلفية الفيديو */}
-      <LoginVideoBackground src="/login-bg-720.mp4" poster="" fit="cover" position="center 20%" overlay={theme === 'light' ? 0.25 : 0.55} accentRgb={theme === 'lux' ? '212,175,55' : '99,179,237'} />
+      <ParentVideoBackground dim={theme === 'light' ? 0.08 : 0.35} />
 
       <div className="fixed top-4 left-4 z-20"><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
 
@@ -50,10 +50,10 @@ export default function GradesParent() {
             <div className="text-center mb-8">
               <img src="/moe-logo.jpeg" alt="وزارة التعليم" className="w-24 h-24 mx-auto rounded-2xl object-contain bg-white p-2 sub-card" />
               <h1 className="text-3xl sm:text-4xl font-black mt-5" style={{ color: 'var(--sub-navy-ink)' }}>نتائج الطلاب</h1>
-              <p className="text-sm mt-1 font-semibold" style={{ color: 'var(--sub-muted)' }}>{SCHOOL_NAME} — نظام درجات الخيرات</p>
+              <p className="text-sm mt-1 font-bold" style={{ color: 'var(--sub-navy-ink)', textShadow: '0 1px 8px rgba(255,255,255,.35)' }}>{SCHOOL_NAME} — نظام درجات الخيرات</p>
             </div>
 
-            <form onSubmit={search} className="sub-card p-7 w-full max-w-md sub-rise space-y-5">
+            <form onSubmit={search} className="sub-card parent-glass-card p-7 w-full max-w-md sub-rise space-y-5" data-testid="grades-parent-login-card">
               <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: 'var(--sub-line)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--sub-teal-soft)' }}>
                   <GraduationCap className="w-5 h-5" style={{ color: 'var(--sub-teal-ink)' }} />
