@@ -346,8 +346,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             name = str(row[col_map["name"]] or "").strip() if col_map.get("name", -1) < len(row) else ""
             if not name:
                 continue
-            emp = str(row[col_map["emp"]].strip() if col_map.get("emp", -1) < len(row) and row[col_map["emp"]] else "").strip()
-            civil = str(row[col_map["civil"]].strip() if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
+            emp = str(row[col_map["emp"]] if col_map.get("emp", -1) < len(row) and row[col_map["emp"]] else "").strip()
+            civil = str(row[col_map["civil"]] if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
             existing = await db.grades_users.find_one({"$or": [
                 {"username": emp or civil or name},
                 {"employee_number": emp} if emp else {"__skip": 1},
@@ -451,9 +451,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             name = str(row[col_map["name"]] or "").strip() if col_map.get("name", -1) < len(row) else ""
             if not name:
                 continue
-            grade = str(row[col_map["grade"]].strip() if col_map.get("grade", -1) < len(row) and row[col_map["grade"]] else "").strip()
-            section = str(row[col_map["section"]].strip() if col_map.get("section", -1) < len(row) and row[col_map["section"]] else "").strip()
-            civil = str(row[col_map["civil"]].strip() if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
+            grade = str(row[col_map["grade"]] if col_map.get("grade", -1) < len(row) and row[col_map["grade"]] else "").strip()
+            section = str(row[col_map["section"]] if col_map.get("section", -1) < len(row) and row[col_map["section"]] else "").strip()
+            civil = str(row[col_map["civil"]] if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
             # التحقق من التكرار بالرقم المدني أو الاسم+الصف+الشعبة
             dup_q = {}
             if civil:

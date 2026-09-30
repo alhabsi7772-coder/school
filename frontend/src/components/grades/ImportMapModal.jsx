@@ -57,7 +57,7 @@ export default function ImportMapModal({ preview, fields, mapping, setMapping, o
           <button
             className="sub-btn sub-btn-primary"
             onClick={onConfirm}
-            disabled={confirming || !mapping[fields.find((f) => f.required)?.key]}
+            disabled={confirming || (() => { const v = mapping[fields.find((f) => f.required)?.key]; return v === '' || v == null; })()}
             data-testid="import-map-confirm"
           >
             {confirming ? 'جارٍ الاستيراد...' : 'تأكيد الاستيراد'}
