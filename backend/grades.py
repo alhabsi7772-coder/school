@@ -147,6 +147,25 @@ class ScoreSave(BaseModel):
 class SettingsReq(BaseModel):
     site_closed: Optional[bool] = None
     grades_locked: Optional[bool] = None
+    subject_max: Optional[dict] = None
+
+
+def subject_max_map(settings: dict) -> dict:
+    """الدرجات العظمى لكل مادة {subject: {quiz1, quiz2}} مع القيمة الافتراضية 10."""
+    saved = (settings or {}).get("subject_max") or {}
+    out = {}
+    for sub in SUBJECTS:
+        v = saved.get(sub) or {}
+        out[sub] = {
+            "quiz1": float(v.get("quiz1", QUIZ_MAX) or 0),
+            "quiz2": float(v.get("quiz2", QUIZ_MAX) or 0),
+        }
+    return out
+
+
+def max_for(settings: dict, subject: str):
+    m = subject_max_map(settings).get(subject) or {"quiz1": QUIZ_MAX, "quiz2": QUIZ_MAX}
+    return m["quiz1"], m["quiz2"]
 
 
 def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_algorithm):
@@ -202,7 +221,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     @router.get("/status")
     async def site_status():
         s = await get_settings()
-        return {"site_closed": s.get("site_closed", False), "grades_locked": s.get("grades_locked", False)}
+        return {"site_closed": s.get("site_closed", False), "grades_locked": s.get("grades_locked", False),
+                "subject_max": subject_max_map(s), "subjects": SUBJECTS}
 
     # ---- auth ----
     @router.post("/auth/login")
@@ -234,13 +254,31 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     # ---- settings (admin) ----
     @router.get("/settings")
     async def read_settings(u=Depends(require_admin)):
-        return await get_settings()
+        s = await get_settings()
+        s["subject_max"] = subject_max_map(s)
+        s["subjects"] = SUBJECTS
+        return s
 
     @router.put("/settings")
     async def write_settings(req: SettingsReq, u=Depends(require_admin)):
         update = {k: v for k, v in req.dict().items() if v is not None}
+        if "subject_max" in update:
+            clean = {}
+            for sub, v in (update["subject_max"] or {}).items():
+                if sub not in SUBJECTS:
+                    continue
+                try:
+                    q1 = max(0.0, min(100.0, float((v or {}).get("quiz1", QUIZ_MAX))))
+                    q2 = max(0.0, min(100.0, float((v or {}).get("quiz2", QUIZ_MAX))))
+                except (TypeError, ValueError):
+                    raise HTTPException(400, f"قيمة غير صحيحة للمادة: {sub}")
+                clean[sub] = {"quiz1": q1, "quiz2": q2}
+            update["subject_max"] = clean
         await db.grades_settings.update_one({}, {"$set": update}, upsert=True)
-        return await get_settings()
+        s = await get_settings()
+        s["subject_max"] = subject_max_map(s)
+        s["subjects"] = SUBJECTS
+        return s
 
     # ---- teachers (admin) ----
     async def find_teacher_by_name(name: str, exclude_id: str = None):
@@ -797,7 +835,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "teacher_id": u["uid"], "grade": grade, "section": section,
             "subject": subject, "semester": semester,
         }, {"_id": 0}).to_list(None)
-        return {"scores": {s["student_id"]: s for s in scores}}
+        q1max, q2max = max_for(await get_settings(), subject)
+        return {"scores": {s["student_id"]: s for s in scores}, "quiz1_max": q1max, "quiz2_max": q2max}
 
     @router.put("/my/scores")
     async def save_score(req: ScoreSave, u=Depends(current_user)):
@@ -809,8 +848,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                  for a in u["user"].get("assignments", []))
         if not ok and u["role"] != "admin":
             raise HTTPException(403, "لا تملك صلاحية إدخال الدرجات لهذا الصف/الشعبة")
-        quiz1 = None if req.quiz1 is None else max(0.0, min(float(req.quiz1), QUIZ_MAX))
-        quiz2 = None if req.quiz2 is None else max(0.0, min(float(req.quiz2), QUIZ_MAX))
+        q1max, q2max = max_for(s, req.subject)
+        quiz1 = None if req.quiz1 is None else max(0.0, min(float(req.quiz1), q1max))
+        quiz2 = None if req.quiz2 is None else max(0.0, min(float(req.quiz2), q2max))
         doc = {
             "teacher_id": u["uid"], "teacher_name": u["user"]["name"],
             "student_id": req.student_id, "subject": req.subject,
@@ -827,8 +867,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     @router.get("/my/stats")
     async def my_stats(u=Depends(current_user)):
         assignments = u["user"].get("assignments", [])
+        settings = await get_settings()
         out = []
         for a in assignments:
+            q1max, q2max = max_for(settings, a["subject"])
+            max_total = q1max + q2max
             students = await db.grades_students.find({"grade": a["grade"], "section": str(a["section"])}, {"_id": 0}).to_list(None)
             total_students = len(students)
             for sem in SEMESTERS:
@@ -837,8 +880,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     "subject": a["subject"], "semester": sem,
                 }, {"_id": 0}).to_list(None)
                 entered = len(scores)
-                # من حصل على الدرجة النهائية (quiz1 + quiz2 = 20)
-                full = sum(1 for s in scores if (s.get("quiz1") or 0) + (s.get("quiz2") or 0) >= QUIZ_MAX * 2)
+                full = sum(1 for s in scores if (s.get("quiz1") or 0) + (s.get("quiz2") or 0) >= max_total)
                 avg = None
                 if scores:
                     totals = [(s.get("quiz1") or 0) + (s.get("quiz2") or 0) for s in scores]
@@ -847,7 +889,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
                     "semester": sem, "semester_label": SEMESTER_LABELS[sem],
                     "total_students": total_students, "entered": entered,
-                    "full_mark": full, "avg": avg,
+                    "full_mark": full, "avg": avg, "max_total": max_total,
                 })
         return {"stats": out}
 
@@ -861,10 +903,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         ids = {s["student_id"] for s in scores}
         students = await db.grades_students.find({"id": {"$in": list(ids)}}, {"_id": 0}).to_list(None)
         smap = {s["id"]: s for s in students}
+        settings = await get_settings()
         rows = []
         for s in scores:
             total = (s.get("quiz1") or 0) + (s.get("quiz2") or 0)
-            if total < QUIZ_MAX * 2:
+            q1max, q2max = max_for(settings, s.get("subject", ""))
+            sub_max = q1max + q2max
+            if sub_max <= 0 or total < sub_max:
                 continue
             st = smap.get(s["student_id"], {})
             rows.append({
@@ -876,9 +921,10 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 "semester_label": SEMESTER_LABELS.get(s.get("semester", ""), ""),
                 "teacher_name": s.get("teacher_name", ""),
                 "total": total,
+                "max": sub_max,
             })
         rows.sort(key=lambda r: (GRADE_NUM.get(r["grade"], "9"), r["section"], r["student_name"]))
-        return {"rows": rows, "count": len(rows), "max": QUIZ_MAX * 2}
+        return {"rows": rows, "count": len(rows), "subject_max": subject_max_map(settings)}
 
     # ---- parent: results by civil number (public) ----
     @router.get("/parent/results")
@@ -893,12 +939,15 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if not student:
             raise HTTPException(404, "لا يوجد طالب بهذا الرقم المدني")
         scores = await db.grades_scores.find({"student_id": student["id"]}, {"_id": 0}).to_list(None)
+        settings = await get_settings()
         # تجميع حسب المادة ثم الفصل
         results = []
         for sub in SUBJECTS:
             sub_scores = [s for s in scores if s.get("subject") == sub]
             if not sub_scores:
                 continue
+            q1max, q2max = max_for(settings, sub)
+            sub_max = q1max + q2max
             for sem in SEMESTERS:
                 sem_scores = [s for s in sub_scores if s.get("semester") == sem]
                 if not sem_scores:
@@ -906,10 +955,12 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 s = sem_scores[0]
                 q1, q2 = s.get("quiz1"), s.get("quiz2")
                 total = (q1 or 0) + (q2 or 0) if (q1 is not None or q2 is not None) else None
+                pct = (total / sub_max * 100) if (total is not None and sub_max > 0) else None
                 results.append({
                     "subject": sub, "semester": sem, "semester_label": SEMESTER_LABELS[sem],
                     "quiz1": q1, "quiz2": q2, "total": total,
-                    "max": QUIZ_MAX * 2, "level": level_letter(total) if total is not None else "",
+                    "quiz1_max": q1max, "quiz2_max": q2max,
+                    "max": sub_max, "level": level_letter(pct) if pct is not None else "",
                     "teacher": s.get("teacher_name", ""),
                 })
         # إحصائيات لكل مادة

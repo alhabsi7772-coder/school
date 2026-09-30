@@ -188,17 +188,18 @@ class TestStudentsImport:
 class TestCrud:
     def test_add_teacher_and_delete(self, admin_headers):
         unique = uuid.uuid4().hex[:6]
+        emp = str(uuid.uuid4().int)[:8]
         r = requests.post(
             f"{API}/teachers",
             headers=admin_headers,
-            json={"name": f"TEST_add_{unique}", "employee_number": f"EMPADD{unique}", "civil_number": ""},
+            json={"name": f"TEST_add_{unique}", "employee_number": emp, "civil_number": ""},
         )
         assert r.status_code == 200, r.text
         # find id
         r2 = requests.get(f"{API}/teachers", headers=admin_headers)
         t = next(x for x in r2.json()["teachers"] if x["name"] == f"TEST_add_{unique}")
-        # login as this teacher with default password
-        rlogin = requests.post(f"{API}/auth/login", json={"username": f"EMPADD{unique}", "password": "123456"})
+        # login: username = الرقم المدني (أو الوظيفي عند غيابه)، كلمة المرور = آخر ٤ أرقام من الوظيفي
+        rlogin = requests.post(f"{API}/auth/login", json={"username": emp, "password": emp[-4:]})
         assert rlogin.status_code == 200, rlogin.text
         assert rlogin.json()["role"] == "teacher"
         # delete
@@ -239,7 +240,7 @@ class TestTeacherFlow:
     def test_full_flow(self, admin_headers):
         u = uuid.uuid4().hex[:6]
         # create teacher
-        emp = f"EMPFLOW{u}"
+        emp = str(uuid.uuid4().int)[:8]
         requests.post(f"{API}/teachers", headers=admin_headers,
                       json={"name": f"TEST_flowT_{u}", "employee_number": emp, "civil_number": ""})
         tlist = requests.get(f"{API}/teachers", headers=admin_headers).json()["teachers"]
@@ -251,11 +252,11 @@ class TestTeacherFlow:
         slist = requests.get(f"{API}/students", headers=admin_headers).json()["students"]
         student = next(s for s in slist if s["name"] == f"TEST_flowS_{u}")
         # assign
-        assn = {"assignments": [{"grade": "الخامس", "section": "1", "subject": "الرياضيات"}]}
+        assn = {"subject": "الرياضيات", "classes": [{"grade": "الخامس", "section": "1"}]}
         r = requests.put(f"{API}/teachers/{teacher['id']}", headers=admin_headers, json=assn)
         assert r.status_code == 200
         # teacher login
-        rl = requests.post(f"{API}/auth/login", json={"username": emp, "password": "123456"})
+        rl = requests.post(f"{API}/auth/login", json={"username": emp, "password": emp[-4:]})
         assert rl.status_code == 200
         t_headers = {"Authorization": f"Bearer {rl.json()['token']}"}
         # assignments

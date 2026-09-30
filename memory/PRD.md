@@ -389,3 +389,14 @@
 - `GradesAdmin.jsx`: بطاقة خامسة «معلمون لم يكملوا» + قسم كهرماني «معلمون لم يكملوا إدخال درجات شعبهم» بجدول (المعلم/المادة/الشعب الناقصة/المتبقي) — data-testid: grades-incomplete-card / grades-incomplete-row-{i}.
 - صفحة طباعة جديدة `/grades/full-marks/print` (`GradesFullMarksPrint.jsx`، تقبل ?semester=1|2) بترويسة الوزارة والمدرسة وجدول المتميزين وخانتي اعتماد + زر «تنزيل كشف PDF» في صفحة الإحصائيات (data-testid: grades-full-pdf-btn / grades-print-btn / grades-fullmarks-sheet).
 - تحقق: curl لـ admin/stats (10 معلمين غير مكملين بقيم صحيحة) + سكرين شوت للوحة المدير وصفحة الطباعة والاسم الكامل. حُذفت البيانات التجريبية.
+
+## 2026-06-30 — الدرجات العظمى لكل مادة (يحددها المدير)
+- إعداد جديد `subject_max = {المادة: {quiz1, quiz2}}` في `grades_settings` (الافتراضي 10/10 لكل مادة، الحد الأقصى 100 للخانة).
+- Backend: `GET/PUT /api/grades/settings` (تنظيف وتحقق من القيم)، و`GET /status` يُرجع `subject_max` + `subjects`؛ `GET /my/scores` يُرجع `quiz1_max/quiz2_max` للمادة؛ `PUT /my/scores` يقصّ الدرجة على حد المادة؛ `/my/stats` يحسب الدرجة النهائية بـ max المادة (+`max_total`)؛ `/full-marks` يستخدم حد كل مادة ويُرجع `max` لكل صف؛ `/parent/results` يُرجع `quiz1_max/quiz2_max/max` ويحسب المستوى كنسبة صحيحة.
+- Frontend: قسم «الدرجات العظمى للاختبارات القصيرة (لكل مادة)» في لوحة المدير بكل المواد العشر وخانتين لكل مادة + زر حفظ (data-testid: grades-subject-max-card / grades-max-q1-{i} / grades-max-q2-{i} / grades-save-subject-max). `GradesEnter` يقرأ الحدود من الـAPI (عنوان العمود «من X» والقصّ)، والإحصائيات وكشف PDF يعرضان «الدرجة / العظمى».
+- تحقق: curl (حفظ 15/5 للتربية الإسلامية وبقاء 10/10 للبقية) + سكرين شوت (إعداد المدير، تغيّر حدود المعلم فوراً، قصّ 20 → 15، المتميزون 20/20) + 8 pytest ناجحة. أُعيدت القيم للافتراضي بعد الاختبار.
+
+## 2026-06-30 — لوحة التحكم في الصفحة الرئيسية للمدير
+- `GradesAdmin.jsx`: قسم «التحكم في النظام» أُعيد تصميمه على الرئيسية: بطاقتان بوصف واضح لكل تحكم — «دخول المعلمين إلى النظام» (زر غلق/فتح النظام) و«كتابة الدرجات» (زر قفل/فتح الإدخال)، مع شارات «الحالة الحالية» وروابط سريعة (إدارة المعلمين/الطلاب، الإحصائيات وكشف المتميزين، صفحة ولي الأمر).
+- data-testid: grades-control-panel / grades-toggle-site / grades-toggle-lock / grades-status-site / grades-status-lock / grades-quick-teachers|students|stats|parent.
+- تحقق: سكرين شوت سطح مكتب وجوال + تبديل القفل ذهاباً وإعادته (الشارة تتغيّر فوراً).

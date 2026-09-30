@@ -18,6 +18,7 @@ export default function GradesEnter() {
   const [students, setStudents] = useState([]);
   const [scores, setScores] = useState({});
   const [settings, setSettings] = useState({ grades_locked: false });
+  const [qmax, setQMax] = useState({ quiz1: QUIZ_MAX, quiz2: QUIZ_MAX });
   const [status, setStatus] = useState('idle'); // idle | saving | saved
   const [loading, setLoading] = useState(true);
   const pending = useRef(new Map());
@@ -62,7 +63,10 @@ export default function GradesEnter() {
     gradesApi.get('/my/students', { params: { grade, section } })
       .then(r => setStudents(r.data.students)).catch(e => toast.error(errMsg(e)));
     gradesApi.get('/my/scores', { params: { grade, section, subject, semester } })
-      .then(r => setScores(r.data.scores || {})).catch(e => toast.error(errMsg(e)));
+      .then(r => {
+        setScores(r.data.scores || {});
+        setQMax({ quiz1: r.data.quiz1_max ?? QUIZ_MAX, quiz2: r.data.quiz2_max ?? QUIZ_MAX });
+      }).catch(e => toast.error(errMsg(e)));
   }, [grade, section, subject, semester]);
 
   const flush = async () => {
@@ -121,7 +125,7 @@ export default function GradesEnter() {
   const updateScore = (sid, field, value) => {
     setScores(prev => {
       const cur = prev[sid] || {};
-      const v = value === '' ? null : Math.max(0, Math.min(QUIZ_MAX, parseFloat(value)));
+      const v = value === '' ? null : Math.max(0, Math.min(qmax[field], parseFloat(value)));
       return { ...prev, [sid]: { ...cur, [field]: Number.isNaN(v) ? null : v } };
     });
     if (!settings.grades_locked) scheduleSave(sid);
@@ -202,8 +206,8 @@ export default function GradesEnter() {
                 <thead>
                   <tr>
                     <th>م</th><th>اسم الطالب</th>
-                    <th>اختبار قصير 1<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {QUIZ_MAX})</span></th>
-                    <th>اختبار قصير 2<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {QUIZ_MAX})</span></th>
+                    <th>اختبار قصير 1<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {qmax.quiz1})</span></th>
+                    <th>اختبار قصير 2<br/><span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>(من {qmax.quiz2})</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -214,9 +218,9 @@ export default function GradesEnter() {
                       <tr key={s.id}>
                         <td>{i + 1}</td>
                         <td className="font-bold">{s.name}</td>
-                        <td><input type="number" min="0" max={QUIZ_MAX} step="0.5" disabled={settings.grades_locked}
+                        <td><input type="number" min="0" max={qmax.quiz1} step="0.5" disabled={settings.grades_locked}
                           className="sub-input w-20 text-center" value={q1 ?? ''} onChange={(e) => updateScore(s.id, 'quiz1', e.target.value)} onBlur={flush} data-testid={`grades-quiz1-${s.id}`} /></td>
-                        <td><input type="number" min="0" max={QUIZ_MAX} step="0.5" disabled={settings.grades_locked}
+                        <td><input type="number" min="0" max={qmax.quiz2} step="0.5" disabled={settings.grades_locked}
                           className="sub-input w-20 text-center" value={q2 ?? ''} onChange={(e) => updateScore(s.id, 'quiz2', e.target.value)} onBlur={flush} data-testid={`grades-quiz2-${s.id}`} /></td>
                       </tr>
                     );

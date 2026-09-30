@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Users, BookOpen, CheckCircle2, Clock, Lock, Unlock, Lock as LockIcon, AlertTriangle, FileUp } from 'lucide-react';
+import { Users, BookOpen, CheckCircle2, Clock, Lock, Unlock, Lock as LockIcon, AlertTriangle, FileUp, Settings } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, GRADES_LIST, classLabel } from './gradesApi';
+import { gradesApi, errMsg, GRADES_LIST, SUBJECTS, classLabel } from './gradesApi';
 
 export default function GradesAdmin() {
   const [stats, setStats] = useState(null);
   const [settings, setSettings] = useState({ site_closed: false, grades_locked: false });
+  const [subjectMax, setSubjectMax] = useState({});
+  const [savingMax, setSavingMax] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
 
@@ -19,8 +21,23 @@ export default function GradesAdmin() {
       ]);
       setStats(s.data);
       setSettings(st.data);
+      setSubjectMax(st.data.subject_max || {});
     } catch (e) { toast.error(errMsg(e)); }
     finally { setLoading(false); }
+  };
+
+  const setMax = (sub, key, value) => {
+    setSubjectMax(prev => ({ ...prev, [sub]: { ...(prev[sub] || { quiz1: 10, quiz2: 10 }), [key]: value === '' ? 0 : Number(value) } }));
+  };
+
+  const saveMax = async () => {
+    setSavingMax(true);
+    try {
+      const res = await gradesApi.put('/settings', { subject_max: subjectMax });
+      setSubjectMax(res.data.subject_max || {});
+      toast.success('تم حفظ الدرجات العظمى للمواد');
+    } catch (e) { toast.error(errMsg(e)); }
+    finally { setSavingMax(false); }
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -60,26 +77,105 @@ export default function GradesAdmin() {
         ))}
       </div>
 
-      {/* أزرار التحكم */}
-      <div className="sub-card p-5 mb-6 sub-rise">
-        <h3 className="font-black mb-4" style={{ color: 'var(--sub-navy-ink)' }}>التحكم في النظام</h3>
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => toggleLock('grades_locked')} disabled={toggling}
-            className="sub-btn sub-btn-sm" style={settings.grades_locked ? { background: 'var(--sub-red)', color: '#fff' } : { background: 'var(--sub-green-soft)', color: 'var(--sub-green-ink)', border: '1px solid var(--sub-green-line)' }}
-            data-testid="grades-toggle-lock">
-            {settings.grades_locked ? <><LockIcon className="w-4 h-4" /> قفل كتابة الدرجات مفعّل</> : <><Unlock className="w-4 h-4" /> كتابة الدرجات مفتوحة</>}
-          </button>
-          <button onClick={() => toggleLock('site_closed')} disabled={toggling}
-            className="sub-btn sub-btn-sm" style={settings.site_closed ? { background: 'var(--sub-red)', color: '#fff' } : { background: 'var(--sub-amber-soft)', color: 'var(--sub-amber-ink)', border: '1px solid var(--sub-amber-line)' }}
-            data-testid="grades-toggle-site">
-            {settings.site_closed ? <><LockIcon className="w-4 h-4" /> النظام مغلق للمعلمين</> : <><Unlock className="w-4 h-4" /> النظام مفتوح</>}
-          </button>
+      {/* لوحة التحكم في النظام */}
+      <div className="sub-card p-5 mb-6 sub-rise" data-testid="grades-control-panel">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings className="w-5 h-5" style={{ color: 'var(--sub-navy)' }} />
+          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>التحكم في النظام</h3>
         </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* فتح/غلق النظام */}
+          <div className="p-4 rounded-2xl flex items-center justify-between gap-3"
+            style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
+            <div>
+              <p className="font-black text-sm" style={{ color: 'var(--sub-navy-ink)' }}>دخول المعلمين إلى النظام</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--sub-muted)' }}>
+                {settings.site_closed ? 'النظام مغلق — لا يمكن للمعلمين تسجيل الدخول (المدير يستطيع)' : 'النظام مفتوح — يستطيع المعلمون تسجيل الدخول وإدخال الدرجات'}
+              </p>
+            </div>
+            <button onClick={() => toggleLock('site_closed')} disabled={toggling}
+              className="sub-btn sub-btn-sm flex-shrink-0"
+              style={settings.site_closed ? { background: 'var(--sub-green-soft)', color: 'var(--sub-green-ink)', border: '1px solid var(--sub-green-line)' } : { background: 'var(--sub-red)', color: '#fff' }}
+              data-testid="grades-toggle-site">
+              {settings.site_closed ? <><Unlock className="w-4 h-4" /> فتح النظام</> : <><LockIcon className="w-4 h-4" /> غلق النظام</>}
+            </button>
+          </div>
+
+          {/* قفل إدخال الدرجات */}
+          <div className="p-4 rounded-2xl flex items-center justify-between gap-3"
+            style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
+            <div>
+              <p className="font-black text-sm" style={{ color: 'var(--sub-navy-ink)' }}>كتابة الدرجات</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--sub-muted)' }}>
+                {settings.grades_locked ? 'الإدخال مقفول — لا يستطيع المعلمون تعديل الدرجات' : 'الإدخال مفتوح — يستطيع المعلمون إدخال الدرجات وتعديلها'}
+              </p>
+            </div>
+            <button onClick={() => toggleLock('grades_locked')} disabled={toggling}
+              className="sub-btn sub-btn-sm flex-shrink-0"
+              style={settings.grades_locked ? { background: 'var(--sub-green-soft)', color: 'var(--sub-green-ink)', border: '1px solid var(--sub-green-line)' } : { background: 'var(--sub-red)', color: '#fff' }}
+              data-testid="grades-toggle-lock">
+              {settings.grades_locked ? <><Unlock className="w-4 h-4" /> فتح الإدخال</> : <><LockIcon className="w-4 h-4" /> قفل الإدخال</>}
+            </button>
+          </div>
+        </div>
+
+        {/* الحالة الحالية */}
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+          <span className="text-xs font-bold" style={{ color: 'var(--sub-muted)' }}>الحالة الحالية:</span>
+          <span className={`sub-badge ${settings.site_closed ? 'sub-badge-red' : 'sub-badge-green'}`} data-testid="grades-status-site">
+            {settings.site_closed ? 'النظام مغلق' : 'النظام مفتوح'}
+          </span>
+          <span className={`sub-badge ${settings.grades_locked ? 'sub-badge-red' : 'sub-badge-green'}`} data-testid="grades-status-lock">
+            {settings.grades_locked ? 'الإدخال مقفول' : 'الإدخال مفتوح'}
+          </span>
+        </div>
+
+        {/* روابط سريعة */}
+        <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--sub-line)' }}>
+          <Link to="/grades/teachers" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-quick-teachers">إدارة المعلمين</Link>
+          <Link to="/grades/students" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-quick-students">إدارة الطلاب</Link>
+          <Link to="/grades/stats" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-quick-stats">الإحصائيات وكشف المتميزين</Link>
+          <a href="/grades/parent" target="_blank" rel="noreferrer" className="sub-btn sub-btn-ghost sub-btn-sm" data-testid="grades-quick-parent">صفحة ولي الأمر</a>
+        </div>
+
         {settings.site_closed && (
           <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: 'var(--sub-amber-ink)' }}>
-            <AlertTriangle className="w-3.5 h-3.5" /> النظام مغلق — لن يتمكن المعلمون من تسجيل الدخول (المدير يستطيع)
+            <AlertTriangle className="w-3.5 h-3.5" /> تذكير: النظام مغلق حالياً للمعلمين
           </p>
         )}
+      </div>
+
+      {/* الدرجات العظمى للمواد */}
+      <div className="sub-card p-5 mb-6 sub-rise" data-testid="grades-subject-max-card">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الدرجات العظمى للاختبارات القصيرة (لكل مادة)</h3>
+          <button onClick={saveMax} disabled={savingMax} className="sub-btn sub-btn-primary sub-btn-sm mr-auto" data-testid="grades-save-subject-max">
+            {savingMax ? 'جارٍ الحفظ...' : 'حفظ الدرجات العظمى'}
+          </button>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
+          <table className="sub-table">
+            <thead><tr><th>م</th><th>المادة</th><th>اختبار قصير 1</th><th>اختبار قصير 2</th><th>المجموع</th></tr></thead>
+            <tbody>
+              {SUBJECTS.map((sub, i) => {
+                const v = subjectMax[sub] || { quiz1: 10, quiz2: 10 };
+                return (
+                  <tr key={sub}>
+                    <td>{i + 1}</td>
+                    <td className="font-bold">{sub}</td>
+                    <td><input type="number" min="0" max="100" step="0.5" className="sub-input w-24 text-center"
+                      value={v.quiz1} onChange={(e) => setMax(sub, 'quiz1', e.target.value)} data-testid={`grades-max-q1-${i}`} /></td>
+                    <td><input type="number" min="0" max="100" step="0.5" className="sub-input w-24 text-center"
+                      value={v.quiz2} onChange={(e) => setMax(sub, 'quiz2', e.target.value)} data-testid={`grades-max-q2-${i}`} /></td>
+                    <td className="font-black">{(Number(v.quiz1) || 0) + (Number(v.quiz2) || 0)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs mt-3" style={{ color: 'var(--sub-muted)' }}>تُطبَّق هذه الحدود فوراً على إدخال المعلمين وعلى حساب «الدرجة النهائية» في الإحصائيات وكشف المتميزين ونتائج ولي الأمر.</p>
       </div>
 
       {/* توزيع الطلاب حسب الصف */}

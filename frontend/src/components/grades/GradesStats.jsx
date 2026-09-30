@@ -7,7 +7,6 @@ import { gradesApi, errMsg, SEMESTERS } from './gradesApi';
 export default function GradesStats() {
   const [stats, setStats] = useState([]);
   const [full, setFull] = useState([]);
-  const [fullMax, setFullMax] = useState(20);
   const [semFilter, setSemFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const isAdmin = (localStorage.getItem('gradesRole') || 'teacher') === 'admin';
@@ -15,7 +14,7 @@ export default function GradesStats() {
   useEffect(() => {
     Promise.all([
       gradesApi.get('/my/stats').then(r => setStats(r.data.stats || [])).catch(e => toast.error(errMsg(e))),
-      gradesApi.get('/full-marks').then(r => { setFull(r.data.rows || []); setFullMax(r.data.max || 20); }).catch(e => toast.error(errMsg(e))),
+      gradesApi.get('/full-marks').then(r => { setFull(r.data.rows || []); }).catch(e => toast.error(errMsg(e))),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -69,7 +68,7 @@ export default function GradesStats() {
       <div className="sub-card p-5 mb-5 sub-rise" data-testid="grades-full-marks-card">
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <Trophy className="w-5 h-5" style={{ color: 'var(--sub-amber-ink)' }} />
-          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الحاصلون على الدرجة النهائية ({fullMax}/{fullMax})</h3>
+          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الحاصلون على الدرجة النهائية لمادتهم</h3>
           <span className="sub-badge sub-badge-navy">{fullRows.length} طالب</span>
           <select className="sub-input mr-auto w-auto" value={semFilter} onChange={(e) => setSemFilter(e.target.value)} data-testid="grades-full-sem-filter">
             <option value="">كل الفصول</option>
@@ -102,7 +101,7 @@ export default function GradesStats() {
                     <td>{r.subject}</td>
                     <td className="text-xs" style={{ color: 'var(--sub-muted)' }}>{r.semester_label}</td>
                     {isAdmin && <td className="text-xs">{r.teacher_name}</td>}
-                    <td className="font-black" style={{ color: 'var(--sub-green-ink)' }}>{r.total}</td>
+                    <td className="font-black" style={{ color: 'var(--sub-green-ink)' }}>{r.total} / {r.max}</td>
                   </tr>
                 ))}
               </tbody>

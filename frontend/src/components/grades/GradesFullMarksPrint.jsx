@@ -8,13 +8,12 @@ export default function GradesFullMarksPrint() {
   const [params] = useSearchParams();
   const semester = params.get('semester') || '';
   const [rows, setRows] = useState([]);
-  const [max, setMax] = useState(20);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.documentElement.classList.add('sub-app');
     gradesApi.get('/full-marks', { params: semester ? { semester } : {} })
-      .then(r => { setRows(r.data.rows || []); setMax(r.data.max || 20); })
+      .then(r => { setRows(r.data.rows || []); })
       .finally(() => setLoading(false));
     return () => document.documentElement.classList.remove('sub-app');
   }, [semester]);
@@ -36,7 +35,7 @@ export default function GradesFullMarksPrint() {
           <img src="/moe-logo.jpeg" alt="" style={{ width: 64, height: 64, objectFit: 'contain', margin: '0 auto 6px' }} />
           <p style={{ fontWeight: 900, color: '#7F1D1D', margin: 0 }}>سلطنة عمان — وزارة التعليم</p>
           <p style={{ fontWeight: 800, margin: '2px 0' }}>{SCHOOL_NAME}</p>
-          <h1 style={{ fontSize: 20, fontWeight: 900, margin: '10px 0 2px' }}>كشف الطلاب المتميزين — الدرجة النهائية ({max}/{max})</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 900, margin: '10px 0 2px' }}>كشف الطلاب المتميزين — الحاصلون على الدرجة النهائية</h1>
           <p style={{ fontSize: 13, margin: 0 }}>{semLabel} · بتاريخ: {today} · العدد: {rows.length}</p>
         </div>
         {loading ? <p style={{ textAlign: 'center' }}>جارٍ التحميل...</p> : (
@@ -58,7 +57,7 @@ export default function GradesFullMarksPrint() {
                   <td style={td}>{r.subject}</td>
                   <td style={td}>{r.semester_label}</td>
                   <td style={td}>{r.teacher_name}</td>
-                  <td style={{ ...td, fontWeight: 900 }}>{r.total}</td>
+                  <td style={{ ...td, fontWeight: 900 }}>{r.total} / {r.max}</td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={8} style={{ ...td, padding: 20 }}>لا يوجد طلاب حاصلون على الدرجة النهائية</td></tr>}
