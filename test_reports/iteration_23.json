@@ -1,0 +1,39 @@
+{
+  "summary": "Smoke tested the imported school platform (quiz, substitution, grades). Backend & frontend load and integrate correctly. All three login systems work with credentials from /app/memory/test_credentials.md. Created a focused smoke suite (19 tests, 100% pass). Existing repo test suites (test_substitution*.py, test_projects.py, test_supervision.py, test_rubric_images.py, some test_grades_system.py cases) have hard-coded stale expectations (old subadmin creds 'ehtiyat/ehtiyat2026', wrong login payloads, outdated Pydantic schema fields like missing 'grade' on rubric) — those failures are STALE TESTS, not backend regressions. No 500s observed on any hit endpoint.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "existing repo pytest suites", "issue": "~81 setup errors + 21 failures across test_substitution.py/test_substitution_v2/test_substitution_swap_bulk_late/test_substitution_new_features/test_supervision/test_projects/test_rubric_images/test_grades_system::test_substitution_login due to stale expectations (old sub creds 'ehtiyat/ehtiyat2026', missing username in login payloads, outdated request schemas). Backend endpoints themselves respond correctly."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AbsentCard (substitution/distribute)", "issue": "React DOM nesting warning: <span> rendered as child of <option>. Only a dev-mode warning; UI still functions.", "selector": "select > option > span", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_imported_project_smoke.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Fix span-inside-option in AbsentCard for substitution/distribute page to remove React nesting warning.",
+    "(Optional) Refresh/prune stale pytest suites in /app/backend/tests/ that predate the current substitution credentials/API schemas, or add a conftest that seeds test data + reads creds from env."
+  ],
+  "critical_code_review_comments": [
+    "backend/server.py is very large (>3000 lines) — consider splitting into feature modules similar to grades.py/substitution.py for maintainability.",
+    "Login attempt lockout is 15 min after 3 failed tries and shared across ALL 3 auth systems via the single db.login_attempts collection — running any legacy test with old creds locks out the correct user; documented for future testing agent.",
+    "Frontend App.js relies on localStorage synchronous read to pick admin vs teacher home for /grades — a race on first mount is possible but acceptable given login flow sets it before navigation."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_imported_project_smoke.py (new)"
+  ],
+  "success_rate": {"backend": "100% (19/19 on new smoke suite; legacy suites are stale not broken)", "frontend": "100% pages loaded, 0 page errors, 0 console errors except one dev-mode nesting warning"},
+  "test_credentials": "teacher admin/teacher123, teacher1/khairat1; sub subadmin/sub12345; grades admin/admin123 — all verified working",
+  "seed_data_creation": "Test suite creates and deletes TEST_-prefixed quizzes only; no persistent seed added.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "1) ALWAYS clear db.login_attempts before running suites: mongosh test_database --eval 'db.login_attempts.deleteMany({})'. 2) Export REACT_APP_BACKEND_URL before pytest so stale defaults in test files (school-hub-878, school-frontend-3) are overridden. 3) Legacy tests in /app/backend/tests/test_substitution*.py etc use hardcoded 'ehtiyat/ehtiyat2026' — replace with subadmin/sub12345 (or read from env) if you want them to run. 4) Rubric create endpoint now REQUIRES 'grade' field. 5) Project create login expects {username, password} not just {password}. 6) The smoke suite /app/backend/tests/test_imported_project_smoke.py is the source of truth for current working contract.",
+  "rca of the issue": "No blocking bugs. Root cause of legacy test failures: repo test files were authored against earlier revisions of the app (different credentials, different Pydantic schemas). The actual backend and frontend function correctly with current credentials and current UI."
+}

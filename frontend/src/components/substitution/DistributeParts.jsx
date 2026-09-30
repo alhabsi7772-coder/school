@@ -71,7 +71,7 @@ export function AbsentCard({ teachers, day, selected, onSelect, onAdd, onRemove,
       </div>
       <select className="sub-input" value="" disabled={disabled} onChange={(e) => e.target.value && onAdd(e.target.value)} data-testid="sub-absent-select">
         <option value="">— اختر معلماً غائباً —</option>
-        {options.map((t) => <option key={t.id} value={t.id}>{t.name} · {t.subject}</option>)}
+        {options.map((t) => <option key={t.id} value={t.id}>{`${t.name} · ${t.subject}`}</option>)}
       </select>
       <div className="flex flex-wrap gap-2 mt-4" data-testid="sub-absent-chips">
         {(day?.absent || []).length === 0 && <p className="text-xs font-semibold" style={{ color: 'var(--sub-muted)' }}>لم يُحدَّد أي معلم غائب بعد</p>}
