@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Users, BookOpen, CheckCircle2, Clock, Lock, Unlock, Lock as LockIcon, AlertTriangle, FileUp } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, GRADES_LIST } from './gradesApi';
+import { gradesApi, errMsg, GRADES_LIST, classLabel } from './gradesApi';
 
 export default function GradesAdmin() {
   const [stats, setStats] = useState(null);
@@ -102,14 +102,15 @@ export default function GradesAdmin() {
         </div>
         <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
           <table className="sub-table">
-            <thead><tr><th>م</th><th>المعلم</th><th>الرقم الوظيفي</th><th>التكليفات</th><th>الدرجات المدخلة</th><th>الحالة</th></tr></thead>
+            <thead><tr><th>م</th><th>المعلم</th><th>الرقم الوظيفي</th><th>المادة</th><th>الصفوف</th><th>الدرجات المدخلة</th><th>الحالة</th></tr></thead>
             <tbody>
               {(stats?.teachers || []).map((t, i) => (
                 <tr key={t.id}>
                   <td>{i + 1}</td>
                   <td className="font-bold">{t.name}</td>
                   <td className="text-xs" style={{ color: 'var(--sub-muted)' }}>{t.employee_number || '—'}</td>
-                  <td className="text-xs">{(t.assignments || []).map(a => `${a.subject} ${a.grade}/${a.section}`).join('، ') || '—'}</td>
+                  <td className="text-xs font-semibold">{t.subject || '—'}</td>
+                  <td className="text-xs">{(t.classes || []).map(classLabel).join('، ') || '—'}</td>
                   <td className="font-black">{t.scores_count || 0}</td>
                   <td>
                     {t.entered
@@ -119,7 +120,7 @@ export default function GradesAdmin() {
                 </tr>
               ))}
               {(!stats?.teachers || stats.teachers.length === 0) && (
-                <tr><td colSpan={6} className="text-center py-8" style={{ color: 'var(--sub-muted)' }}>لا يوجد معلمون — استورد بيانات المعلمين من صفحة المعلمين</td></tr>
+                <tr><td colSpan={7} className="text-center py-8" style={{ color: 'var(--sub-muted)' }}>لا يوجد معلمون — استورد بيانات المعلمين من صفحة المعلمين</td></tr>
               )}
             </tbody>
           </table>

@@ -28,6 +28,8 @@ export const errMsg = (e, fallback = 'حدث خطأ غير متوقع') =>
   e.response?.data?.detail || e.response?.data?.message || fallback;
 
 export const GRADES_LIST = ['الخامس', 'السادس', 'السابع', 'الثامن'];
+export const GRADE_NUM = { 'الخامس': '5', 'السادس': '6', 'السابع': '7', 'الثامن': '8' };
+export const classLabel = (c) => `${GRADE_NUM[c.grade] || c.grade}/${c.section}`;
 export const SUBJECTS = [
   'التربية الاسلامية', 'اللغة العربية', 'اللغة الانجليزية', 'الرياضيات', 'العلوم', 'الدراسات الاجتماعية', 'التربية البدنية والصحية', 'تقنية المعلومات', 'الفنون البصرية', 'الفنون الموسيقية',
 ];
