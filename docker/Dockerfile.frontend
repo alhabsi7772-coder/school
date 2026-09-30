@@ -1,0 +1,8 @@
+FROM node:22-bookworm
+
+WORKDIR /app/frontend
+
+# Dependencies are installed at container startup into the bind-mounted source
+# (node_modules persists on the host, gitignored). Plain `npm install` (NOT
+# --legacy-peer-deps) is required: legacy-peer-deps hoists ajv v6 to the top
+# level and breaks ajv-keywords ("Cannot find module 'ajv/dist/compile/codegen'").

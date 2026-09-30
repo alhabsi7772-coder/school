@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+# Build tooling + headers needed by a few native wheels in requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ \
+    libffi-dev libssl-dev \
+    libxml2-dev libxslt1-dev \
+    libjpeg-dev zlib1g-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/backend
+
+# Install Python deps from the pinned requirements file (source is bind-mounted at runtime)
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
