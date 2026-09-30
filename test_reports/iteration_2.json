@@ -1,0 +1,64 @@
+{
+  "summary": "Verified FIX 1-5 for grade/section dropdowns and unified input-field styling across teacher & student pages. All primary fixes work correctly. One inconsistency found: gen-grade-select in QuestionBank AI-generate dialog still uses old white-theme classes (visually dark only due to global CSS override), contradicting FIX 3 intent.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "QuestionBank.jsx (AI generate dialog)",
+        "issue": "gen-grade-select does NOT use 'input-field' class as claimed by FIX 3. It still has the old white-theme classes: 'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100'. Its label also uses text-slate-700. Renders dark visually ONLY because a global CSS override coincidentally styles selects — but inconsistent with sibling gen-topic-select (which uses input-field). File: /app/frontend/src/components/teacher/QuestionBank.jsx lines 332-344.",
+        "selector": "[data-testid='gen-grade-select']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Multiple teacher pages (Gradebooks list, GradebookDetail)",
+        "issues": [
+          "Pre-existing React DOM nesting warnings pollute console: '<span> cannot appear as a child of <option>/<select>/<th>/<tr>/<tbody>/<td>' — appears to come from a devtools instrumentation wrapper (x-component) but produces noisy React warnings. Non-blocking but should be investigated."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_2.json"
+  ],
+  "action_items": [
+    "OPTIONAL LOW-PRIORITY: In /app/frontend/src/components/teacher/QuestionBank.jsx (lines 332-344), replace the manual class on gen-grade-select with className='input-field' and change label className from 'text-slate-700' to match the dark theme (e.g. use theme text color) for full consistency with FIX 3 intent. Currently visually OK due to global CSS override, but not aligned with the pattern used elsewhere.",
+    "OPTIONAL: Investigate source of x-component/x-line-number wrappers producing invalid DOM nesting warnings (span inside option/select/table cells) — likely a devtools instrumentation that should be disabled in production build."
+  ],
+  "critical_code_review_comments": [
+    "GRADES map at /app/frontend/src/utils.js is the single source of truth and works correctly across all consumers (Gradebooks create modal, StudentGrades). Fallback in sectionsOfGrade returns [1..7] for undefined grades (التاسع/العاشر) — verified.",
+    "In Gradebooks.jsx line 267 the onChange correctly resets section to empty when grade changes — verified in browser.",
+    "Backend gradebook create endpoint validated creation with السادس/section=7 (200 response, navigation to detail page succeeded)."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (only smoke-tested via UI flows)",
+    "frontend": "95% (only gen-grade-select class inconsistency)"
+  },
+  "test_credentials": "admin / teacher123 (as documented in /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created one test gradebook (السادس / section 7 / 2 students) during end-to-end test — cleaned up successfully via DELETE /api/gradebooks/{id}. No leftover test data. No rubric was created (create-rubric modal not exercised, existing rubric 'اساسيات الحاسوب' used).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "FIX 1 (section counts), FIX 2 (gradebook create modal), FIX 3 (QuestionBank filters), FIX 4 (RubricPrint gb select), FIX 5 (.env) all verified. Student-side /my-grades uses input-field selects correctly and has correct grade list (no التاسع/العاشر). Only remaining minor inconsistency is gen-grade-select in QuestionBank AI-generate dialog missing input-field class. Test data cleanup done via API DELETE.",
+  "verification_details": {
+    "fix1_section_counts_gradebook_modal": {
+      "الخامس": 7, "السادس": 7, "السابع": 6, "الثامن": 6, "التاسع_fallback": 7, "العاشر_fallback": 7, "result": "PASS"
+    },
+    "fix1_section_counts_studentgrades": {
+      "الخامس": 7, "السادس": 7, "السابع": 6, "الثامن": 6, "result": "PASS - grades التاسع/العاشر correctly absent from student-side dropdown"
+    },
+    "fix2_gradebook_e2e_create": "PASS - created السادس/7/2-students, navigated to detail, cleaned up via API",
+    "fix2_grade_change_resets_section": "PASS - selecting new grade sets section back to empty ''",
+    "fix3_qbank_filters_styling": "PASS - filter-grade, filter-difficulty, filter-type all have input-field class with dark bg rgba(17,24,39,0.7) + light text rgb(248,250,252). Filter change triggers refetch OK.",
+    "fix3_gen_selects": "PARTIAL - gen-grade-select does NOT have input-field class (still uses old white-theme classes); gen-topic-select DOES have input-field. Visually both render dark due to global CSS override but not consistent.",
+    "fix4_rubric_print_gb_select": "PASS - print-gb-select has input-field class, dark theme, options populated (4 gradebooks)",
+    "fix5_env_smoke": "PASS - app loads, /teacher/dashboard, /teacher/gradebooks, /teacher/question-bank, /teacher/rubrics, /my-grades, / all rendered without functional errors",
+    "regression_teacher_login": "PASS",
+    "console_scan": "Only React DOM nesting warnings (pre-existing from x-component instrumentation) and React Router v7 future flag warnings. No functional JS errors."
+  }
+}

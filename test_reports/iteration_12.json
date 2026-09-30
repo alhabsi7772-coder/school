@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 12 — verified all 6 NEW substitution features. Backend: 6/6 pytest tests passing (candidates have day_periods + consecutive_alert; consecutive_alert correctly triggers after 2 prior consecutive school days and clears on next day when the sub isn't reassigned; auto-distribute produces different results across repeat clicks while preserving manual assignments (auto=false); GET /stats?teacher_id=X returns teacher + teacher_rows with date/day/period/time/class/subject/absent_name; DELETE /system/reset empties sub_days and preserves teachers; DELETE /teachers/all requires auth). Frontend (Playwright): login → /substitution distribute page shows 'حصصه اليوم: N' badges for every free candidate and 7 amber 'نصاب عالي جداً' badges rendered; auto-distribute clicked 3x produced 3 different assignment sets (689 vs 661 chars, all different) with manual assignments preserved; /substitution/stats custom-mode toggle reveals sub-stats-from / sub-stats-to inputs, teacher filter narrows table to 1 row, PDF button href correctly appends teacher_id; print page /substitution/stats/print renders general table when no teacher selected and detail table (with معلم name in title, subject, quota, per-assignment rows) when teacher_id provided; print button clickable. Settings danger-zone reset button opens window.prompt — wrong-word path shows Arabic error toast and does NOT delete; cancel path is a no-op. Teachers page 'حذف الجميع' button opens prompt — wrong-word and cancel both keep 49 teachers intact. Real destructive DELETE /teachers/all was NOT invoked from UI (per instructions) to avoid destroying seeded data.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_substitution_new_features.py",
+    "/app/test_reports/pytest/sub_iter12_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "substitution.py is now 753 lines — past the 700-line soft cap. Recommend splitting settings/timing helpers, stats, and export handlers into separate modules (backend/substitution/settings.py, stats.py, export.py) with the main file only wiring routes.",
+    "pick_fair_candidate() in substitution.py:363 uses random.choice on a pool built from top+near candidates. Pool max is 3; when only 2 near-fair candidates exist, randomness is limited but still non-deterministic — confirmed producing distinct outputs in 3 back-to-back runs. Consider widening the pool (e.g. all cands with same subs_today and subs_year within 1) for larger schools.",
+    "rank_candidates()'s consecutive_alert computes prev_sub_sets(d, 3) once per call; auto_distribute() invokes rank_candidates in a loop over every open slot → N * (3 DB reads) queries. For big absentee days this is slow. Recommend hoisting streak_sets and load_counts outside the per-slot loop and passing them in.",
+    "SubStats.jsx line 34 debounces effect only on state changes but the initial mode='month' fires stats API call before allTeachers is populated (parallel). Not a bug, but consider Promise.all to reduce initial UI flicker.",
+    "DELETE /system/reset (substitution.py:668) uses the correct pattern (destroy sub_days only, preserve teachers/settings). Consider a soft-audit log (write a doc with user/timestamp to a separate collection) since the action is destructive and irreversible."
+  ],
+  "updated_files": ["/app/backend/tests/test_substitution_new_features.py"],
+  "success_rate": {"backend": "100% (6/6 new tests + 22/22 legacy)", "frontend": "100% of tested flows"},
+  "test_credentials": "ehtiyat / ehtiyat2026 (substitution admin)",
+  "seed_data_creation": "Test created and cleaned up days 2026-10-11, 2026-10-12, 2026-10-13, 2026-10-14, 2026-10-18, 2026-10-25. test_system_reset_deletes_all_days_only intentionally called DELETE /system/reset which emptied sub_days — this is expected and safe (teachers/settings untouched). After tests, sub_days is empty; teachers count = 49 (verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 6 new features (day_periods, consecutive_alert, auto-distribute randomization, stats teacher filter + print page, danger-zone system reset, delete-all-teachers) verified end-to-end. Backend pytest suite at /app/backend/tests/test_substitution_new_features.py is idempotent (creates + cleans days). Real DELETE /teachers/all was NOT invoked from UI — only auth-required 401 path tested. The UI confirmation gates for both destructive endpoints were verified with wrong-word and cancel paths; if you want to test the happy path, be aware backend auto-reseeds sub_teachers from data/substitution_seed.json on startup ONLY when the collection is empty, so restarting backend after full deletion would re-seed. NOTE: Consecutive-alert test relies on finding a teacher with periods on 3 consecutive school days AND a free substitute across the same slots — logic works with the current seeded schedule but may need adjustment if seed data changes.",
+  "rca of the issue": "n/a — no bugs found"
+}

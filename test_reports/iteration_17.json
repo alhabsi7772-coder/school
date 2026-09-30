@@ -1,0 +1,23 @@
+{
+  "summary": "Full E2E testing of merged period-swap, teacher-bulk-actions, and late-absent-teacher features on the substitution subsystem. Backend pytest suite (6 tests) passes 100%. Frontend Playwright test verified: login, sub-nav-swap link, swap page schedule grid rendering (8 periods, teaching cells clickable), candidate list (25 shown after picking teacher A period), teachers page bulk toolbar with select-all + bulk activate/deactivate (status text toggled نشط ↔ غير نشط) + bulk delete confirm dialog cancelled non-destructively, and late-absent-teacher badge appears correctly on chip (data-testid sub-absent-late-<id>) when a new absent teacher is added AFTER an initial distribution.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_substitution_swap_bulk_late.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "html2canvas + jspdf added as deps but not fully exercised in this test (SubSwapPrint/SubPrint export flows only smoke-tested via backend). Main agent may want to spot-check the print pages render without JS errors.",
+    "React Router v7 future-flag warnings still logged (v7_startTransition / v7_relativeSplatPath) — cosmetic only, no functional impact.",
+    "Login form: submit succeeds even without remember-me checkbox; behaves as expected."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "ehtiyat / ehtiyat2026 at /substitution/login (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None - used existing 49 seeded teachers. Bulk operations on 2 real teachers were toggled and restored to نشط. No destructive changes.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 3 merged features (period swap, teachers bulk actions, late-absent badge) work end-to-end. Backend test file test_substitution_swap_bulk_late.py is a good regression suite. Frontend testids follow sub-swap-*, sub-bulk-*, sub-absent-late-* patterns. Swap teacher-A grid uses data-testid sub-swap-cell-a-{period} where cells with class 'pick' are teaching periods. Test date used: 2026-01-19 (Monday).",
+  "rca of the issue": "N/A - no bugs found. Merged branch is clean and functional."
+}

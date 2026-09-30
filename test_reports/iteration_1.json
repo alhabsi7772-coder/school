@@ -1,0 +1,37 @@
+{
+  "summary": "Tested rubric image attachment feature (moved from per-student eval to rubric card). Backend: 7/7 pytest tests pass (create with images, GET returns images, update clears images, non-data URLs filtered, max-8 enforced, eval save without images persists no images field, extra images field ignored on eval). Frontend: verified RubricEditor (new) has all required testids (rubric-editor-upload-label, rubric-editor-image-input, rubric-images-count='0 / 8'). RubricEvaluate confirmed NO upload UI present (no rubric-eval-upload-label or rubric-eval-image-input). Eval modal shows reference gallery (rubric-reference-images) with rubric-reference-img-0 and rubric-reference-img-1, clicking opens fullscreen preview (rubric-img-preview) with working close button.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "RubricEditor", "issues": ["React validateDOMNesting warning: <span> appears as child of <select> and <option> in Column dropdown — cosmetic React warning, not blocking. Likely caused by browser-extension or stray <span> inside <select> in the form. Worth a quick check at /app/frontend/src/components/teacher/RubricEditor.jsx select element ~line 131."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_rubric_images.py",
+    "/app/test_reports/pytest/rubric_images.xml"
+  ],
+  "action_items": [
+    "(Optional) Investigate React validateDOMNesting warning on Column <select> in RubricEditor — non-blocking but worth cleaning."
+  ],
+  "critical_code_review_comments": [
+    "Backend correctly filters images to start with 'data:' and caps at 8 in both create_rubric and update_rubric.",
+    "RubricEvalSave Pydantic model has only {gradebook_id, student_id, scores} — extra 'images' field sent by clients is silently ignored (pydantic v2 default), confirmed via API test that saved evaluation doc has no 'images' key.",
+    "RubricEditor.jsx properly handles empty/missing images (Array.isArray check on r.images) and removeImage uses functional setState.",
+    "RubricEvaluate.jsx correctly conditionally renders reference gallery only when rubric.images?.length > 0; preview modal stops click propagation on the image."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_rubric_images.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin / teacher123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created TEST_ prefixed rubrics and gradebook (grade=TEST_R5, section=TEST_A) — cleanup performed in fixtures; UI test rubric was deleted at end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 7 backend pytest tests in /app/backend/tests/test_rubric_images.py pass. Frontend testids verified: rubric-editor-upload-label, rubric-editor-image-input, rubric-images-count, rubric-editor-img-{i}, rubric-editor-img-remove-{i}, rubric-reference-images, rubric-reference-img-{i}, rubric-img-preview, rubric-img-preview-close. RubricEvaluate no longer has rubric-eval-upload-label/rubric-eval-image-input — confirmed absent. Backend strips non-data URLs and enforces max 8 images on POST/PUT /api/rubrics. PUT /api/rubrics/{rid}/evaluations ignores 'images' field gracefully (Pydantic).",
+  "rca of the issue": "N/A — feature works as designed. The only observation is a non-blocking React validateDOMNesting warning on the Column dropdown."
+}

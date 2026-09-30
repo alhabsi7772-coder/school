@@ -1,0 +1,41 @@
+{
+  "summary": "Full end-to-end testing of the new Substitution periods management system (نظام حصص الاحتياط). Backend: 22/22 pytest cases pass covering auth (login/wrong-pwd/me/admin-token-rejection), teachers listing (49 teachers, quota sum=960, schedule 5x8), day operations (set absent, friday-rejection, candidates ranking with least_quota/least_subs/same_subject flags, assign with all negative cases, auto-distribute with no double-booking + no own-class constraints, clear assignments, clear day), stats + days list, docx export (>10KB, correct MIME), and teacher CRUD + PDF import (updated:49/added:0/total:49, non-PDF→400). Frontend: /substitution/login rendering, correct-and-wrong-cred flows with error toast, redirect guard, distribute page (date picker → الاثنين, absent select → chip, 8 period buttons with correct enabled/disabled + class labels, candidates panel, تكليف assignment turns period green + adds report row, sub-unassign-btn, sub-auto-btn distributes both absent teachers, sub-clear-btn), Teachers page (49 rows, search filter, weekly modal), Stats page (all mode buttons, 4 stat cards, table, days log), Print page /substitution/print/{date} (MOE logo, school name, correct title, table, buttons sub-print-now/sub-print-word, approval footer), substitution-link on /teacher/login pointing to /substitution/login, change-pwd modal opens (not submitted per instructions), logout works.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "SubLayout nav",
+        "issue": "Home nav link testid is `sub-nav-substitution` (derived from n.to.split('/').pop() for '/substitution') instead of the specified `sub-nav-home`. Review contract expected `sub-nav-home/teachers/stats`.",
+        "selector": "[data-testid=\"sub-nav-home\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_substitution.py",
+    "/app/test_reports/pytest/sub_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (contract alignment): In /app/frontend/src/components/substitution/SubLayout.jsx, hard-code data-testid for the '/substitution' NAV entry to `sub-nav-home` (currently produced as `sub-nav-substitution` by n.to.split('/').pop()). All other nav testids match spec."
+  ],
+  "critical_code_review_comments": [
+    "substitution.py: JWT secret comes from .env (JWT_SECRET) - good. Login rate-limiting (5 fails → 15 min lock) implemented correctly for both success and failure paths.",
+    "candidates ranking sorts by (not free, subs_today, subs_year, quota, name) which matches spec (fewest subs today → fewest subs year → lowest quota).",
+    "auto_distribute uses rank_candidates with exclude_busy=True, then picks best[0]; no double-booking is enforced because taken_this_period is checked in rank_candidates - verified in test.",
+    "PUT /substitution/day/{d}/absent already prunes assignments where substitute becomes absent - good.",
+    "Minor: substitution.py is 498 lines - reasonably close to the 700-line soft cap; could be split into teacher/day/stats/export modules for maintainability but not required.",
+    "SubLayout nav derives testid from URL segment - fragile against renames; consider explicit testid strings per NAV entry."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_substitution.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~97% (single testid naming mismatch)"},
+  "test_credentials": "ehtiyat / ehtiyat2026 (substitution admin); admin / teacher123 (main)",
+  "seed_data_creation": "During tests, created and cleared day 2026-09-13 (final state: absent list retained then day-doc deleted via DELETE /substitution/day/2026-09-13). Created and deleted a TEST_dummy_teacher. Existing seeded day 2026-09-06 (زاهر + 2 auto assignments) left intact as it was pre-existing test data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is fully functional. Only minor UI issue is the home nav testid discrepancy (sub-nav-substitution vs expected sub-nav-home). The frontend add-teacher form uses `sub-add-name/sub-add-subject/sub-add-quota/sub-add-save` (not `sub-new-*`). Substitution router mounted under /api/substitution; auth token is separate JWT with role=substitution, stored in localStorage as `subToken`. Test file /app/backend/tests/test_substitution.py is idempotent - re-runnable.",
+  "rca of the issue": "sub-nav-home mismatch RCA: In SubLayout.jsx line 74, testid is generated with `n.to.split('/').pop() || 'home'`. For to='/substitution', split gives ['', 'substitution'], pop returns 'substitution' (truthy) so the fallback 'home' is never used. Fix: replace with explicit testid mapping or `n.testid` property in NAV array."
+}
