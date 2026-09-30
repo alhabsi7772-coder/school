@@ -60,6 +60,17 @@ def with_classes(t: dict) -> dict:
     return t
 
 
+def teacher_password(emp: str) -> str:
+    """كلمة مرور المعلم الافتراضية: آخر ٤ أرقام من الرقم الوظيفي، وإلا 123456."""
+    digits = "".join(ch for ch in (emp or "") if ch.isdigit())
+    return digits[-4:] if len(digits) >= 4 else "123456"
+
+
+def teacher_username(emp: str, civil: str) -> str:
+    """اسم المستخدم: الرقم المدني أولاً، ثم الوظيفي، ثم عشوائي."""
+    return (civil or "").strip() or (emp or "").strip() or f"t{uuid.uuid4().hex[:6]}"
+
+
 def build_assignments(subject: str, classes: list) -> list:
     return [{"subject": subject, "grade": c["grade"], "section": str(c["section"])} for c in classes] if subject else []
 
@@ -271,11 +282,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             emp = update.get("employee_number", cur.get("employee_number", "")).strip()
             civil = update.get("civil_number", cur.get("civil_number", "")).strip()
             update["employee_number"], update["civil_number"] = emp, civil
-            new_username = emp or civil
+            new_username = civil or emp
             if new_username and new_username != cur.get("username"):
                 if await db.grades_users.find_one({"username": new_username, "id": {"$ne": tid}}):
                     raise HTTPException(400, "الرقم مستخدم لمعلم آخر")
                 update["username"] = new_username
+            if emp and emp != cur.get("employee_number", ""):
+                update["password_hash"] = hash_password(teacher_password(emp))
         await db.grades_users.update_one({"id": tid}, {"$set": update})
         return {"ok": True}
 
@@ -301,7 +314,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if await find_teacher_by_name(name):
             raise HTTPException(400, "يوجد معلم بنفس الاسم")
         emp, civil = body.employee_number.strip(), body.civil_number.strip()
-        username = emp or civil or f"t{uuid.uuid4().hex[:6]}"
+        username = teacher_username(emp, civil)
         if await db.grades_users.find_one({"username": username}):
             raise HTTPException(400, "يوجد معلم بنفس الرقم الوظيفي/المدني")
         subject = body.subject.strip()
@@ -309,7 +322,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         await db.grades_users.insert_one({
             "id": str(uuid.uuid4()), "name": name,
             "employee_number": emp, "civil_number": civil,
-            "username": username, "password_hash": hash_password("123456"),
+            "username": username, "password_hash": hash_password(teacher_password(emp)),
             "role": "teacher", "is_active": True, "subject": subject, "classes": classes,
             "assignments": build_assignments(subject, classes),
             "created_at": now_iso(),
@@ -493,9 +506,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             upd = {}
             if emp:
                 upd["employee_number"] = emp
+                if emp != cur.get("employee_number", ""):
+                    upd["password_hash"] = hash_password(teacher_password(emp))
             if civil:
                 upd["civil_number"] = civil
-            new_username = emp or civil
+            new_username = civil or emp
             if new_username and new_username != cur.get("username") and \
                     not await db.grades_users.find_one({"username": new_username, "id": {"$ne": cur["id"]}}):
                 upd["username"] = new_username
@@ -505,6 +520,25 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             else:
                 skipped += 1
         return {"updated": updated, "skipped": skipped}
+
+    @router.post("/teachers/sync-credentials")
+    async def sync_teacher_credentials(u=Depends(require_admin)):
+        """تحديث جميع المعلمين: اسم المستخدم = الرقم المدني، كلمة المرور = آخر ٤ أرقام من الرقم الوظيفي."""
+        updated = 0
+        async for t in db.grades_users.find({"role": "teacher"}, {"_id": 0}):
+            emp, civil = (t.get("employee_number") or "").strip(), (t.get("civil_number") or "").strip()
+            if not emp and not civil:
+                continue
+            upd = {}
+            username = civil or emp
+            if username != t.get("username") and not await db.grades_users.find_one({"username": username, "id": {"$ne": t["id"]}}):
+                upd["username"] = username
+            if emp:
+                upd["password_hash"] = hash_password(teacher_password(emp))
+            if upd:
+                await db.grades_users.update_one({"id": t["id"]}, {"$set": upd})
+                updated += 1
+        return {"updated": updated}
 
     @router.post("/teachers/import")
     async def import_teachers(
@@ -559,9 +593,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 upd = {}
                 if emp:
                     upd["employee_number"] = emp
+                    if emp != existing.get("employee_number", ""):
+                        upd["password_hash"] = hash_password(teacher_password(emp))
                 if civil:
                     upd["civil_number"] = civil
-                new_username = emp or civil
+                new_username = civil or emp
                 if new_username and new_username != existing.get("username") and \
                         not await db.grades_users.find_one({"username": new_username, "id": {"$ne": existing["id"]}}):
                     upd["username"] = new_username
@@ -569,13 +605,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     await db.grades_users.update_one({"id": existing["id"]}, {"$set": upd})
                 updated += 1
             else:
-                username = emp or civil or f"t{uuid.uuid4().hex[:6]}"
+                username = teacher_username(emp, civil)
                 if await db.grades_users.find_one({"username": username}):
                     username = f"{username}_{uuid.uuid4().hex[:4]}"
                 await db.grades_users.insert_one({
                     "id": str(uuid.uuid4()), "name": name,
                     "employee_number": emp, "civil_number": civil,
-                    "username": username, "password_hash": hash_password("123456"),
+                    "username": username, "password_hash": hash_password(teacher_password(emp)),
                     "role": "teacher", "is_active": True, "subject": "", "classes": [], "assignments": [],
                     "created_at": now_iso(),
                 })

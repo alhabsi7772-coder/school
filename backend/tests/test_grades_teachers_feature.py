@@ -163,7 +163,7 @@ def test_add_teacher_success_and_login(headers, created_ids):
     created_ids["teachers"].append(new_t["id"])
     # login as new teacher
     login = requests.post(f"{API}/grades/auth/login",
-                         json={"username": "TEST_EMP_9999", "password": "123456"})
+                         json={"username": "TEST_EMP_9999", "password": "9999"})
     assert login.status_code == 200, login.text
     tk = login.json()["token"]
     # my/assignments returns the class

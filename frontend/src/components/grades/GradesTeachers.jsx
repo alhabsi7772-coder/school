@@ -96,7 +96,7 @@ export default function GradesTeachers() {
         toast.success('تم حفظ بيانات المعلم');
       } else {
         await gradesApi.post('/teachers', form);
-        toast.success('تمت إضافة المعلم — كلمة المرور الافتراضية 123456');
+        toast.success('تمت إضافة المعلم — الدخول بالرقم المدني وآخر ٤ أرقام من الرقم الوظيفي');
       }
       setEditing(null);
       fetchTeachers();
@@ -147,7 +147,7 @@ export default function GradesTeachers() {
       {/* تنبيه صيغة الملف */}
       <div className="sub-card p-4 mb-5 sub-rise" style={{ background: 'var(--sub-amber-soft)', borderColor: 'var(--sub-amber-line)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--sub-amber-ink)' }}>
-          الخطوات: ١) استيراد من نظام الاحتياط (الأسماء والمادة والصفوف) ← ٢) استيراد من Excel: تظهر نافذة مطابقة الأسماء تلقائياً ويدوياً، ويُنقل الرقم الوظيفي والرقم المدني فقط دون تكرار أي معلم. كلمة المرور الافتراضية للمعلمين الجدد: 123456
+          الخطوات: ١) استيراد من نظام الاحتياط (الأسماء والمادة والصفوف) ← ٢) استيراد من Excel: تظهر نافذة مطابقة الأسماء تلقائياً ويدوياً، ويُنقل الرقم الوظيفي والرقم المدني فقط دون تكرار أي معلم. دخول المعلم: اسم المستخدم = الرقم المدني، كلمة المرور = آخر ٤ أرقام من الرقم الوظيفي (وإلا 123456)
         </p>
       </div>
 
