@@ -51,6 +51,7 @@ import GradesStudents from './components/grades/GradesStudents';
 import GradesEnter from './components/grades/GradesEnter';
 import GradesStats from './components/grades/GradesStats';
 import GradesParent from './components/grades/GradesParent';
+import GradesFullMarksPrint from './components/grades/GradesFullMarksPrint';
 import './App.css';
 
 const SubRoute = ({ children }) => {
@@ -142,6 +143,7 @@ function App() {
             <Route path="/grades/students" element={<GradesAdminRoute><GradesStudents /></GradesAdminRoute>} />
             <Route path="/grades/enter" element={<GradesRoute><GradesEnter /></GradesRoute>} />
             <Route path="/grades/stats" element={<GradesRoute><GradesStats /></GradesRoute>} />
+            <Route path="/grades/full-marks/print" element={<GradesRoute><GradesFullMarksPrint /></GradesRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

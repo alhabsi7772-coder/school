@@ -728,6 +728,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         total_students = await db.grades_students.count_documents({})
         teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).to_list(None)
         entered_ids = set()
+        student_counts = {}
         for t in teachers:
             with_classes(t)
             c = await db.grades_scores.count_documents({"teacher_id": t["id"]})
@@ -735,6 +736,33 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             t["scores_count"] = c
             if c > 0:
                 entered_ids.add(t["id"])
+            # متابعة الإكمال: لكل شعبة وفصل دراسي
+            scores = await db.grades_scores.find({"teacher_id": t["id"]}, {"_id": 0}).to_list(None)
+            pending = []
+            expected = 0
+            complete = 0
+            for a in t.get("assignments", []):
+                key = (a["grade"], str(a["section"]))
+                if key not in student_counts:
+                    student_counts[key] = await db.grades_students.count_documents({"grade": key[0], "section": key[1]})
+                n = student_counts[key]
+                for sem in SEMESTERS:
+                    done = sum(1 for s in scores
+                               if s.get("grade") == a["grade"] and str(s.get("section")) == str(a["section"])
+                               and s.get("subject") == a["subject"] and s.get("semester") == sem
+                               and s.get("quiz1") is not None and s.get("quiz2") is not None)
+                    expected += n
+                    complete += min(done, n)
+                    if n > 0 and done < n:
+                        pending.append({
+                            "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
+                            "semester": sem, "semester_label": SEMESTER_LABELS[sem],
+                            "students": n, "done": done, "missing": n - done,
+                        })
+            t["expected"] = expected
+            t["complete"] = complete
+            t["pending"] = pending
+            t["incomplete"] = len(pending) > 0
         # إحصائيات حسب الصف
         by_grade = {}
         for g in GRADES:
@@ -748,6 +776,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "teachers_entered": len(entered_ids),
             "teachers_pending": total_teachers - len(entered_ids),
             "total_scores": total_scores,
+            "teachers_incomplete": sum(1 for t in teachers if t.get("incomplete")),
             "by_grade": by_grade,
             "teachers": teachers,
         }

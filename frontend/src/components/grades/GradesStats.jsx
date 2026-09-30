@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { BarChart3, Users, Award, TrendingUp, Trophy } from 'lucide-react';
+import { BarChart3, Users, Award, TrendingUp, Trophy, Printer } from 'lucide-react';
 import GradesLayout from './GradesLayout';
 import { gradesApi, errMsg, SEMESTERS } from './gradesApi';
 
@@ -75,6 +75,10 @@ export default function GradesStats() {
             <option value="">كل الفصول</option>
             {SEMESTERS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
+          <a href={`/grades/full-marks/print${semFilter ? `?semester=${semFilter}` : ''}`} target="_blank" rel="noreferrer"
+            className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-full-pdf-btn">
+            <Printer className="w-4 h-4" /> تنزيل كشف PDF
+          </a>
         </div>
         {fullRows.length === 0 ? (
           <p className="text-center py-8 text-sm" style={{ color: 'var(--sub-muted)' }}>لا يوجد طلاب حاصلون على الدرجة النهائية بعد</p>

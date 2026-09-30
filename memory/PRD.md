@@ -382,3 +382,10 @@
 - `GradesParent.jsx`: أُضيف سطر «مرحباً الطالب» فوق اسم الطالب في بطاقة النتيجة (data-testid: grades-parent-student-name).
 - منصة الاختبارات تحتوي التحية أصلاً في `TeacherLayout.jsx` وصفحات الطلاب — لم تُعدَّل.
 - تحقق: سكرين شوت بعد دخول معلم حقيقي.
+
+## 2026-06-30 — الاسم الكامل + تنبيه المدير + كشف المتميزين PDF
+- `GradesLayout.jsx`: التحية تعرض الاسم الكامل بلا truncate وتظهر على كل المقاسات.
+- Backend `GET /api/grades/admin/stats`: لكل معلم `expected/complete/pending[]/incomplete` (لكل شعبة × فصل: عدد الطلاب، المُدخل الكامل quiz1+quiz2، الناقص) + `teachers_incomplete` في الإجمالي.
+- `GradesAdmin.jsx`: بطاقة خامسة «معلمون لم يكملوا» + قسم كهرماني «معلمون لم يكملوا إدخال درجات شعبهم» بجدول (المعلم/المادة/الشعب الناقصة/المتبقي) — data-testid: grades-incomplete-card / grades-incomplete-row-{i}.
+- صفحة طباعة جديدة `/grades/full-marks/print` (`GradesFullMarksPrint.jsx`، تقبل ?semester=1|2) بترويسة الوزارة والمدرسة وجدول المتميزين وخانتي اعتماد + زر «تنزيل كشف PDF» في صفحة الإحصائيات (data-testid: grades-full-pdf-btn / grades-print-btn / grades-fullmarks-sheet).
+- تحقق: curl لـ admin/stats (10 معلمين غير مكملين بقيم صحيحة) + سكرين شوت للوحة المدير وصفحة الطباعة والاسم الكامل. حُذفت البيانات التجريبية.

@@ -42,12 +42,13 @@ export default function GradesAdmin() {
     { l: 'إجمالي الطلاب', v: stats?.total_students ?? '—', ic: BookOpen, c: 'var(--sub-teal-ink)', bg: 'var(--sub-teal-soft)' },
     { l: 'معلمون أدخلوا الدرجات', v: stats?.teachers_entered ?? '—', ic: CheckCircle2, c: 'var(--sub-green-ink)', bg: 'var(--sub-green-soft)' },
     { l: 'معلمون لم يدخلوا', v: stats?.teachers_pending ?? '—', ic: Clock, c: 'var(--sub-amber-ink)', bg: 'var(--sub-amber-soft)' },
+    { l: 'معلمون لم يكملوا', v: stats?.teachers_incomplete ?? '—', ic: AlertTriangle, c: 'var(--sub-red-ink)', bg: 'var(--sub-red-soft)' },
   ];
 
   return (
     <GradesLayout title="لوحة تحكم المدير" subtitle="نظرة عامة على نظام درجات الخيرات ومتابعة المعلمين">
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {cards.map((s, i) => (
           <div key={s.l} className={`sub-stat sub-rise sub-rise-${Math.min(3, i + 1)}`}>
             <div className="flex items-center justify-between">
@@ -93,6 +94,40 @@ export default function GradesAdmin() {
           ))}
         </div>
       </div>
+
+      {/* تنبيه: معلمون لم يكملوا إدخال الدرجات */}
+      {(stats?.teachers || []).some(t => t.incomplete) && (
+        <div className="sub-card p-5 mb-6 sub-rise" data-testid="grades-incomplete-card"
+          style={{ background: 'var(--sub-amber-soft)', borderColor: 'var(--sub-amber-line)' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5" style={{ color: 'var(--sub-amber-ink)' }} />
+            <h3 className="font-black" style={{ color: 'var(--sub-amber-ink)' }}>معلمون لم يكملوا إدخال درجات شعبهم</h3>
+            <span className="sub-badge sub-badge-amber mr-auto">{stats.teachers.filter(t => t.incomplete).length} معلم</span>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-amber-line)', background: 'var(--sub-surface)' }}>
+            <table className="sub-table">
+              <thead><tr><th>م</th><th>المعلم</th><th>المادة</th><th>الشعب الناقصة</th><th>المتبقي</th></tr></thead>
+              <tbody>
+                {stats.teachers.filter(t => t.incomplete).map((t, i) => (
+                  <tr key={t.id} data-testid={`grades-incomplete-row-${i}`}>
+                    <td>{i + 1}</td>
+                    <td className="font-bold">{t.name}</td>
+                    <td className="text-xs font-semibold">{t.subject || '—'}</td>
+                    <td className="text-xs">
+                      {t.pending.map((p, k) => (
+                        <span key={k} className="sub-badge sub-badge-gray" style={{ margin: '2px' }}>
+                          {p.grade}/{p.section} · {p.semester_label} · ناقص {p.missing} من {p.students}
+                        </span>
+                      ))}
+                    </td>
+                    <td className="font-black" style={{ color: 'var(--sub-red-ink)' }}>{t.pending.reduce((a, p) => a + p.missing, 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* حالة المعلمين */}
       <div className="sub-card p-5 sub-rise">

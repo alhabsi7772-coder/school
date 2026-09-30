@@ -78,9 +78,9 @@ export default function GradesLayout({ children, title, subtitle, actions }) {
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {userName && (
-              <div className="hidden sm:block leading-tight text-left mr-1" data-testid="grades-welcome">
+              <div className="leading-tight text-left mr-1" data-testid="grades-welcome">
                 <p className="text-[10px] font-semibold" style={{ color: 'var(--sub-muted)' }}>مرحباً</p>
-                <p className="text-xs font-black max-w-[180px] truncate" style={{ color: 'var(--sub-navy-ink)' }}>
+                <p className="text-xs font-black" style={{ color: 'var(--sub-navy-ink)' }}>
                   {role === 'admin' ? userName : `الأستاذ ${userName}`}
                 </p>
               </div>
