@@ -17,8 +17,8 @@ function ClassPicker({ classes, onChange }) {
           <span className="text-xs font-bold w-14" style={{ color: 'var(--sub-muted)' }}>{g}</span>
           {SECTIONS.map((s) => (
             <button key={s} type="button" onClick={() => toggle(g, s)}
-              className={`sub-badge ${has(g, s) ? 'sub-badge-navy' : ''}`}
-              style={{ cursor: 'pointer', minWidth: 42, justifyContent: 'center', border: '1px solid var(--sub-line)', opacity: has(g, s) ? 1 : 0.6 }}
+              className="sub-badge"
+              style={{ cursor: 'pointer', minWidth: 42, justifyContent: 'center', border: '1px solid var(--sub-line)', background: has(g, s) ? 'var(--sub-navy)' : 'transparent', color: has(g, s) ? '#fff' : 'var(--sub-muted)', transition: 'background-color .15s, color .15s' }}
               data-testid={`class-toggle-${GRADE_NUM[g]}-${s}`}>
               {GRADE_NUM[g]}/{s}
             </button>

@@ -1,0 +1,31 @@
+{
+  "summary": "Tested the grades system teachers refactor (subject + classes instead of التكليفات, import from substitution, Excel import with name matching + Arabic normalization, teacher edit modal, teacher login). All 8 backend pytests pass and UI verified end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "GradesTeachers / TeacherEditModal", "issues": ["React validateDOMNesting console warnings: <span> appearing as child of <tbody> and <select>/<option>. Non-blocking but should be cleaned up — likely from a stray badge/span rendered outside a <td>/<tr> or inside select's option content. Check GradesLayout table wrappers and the subject <select> options in TeacherEditModal."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_grades_teachers_feature.py",
+    "/app/test_reports/pytest/grades_teachers.xml"
+  ],
+  "action_items": [
+    "Optional: fix React DOM nesting warnings (span child of tbody/select) — no functional impact."
+  ],
+  "critical_code_review_comments": [
+    "grades.py PUT /teachers/{tid}: when both employee_number/civil_number are cleared, username becomes empty (falls back to old). Consider generating a fallback t{uuid} similar to POST to keep username uniqueness intact.",
+    "grades.py import_from_substitution creates username `t{uuid8}` for new teachers, meaning admin has to manually set employee/civil later before the teacher can log in. Acceptable but worth documenting.",
+    "GradesTeachers.jsx uses window.confirm() for destructive actions — non-blocking but consider a styled confirm dialog for UX consistency."
+  ],
+  "updated_files": ["/app/backend/tests/test_grades_teachers_feature.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (all critical flows verified)"},
+  "test_credentials": "grades admin admin/admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Excel-import test created 1 TEST_ teacher and added-teacher test created 1 TEST_ teacher; both cleaned up by pytest test_cleanup. Also reset employee_number/civil_number on 'أبو بكر سمير' back to empty after Excel-match test to restore original state. 49 real substitution-imported teachers preserved.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Feature is stable. db.grades_users has 49 teachers imported from substitution with subject+classes populated. Rerunning /api/grades/teachers/import-substitution is idempotent (added=0, updated=49). Excel import matches by Arabic-normalized name (أ→ا, ة→ه, ى→ي, whitespace collapsed) and by employee_number.",
+  "rca of the issue": "N/A — no defects found."
+}
