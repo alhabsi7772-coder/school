@@ -13,6 +13,21 @@ function diamond(ctx, x, y, s, color) {
   ctx.closePath(); ctx.fill();
 }
 
+const AR_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+function toArabicNum(s) {
+  return String(s || '').replace(/[0-9]/g, (d) => AR_DIGITS[d]);
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -152,7 +167,7 @@ const PAT_FNS = {
 
 // ─── EMBLEM ────────────────────────────────────────────────────────────────
 
-function drawEmblem(ctx, x, y, colors, isDark) {
+function drawEmblem(ctx, x, y, colors, isDark, logoImg) {
   const [ring, center, dots] = colors;
   ctx.strokeStyle = ring; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(x, y, 48, 0, Math.PI * 2); ctx.stroke();
@@ -163,9 +178,17 @@ function drawEmblem(ctx, x, y, colors, isDark) {
     const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
     ctx.beginPath(); ctx.arc(x + 44 * Math.cos(a), y + 44 * Math.sin(a), 2.5, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.fillStyle = ring;
-  ctx.font = 'bold 34px Tajawal, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('خ', x, y + 2); ctx.textBaseline = 'alphabetic';
+  if (logoImg) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.drawImage(logoImg, x - 34, y - 34, 68, 68);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = ring;
+    ctx.font = 'bold 34px Tajawal, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('خ', x, y + 2); ctx.textBaseline = 'alphabetic';
+  }
 }
 
 // ─── SEAL ──────────────────────────────────────────────────────────────────
@@ -203,11 +226,11 @@ function drawDivider(ctx, W, y, color, accent, dashed = false) {
 
 // ─── CONTENT RENDERER (SAME FOR ALL TEMPLATES) ────────────────────────────
 
-function drawContent(ctx, W, H, t, student, quiz, schoolName) {
+function drawContent(ctx, W, H, t, student, quiz, schoolName, academicYear, logoImg) {
   ctx.direction = 'rtl';
 
   // Emblem
-  drawEmblem(ctx, 118, 105, t.emblem, t.isDark);
+  drawEmblem(ctx, 118, 105, t.emblem, t.isDark, logoImg);
 
   // School header
   ctx.textAlign = 'right';
@@ -218,10 +241,11 @@ function drawContent(ctx, W, H, t, student, quiz, schoolName) {
   ctx.font = '14px Tajawal, Arial';
   ctx.fillText('وزارة التعليم', W - 58, 100);
   ctx.fillText('المديرية العامة بشمال الشرقية', W - 58, 120);
-  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين', W - 58, 140);
+  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين ٥-٨', W - 58, 140);
   ctx.fillStyle = t.school3;
   ctx.font = '12px Tajawal, Arial';
-  ctx.fillText('العام الدراسي ٢٠٢٥ / ٢٠٢٦', W - 58, 162);
+  const yearStr = academicYear ? toArabicNum(academicYear.replace('-', ' / ')) : '٢٠٢٥ / ٢٠٢٦';
+  ctx.fillText(`العام الدراسي ${yearStr}`, W - 58, 162);
 
   // Header divider
   drawDivider(ctx, W, 178, t.divider, t.accent);
@@ -323,12 +347,15 @@ function drawContent(ctx, W, H, t, student, quiz, schoolName) {
 
 // ─── MAIN GENERATOR ────────────────────────────────────────────────────────
 
-export async function generateCertificate(student, quiz, templateId = 'classic_blue', schoolName) {
+export async function generateCertificate(student, quiz, templateId = 'classic_blue', schoolName, academicYear) {
   const t = TEMPLATES[templateId] || TEMPLATES.classic_blue;
   const W = 1123, H = 794;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+
+  let logoImg = null;
+  try { logoImg = await loadImage('/moe-logo.jpeg'); } catch { logoImg = null; }
 
   // ── Background
   let bg;
@@ -375,7 +402,7 @@ export async function generateCertificate(student, quiz, templateId = 'classic_b
   if (CORNER_FNS[t.cornerStyle]) CORNER_FNS[t.cornerStyle](ctx, W, H, t.cornerColor);
 
   // ── All text content
-  drawContent(ctx, W, H, t, student, quiz, schoolName);
+  drawContent(ctx, W, H, t, student, quiz, schoolName, academicYear, logoImg);
 
   return canvas;
 }

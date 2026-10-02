@@ -165,7 +165,7 @@ export default function QuizResults() {
     setDownloadingId('cert-' + student.id);
     const templateId = localStorage.getItem('certTemplate') || 'classic_blue';
     try {
-      const canvas = await generateCertificate(student, data.quiz, templateId, data.quiz?.school_name);
+      const canvas = await generateCertificate(student, data.quiz, templateId, data.quiz?.school_name, localStorage.getItem('academicYear'));
       const blob = await canvasToBlob(canvas);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -184,7 +184,7 @@ export default function QuizResults() {
     try {
       const zip = new JSZip();
       for (const s of submissions) {
-        const canvas = await generateCertificate(s, data.quiz, templateId, data.quiz?.school_name);
+        const canvas = await generateCertificate(s, data.quiz, templateId, data.quiz?.school_name, localStorage.getItem('academicYear'));
         const blob = await canvasToBlob(canvas);
         zip.file(certFileName(s), blob);
       }

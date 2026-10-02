@@ -83,6 +83,8 @@ const GradesAdminRoute = ({ children }) => {
   return children;
 };
 
+const GradesHome = () => (localStorage.getItem('gradesRole') === 'admin' ? <GradesAdmin /> : <GradesEnter />);
+
 function App() {
   return (
     <ThemeProvider>
@@ -138,7 +140,7 @@ function App() {
             <Route path="/substitution/supervision/print" element={<SubRoute><SubSupervisionPrint /></SubRoute>} />
             <Route path="/grades/login" element={<GradesLogin />} />
             <Route path="/grades/parent" element={<GradesParent />} />
-            <Route path="/grades" element={<GradesRoute>{localStorage.getItem('gradesRole') === 'admin' ? <GradesAdmin /> : <GradesEnter />}</GradesRoute>} />
+            <Route path="/grades" element={<GradesRoute><GradesHome /></GradesRoute>} />
             <Route path="/grades/teachers" element={<GradesAdminRoute><GradesTeachers /></GradesAdminRoute>} />
             <Route path="/grades/students" element={<GradesAdminRoute><GradesStudents /></GradesAdminRoute>} />
             <Route path="/grades/enter" element={<GradesRoute><GradesEnter /></GradesRoute>} />

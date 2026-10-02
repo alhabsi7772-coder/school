@@ -42,7 +42,7 @@ export default function GradesParent() {
       {/* خلفية الفيديو */}
       <ParentVideoBackground dim={theme === 'light' ? 0.08 : 0.35} />
 
-      <div className="fixed top-4 left-4 z-20"><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
+      <div style={{ position: 'fixed', top: '1rem', left: '1rem', zIndex: 20 }}><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
 
       <div className={`relative z-10 px-4 py-10 ${data ? 'max-w-4xl mx-auto' : 'w-full lg:pl-20'}`}>
         {!data ? (

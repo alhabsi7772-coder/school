@@ -1,8 +1,11 @@
 import { useState } from 'react';
 
-// خلفية فيديو لكامل صفحة ولي الأمر مع انتقال ناعم عند إعادة التشغيل
+// خلفية فيديو لكامل صفحة ولي الأمر — تظهر فقط على الكمبيوتر، وتُستبدل بخلفية ثابتة على الهاتف
+const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+
 export default function ParentVideoBackground({ dim = 0.1 }) {
   const [fade, setFade] = useState(false);
+  const [showVideo] = useState(isDesktop);
 
   const onTime = (e) => {
     const v = e.currentTarget;
@@ -14,6 +17,10 @@ export default function ParentVideoBackground({ dim = 0.1 }) {
     v.play().catch(() => {});
     setTimeout(() => setFade(false), 60);
   };
+
+  if (!showVideo) {
+    return <div className="parent-video-root parent-video-static" data-testid="parent-video-bg" />;
+  }
 
   return (
     <div className="parent-video-root" data-testid="parent-video-bg">
@@ -36,3 +43,4 @@ export default function ParentVideoBackground({ dim = 0.1 }) {
     </div>
   );
 }
+

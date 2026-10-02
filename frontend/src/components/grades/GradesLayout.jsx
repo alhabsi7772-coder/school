@@ -58,25 +58,16 @@ export default function GradesLayout({ children, title, subtitle, actions }) {
     <div className={`sub-root ${themeClass(theme)}`} data-testid="grades-layout" data-theme={theme}>
       {theme === 'lux' && <LuxParticles />}
       <header className="sticky top-0 z-30" style={{ background: 'var(--sub-header-bg)', backdropFilter: 'blur(14px)', borderBottom: '1px solid var(--sub-line)' }}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center gap-3">
-          <Link to="/grades" className="flex items-center gap-3 flex-shrink-0">
-            <img src="/moe-logo.jpeg" alt="" className="w-10 h-10 rounded-xl object-contain bg-white p-0.5 border" style={{ borderColor: 'var(--sub-line)' }} />
+        <div className="max-w-7xl mx-auto px-3 md:px-6 py-2 md:py-0 md:h-16 flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-3">
+          <Link to="/grades" className="flex items-center gap-2.5 flex-shrink-0 order-1">
+            <img src="/moe-logo.jpeg" alt="" className="w-9 h-9 md:w-10 md:h-10 rounded-xl object-contain bg-white p-0.5 border" style={{ borderColor: 'var(--sub-line)' }} />
             <div className="hidden sm:block leading-tight">
               <p className="font-black text-sm" style={{ color: 'var(--sub-navy-ink)' }}>نظام درجات الخيرات</p>
               <p className="text-[11px] font-semibold" style={{ color: 'var(--sub-muted)' }}>{SCHOOL_NAME}</p>
             </div>
           </Link>
 
-          <nav className="flex items-center gap-1 mx-auto overflow-x-auto" data-testid="grades-nav">
-            {nav.map((n) => (
-              <Link key={n.to} to={n.to} className={`sub-nav-link ${isActive(n) ? 'active' : ''}`} data-testid={`grades-nav-${n.tid}`}>
-                <n.icon className="w-4 h-4" />
-                <span className="hidden md:inline">{n.label}</span>
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0 order-2 md:order-3 mr-0">
             {userName && (
               <div className="leading-tight text-left mr-1" data-testid="grades-welcome">
                 <p className="text-[10px] font-semibold" style={{ color: 'var(--sub-muted)' }}>مرحباً</p>
@@ -91,6 +82,15 @@ export default function GradesLayout({ children, title, subtitle, actions }) {
             </a>
             <button onClick={logout} className="sub-nav-link" style={{ color: 'var(--sub-red-ink)' }} title="خروج" data-testid="grades-logout-btn"><LogOut className="w-4 h-4" /></button>
           </div>
+
+          <nav className="flex items-center gap-1 overflow-x-auto order-3 md:order-2 w-full md:w-auto md:flex-1 md:mx-auto justify-start md:justify-center pt-2 md:pt-0 mt-1 md:mt-0 border-t md:border-t-0" style={{ borderColor: 'var(--sub-line)' }} data-testid="grades-nav">
+            {nav.map((n) => (
+              <Link key={n.to} to={n.to} className={`sub-nav-link text-xs md:text-sm whitespace-nowrap ${isActive(n) ? 'active' : ''}`} data-testid={`grades-nav-${n.tid}`}>
+                <n.icon className="w-4 h-4" />
+                <span>{n.label}</span>
+              </Link>
+            ))}
+          </nav>
         </div>
       </header>
 

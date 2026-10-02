@@ -55,7 +55,7 @@ export default function GradesLogin() {
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
       } : undefined}>
       {theme === 'lux' && <LuxParticles />}
-      <div className="fixed top-4 left-4 z-20"><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
+      <div style={{ position: 'fixed', top: '1rem', left: '1rem', zIndex: 20 }}><ThemeSwitch theme={theme} setTheme={setTheme} /></div>
       <div className="w-full max-w-md sub-rise">
         <div className="text-center mb-8">
           <img src="/moe-logo.jpeg" alt="وزارة التعليم" className="w-24 h-24 mx-auto rounded-2xl object-contain bg-white p-2 sub-card" />
