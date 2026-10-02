@@ -131,37 +131,36 @@ export default function TeacherLayout({ children, title, backTo }) {
         })}
       </nav>
 
-      {/* رابط نظام الاحتياط (قسم مستقل بحساب خاص) */}
-      <div className="mx-3 mb-2">
+      {/* أزرار الأنظمة + الخروج (ترتيب: الاحتياط → الدرجات → الخروج) */}
+      <div className="mx-3 mb-3 space-y-2">
         <a href="/substitution/login" target="_blank" rel="noreferrer" data-testid="sidebar-substitution-link"
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb), 0.22)' }}>
-          <ArrowLeftRight className="w-4 h-4" />
+          style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', color: 'var(--theme-accent)', border: '1px solid rgba(var(--theme-accent-rgb), 0.22)' }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+          <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
           نظام حصص الاحتياط
         </a>
-      </div>
 
-      {/* Logout button (above AI badge for quick access) */}
-      <div className="mx-3 mb-2">
+        <a href="/grades/login" target="_blank" rel="noreferrer" data-testid="sidebar-grades-link"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={lux
+            ? { background: 'rgba(22,214,122,0.08)', color: 'rgba(40,245,167,0.95)', border: '1px solid rgba(22,214,122,0.22)' }
+            : { background: 'rgba(213,0,249,0.08)', color: 'rgba(213,0,249,0.95)', border: '1px solid rgba(213,0,249,0.22)' }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+          <GraduationCap className="w-4 h-4 flex-shrink-0" />
+          نظام الدرجات
+        </a>
+
         <button onClick={logout} data-testid="quick-logout-btn"
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
           style={{ background: 'rgba(239,68,68,0.10)', color: '#F87171', border: '1px solid rgba(239,68,68,0.25)' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.22)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4 flex-shrink-0" />
           تسجيل الخروج
         </button>
-      </div>
-
-      {/* AI Badge */}
-      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl"
-        style={lux
-          ? { background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.16)' }
-          : { background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: lux ? '#28F5A7' : '#D500F9' }} />
-          <p className="text-xs font-medium" style={{ color: lux ? 'rgba(40,245,167,0.9)' : 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
-        </div>
       </div>
 
       {/* Footer */}

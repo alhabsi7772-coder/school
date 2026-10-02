@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Lock, GraduationCap, Zap, User, Check, ArrowLeftRight } from 'lucide-react';
+import { Lock, GraduationCap, Zap, User, Check, ArrowLeftRight, Award } from 'lucide-react';
 import { API } from '../../utils';
 import LoginVideoBackground from '../LoginVideoBackground';
 
@@ -209,6 +209,12 @@ export default function TeacherLogin() {
               style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', border: '1px solid rgba(var(--theme-accent-rgb), 0.25)', color: 'var(--theme-accent)' }}>
               <ArrowLeftRight className="w-4 h-4" />
               نظام حصص الاحتياط (دخول مستقل)
+            </a>
+            <a href="/grades/login" data-testid="grades-system-link"
+              className="mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+              style={{ background: 'rgba(var(--theme-accent-rgb), 0.08)', border: '1px solid rgba(var(--theme-accent-rgb), 0.25)', color: 'var(--theme-accent)' }}>
+              <Award className="w-4 h-4" />
+              نظام الدرجات (دخول مستقل)
             </a>
           </div>
         </div>

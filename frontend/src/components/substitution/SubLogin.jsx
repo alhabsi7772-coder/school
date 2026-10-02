@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Lock, User, ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { Lock, User, ArrowLeftRight, ArrowRight, Award } from 'lucide-react';
 import { subApi, errMsg, SCHOOL_NAME } from './subApi';
 import { useSubTheme, themeClass } from './subTheme';
 import { ThemeSwitch } from './SubLayout';
@@ -101,6 +101,10 @@ export default function SubLogin() {
           <button type="submit" disabled={loading} className="sub-btn sub-btn-primary w-full" style={{ padding: '0.85rem' }} data-testid="sub-login-btn">
             {loading ? 'جارٍ الدخول...' : 'دخول'}
           </button>
+
+          <Link to="/grades/login" className="sub-btn w-full flex items-center justify-center gap-2" style={{ padding: '0.75rem', border: '1px solid var(--sub-border, rgba(0,0,0,0.12))' }} data-testid="sub-grades-system-link">
+            <Award className="w-4 h-4" /> نظام الدرجات
+          </Link>
 
           <Link to="/teacher/login" className="flex items-center justify-center gap-1.5 text-xs font-bold pt-1" style={{ color: 'var(--sub-muted)' }} data-testid="sub-back-to-main">
             <ArrowRight className="w-3.5 h-3.5" /> العودة إلى المنصة الرئيسية

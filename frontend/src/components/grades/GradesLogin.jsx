@@ -75,7 +75,7 @@ export default function GradesLogin() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold mb-2" style={{ color: 'var(--sub-muted)' }}>اسم المستخدم</label>
+            <label className="block text-xs font-bold mb-2" style={{ color: 'var(--sub-muted)' }}>اسم المستخدم <span className="font-normal">(للمعلم: الرقم المدني)</span></label>
             <div className="relative">
               <User className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--sub-muted)' }} />
               <input className="sub-input pr-11" dir="ltr" style={{ textAlign: 'left' }} value={username} onChange={(e) => setUsername(e.target.value)}
@@ -83,7 +83,7 @@ export default function GradesLogin() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold mb-2" style={{ color: 'var(--sub-muted)' }}>كلمة المرور</label>
+            <label className="block text-xs font-bold mb-2" style={{ color: 'var(--sub-muted)' }}>كلمة المرور <span className="font-normal">(للمعلم: آخر ٤ أرقام من الرقم الوظيفي)</span></label>
             <div className="relative">
               <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--sub-muted)' }} />
               <input type="password" className="sub-input pr-11" value={password} onChange={(e) => setPassword(e.target.value)}

@@ -1,4 +1,5 @@
 """نظام درجات الخيرات — نظام مستقل لإدارة درجات الاختبارات القصيرة."""
+import difflib
 import io
 import uuid
 from datetime import datetime, timezone
@@ -37,6 +38,43 @@ def norm_ar(s: str) -> str:
     return (s or "").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه").replace("ى", "ي").strip()
 
 
+def name_key(s: str) -> str:
+    return " ".join(norm_ar(s).split())
+
+
+GRADE_NUM = {"الخامس": "5", "السادس": "6", "السابع": "7", "الثامن": "8"}
+GRADE_BY_NUM = {v: k for k, v in GRADE_NUM.items()}
+
+
+def _class_sort(c):
+    return (GRADE_NUM.get(c["grade"], "9"), int(c["section"]) if str(c["section"]).isdigit() else 99)
+
+
+def with_classes(t: dict) -> dict:
+    """يضمن وجود حقلي المادة والصفوف (للحسابات القديمة تُشتق من التكليفات)."""
+    if "classes" not in t:
+        seen = {(a["grade"], str(a["section"])) for a in t.get("assignments", [])}
+        t["classes"] = sorted([{"grade": g, "section": sec} for g, sec in seen], key=_class_sort)
+    if not t.get("subject"):
+        t["subject"] = next((a["subject"] for a in t.get("assignments", []) if a.get("subject")), "")
+    return t
+
+
+def teacher_password(emp: str) -> str:
+    """كلمة مرور المعلم الافتراضية: آخر ٤ أرقام من الرقم الوظيفي، وإلا 123456."""
+    digits = "".join(ch for ch in (emp or "") if ch.isdigit())
+    return digits[-4:] if len(digits) >= 4 else "123456"
+
+
+def teacher_username(emp: str, civil: str) -> str:
+    """اسم المستخدم: الرقم المدني أولاً، ثم الوظيفي، ثم عشوائي."""
+    return (civil or "").strip() or (emp or "").strip() or f"t{uuid.uuid4().hex[:6]}"
+
+
+def build_assignments(subject: str, classes: list) -> list:
+    return [{"subject": subject, "grade": c["grade"], "section": str(c["section"])} for c in classes] if subject else []
+
+
 def _parse_excel(data: bytes):
     try:
         wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
@@ -67,10 +105,17 @@ class Assignment(BaseModel):
     subject: str
 
 
+class ClassRef(BaseModel):
+    grade: str
+    section: str
+
+
 class TeacherCreate(BaseModel):
     name: str
     employee_number: str = ""
     civil_number: str = ""
+    subject: str = ""
+    classes: List[ClassRef] = []
 
 
 class StudentCreate(BaseModel):
@@ -85,7 +130,8 @@ class TeacherUpdate(BaseModel):
     employee_number: Optional[str] = None
     civil_number: Optional[str] = None
     is_active: Optional[bool] = None
-    assignments: Optional[List[Assignment]] = None
+    subject: Optional[str] = None
+    classes: Optional[List[ClassRef]] = None
 
 
 class ScoreSave(BaseModel):
@@ -101,6 +147,25 @@ class ScoreSave(BaseModel):
 class SettingsReq(BaseModel):
     site_closed: Optional[bool] = None
     grades_locked: Optional[bool] = None
+    subject_max: Optional[dict] = None
+
+
+def subject_max_map(settings: dict) -> dict:
+    """الدرجات العظمى لكل مادة {subject: {quiz1, quiz2}} مع القيمة الافتراضية 10."""
+    saved = (settings or {}).get("subject_max") or {}
+    out = {}
+    for sub in SUBJECTS:
+        v = saved.get(sub) or {}
+        out[sub] = {
+            "quiz1": float(v.get("quiz1", QUIZ_MAX) or 0),
+            "quiz2": float(v.get("quiz2", QUIZ_MAX) or 0),
+        }
+    return out
+
+
+def max_for(settings: dict, subject: str):
+    m = subject_max_map(settings).get(subject) or {"quiz1": QUIZ_MAX, "quiz2": QUIZ_MAX}
+    return m["quiz1"], m["quiz2"]
 
 
 def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_algorithm):
@@ -156,7 +221,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     @router.get("/status")
     async def site_status():
         s = await get_settings()
-        return {"site_closed": s.get("site_closed", False), "grades_locked": s.get("grades_locked", False)}
+        return {"site_closed": s.get("site_closed", False), "grades_locked": s.get("grades_locked", False),
+                "subject_max": subject_max_map(s), "subjects": SUBJECTS}
 
     # ---- auth ----
     @router.post("/auth/login")
@@ -188,20 +254,46 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     # ---- settings (admin) ----
     @router.get("/settings")
     async def read_settings(u=Depends(require_admin)):
-        return await get_settings()
+        s = await get_settings()
+        s["subject_max"] = subject_max_map(s)
+        s["subjects"] = SUBJECTS
+        return s
 
     @router.put("/settings")
     async def write_settings(req: SettingsReq, u=Depends(require_admin)):
         update = {k: v for k, v in req.dict().items() if v is not None}
+        if "subject_max" in update:
+            clean = {}
+            for sub, v in (update["subject_max"] or {}).items():
+                if sub not in SUBJECTS:
+                    continue
+                try:
+                    q1 = max(0.0, min(100.0, float((v or {}).get("quiz1", QUIZ_MAX))))
+                    q2 = max(0.0, min(100.0, float((v or {}).get("quiz2", QUIZ_MAX))))
+                except (TypeError, ValueError):
+                    raise HTTPException(400, f"قيمة غير صحيحة للمادة: {sub}")
+                clean[sub] = {"quiz1": q1, "quiz2": q2}
+            update["subject_max"] = clean
         await db.grades_settings.update_one({}, {"$set": update}, upsert=True)
-        return await get_settings()
+        s = await get_settings()
+        s["subject_max"] = subject_max_map(s)
+        s["subjects"] = SUBJECTS
+        return s
 
     # ---- teachers (admin) ----
+    async def find_teacher_by_name(name: str, exclude_id: str = None):
+        key = name_key(name)
+        async for t in db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}):
+            if name_key(t.get("name", "")) == key and t["id"] != exclude_id:
+                return t
+        return None
+
     @router.get("/teachers")
     async def list_teachers(u=Depends(require_admin)):
-        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).to_list(None)
+        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).sort("name", 1).to_list(None)
         # حالة إدخال الدرجات لكل معلم
         for t in teachers:
+            with_classes(t)
             count = await db.grades_scores.count_documents({"teacher_id": t["id"]})
             t["entered"] = count > 0
             t["scores_count"] = count
@@ -209,21 +301,42 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
     @router.put("/teachers/{tid}")
     async def update_teacher(tid: str, req: TeacherUpdate, u=Depends(require_admin)):
-        update = {k: v for k, v in req.dict().items() if v is not None}
-        if "assignments" in update:
-            update["assignments"] = [a.dict() for a in (req.assignments or [])]
+        cur = await db.grades_users.find_one({"id": tid, "role": "teacher"}, {"_id": 0})
+        if not cur:
+            raise HTTPException(404, "المعلم غير موجود")
+        update = req.dict(exclude_none=True)
+        if "name" in update:
+            update["name"] = update["name"].strip()
+            if not update["name"]:
+                raise HTTPException(400, "الاسم مطلوب")
+            if await find_teacher_by_name(update["name"], tid):
+                raise HTTPException(400, "يوجد معلم آخر بنفس الاسم")
+        if "subject" in update or "classes" in update:
+            cur = with_classes(cur)
+            subject = update.get("subject", cur["subject"]).strip()
+            classes = sorted(update.get("classes", cur["classes"]), key=_class_sort)
+            update.update({"subject": subject, "classes": classes, "assignments": build_assignments(subject, classes)})
         if "employee_number" in update or "civil_number" in update:
-            cur = await db.grades_users.find_one({"id": tid, "role": "teacher"}) or {}
             emp = update.get("employee_number", cur.get("employee_number", "")).strip()
             civil = update.get("civil_number", cur.get("civil_number", "")).strip()
             update["employee_number"], update["civil_number"] = emp, civil
-            new_username = emp or civil
+            new_username = civil or emp
             if new_username and new_username != cur.get("username"):
                 if await db.grades_users.find_one({"username": new_username, "id": {"$ne": tid}}):
                     raise HTTPException(400, "الرقم مستخدم لمعلم آخر")
                 update["username"] = new_username
+            if emp and emp != cur.get("employee_number", ""):
+                update["password_hash"] = hash_password(teacher_password(emp))
         await db.grades_users.update_one({"id": tid}, {"$set": update})
         return {"ok": True}
+
+    @router.delete("/teachers/all")
+    async def delete_all_teachers(u=Depends(require_admin)):
+        ids = [t["id"] async for t in db.grades_users.find({"role": "teacher"}, {"id": 1})]
+        res = await db.grades_users.delete_many({"role": "teacher"})
+        if ids:
+            await db.grades_scores.delete_many({"teacher_id": {"$in": ids}})
+        return {"ok": True, "deleted": res.deleted_count}
 
     @router.delete("/teachers/{tid}")
     async def delete_teacher(tid: str, u=Depends(require_admin)):
@@ -236,15 +349,20 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         name = body.name.strip()
         if not name:
             raise HTTPException(400, "الاسم مطلوب")
+        if await find_teacher_by_name(name):
+            raise HTTPException(400, "يوجد معلم بنفس الاسم")
         emp, civil = body.employee_number.strip(), body.civil_number.strip()
-        username = emp or civil or f"t{uuid.uuid4().hex[:6]}"
+        username = teacher_username(emp, civil)
         if await db.grades_users.find_one({"username": username}):
             raise HTTPException(400, "يوجد معلم بنفس الرقم الوظيفي/المدني")
+        subject = body.subject.strip()
+        classes = sorted([c.dict() for c in body.classes], key=_class_sort)
         await db.grades_users.insert_one({
             "id": str(uuid.uuid4()), "name": name,
             "employee_number": emp, "civil_number": civil,
-            "username": username, "password_hash": hash_password("123456"),
-            "role": "teacher", "is_active": True, "assignments": [],
+            "username": username, "password_hash": hash_password(teacher_password(emp)),
+            "role": "teacher", "is_active": True, "subject": subject, "classes": classes,
+            "assignments": build_assignments(subject, classes),
             "created_at": now_iso(),
         })
         return {"ok": True}
@@ -266,33 +384,34 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
     @router.post("/teachers/import-substitution")
     async def import_from_substitution(u=Depends(require_admin)):
-        """استيراد المعلمين ومواده وصفوفهم وشعبهم من جداول نظام حصص الاحتياط."""
-        grade_names = {"5": "الخامس", "6": "السادس", "7": "السابع", "8": "الثامن"}
+        """استيراد المعلمين ومادتهم وصفوفهم من جداول نظام حصص الاحتياط (مطابقة بالاسم بدون تكرار)."""
         added, updated = 0, 0
         async for st in db.sub_teachers.find({}, {"_id": 0}):
             name = (st.get("name") or "").strip()
             if not name:
                 continue
-            found = set()
+            found, cell_subjects = set(), {}
             for cells in (st.get("schedule") or {}).values():
-                for c in cells:
+                for c in cells or []:
                     if not c or not c.get("class") or "/" not in c["class"]:
                         continue
                     g, sec = c["class"].split("/", 1)
-                    if g in grade_names:
-                        found.add((c.get("subject") or st.get("subject") or "", grade_names[g], sec))
-            derived = [{"subject": a, "grade": b, "section": c} for a, b, c in sorted(found, key=lambda x: (x[1], int(x[2]) if x[2].isdigit() else 0, x[0]))]
-            existing = await db.grades_users.find_one({"name": name, "role": "teacher"})
+                    if g in GRADE_BY_NUM:
+                        found.add((GRADE_BY_NUM[g], sec.strip()))
+                    if c.get("subject"):
+                        cell_subjects[c["subject"]] = cell_subjects.get(c["subject"], 0) + 1
+            subject = (st.get("subject") or "").strip() or (max(cell_subjects, key=cell_subjects.get) if cell_subjects else "")
+            classes = sorted([{"grade": g, "section": sec} for g, sec in found], key=_class_sort)
+            data = {"subject": subject, "classes": classes, "assignments": build_assignments(subject, classes)}
+            existing = await find_teacher_by_name(name)
             if existing:
-                have = {(a["subject"], a["grade"], a["section"]) for a in existing.get("assignments", [])}
-                merged = existing.get("assignments", []) + [a for a in derived if (a["subject"], a["grade"], a["section"]) not in have]
-                await db.grades_users.update_one({"id": existing["id"]}, {"$set": {"assignments": merged}})
+                await db.grades_users.update_one({"id": existing["id"]}, {"$set": data})
                 updated += 1
             else:
                 await db.grades_users.insert_one({
                     "id": str(uuid.uuid4()), "name": name, "employee_number": "", "civil_number": "",
                     "username": f"t{uuid.uuid4().hex[:8]}", "password_hash": hash_password("123456"),
-                    "role": "teacher", "is_active": True, "assignments": derived, "created_at": now_iso(),
+                    "role": "teacher", "is_active": True, "created_at": now_iso(), **data,
                 })
                 added += 1
         return {"added": added, "updated": updated}
@@ -312,6 +431,152 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 suggested["civil"] = i
         sample = [[("" if c is None else str(c)) for c in row] for row in rows[:5]]
         return {"headers": header, "sample_rows": sample, "total_rows": len(rows), "suggested": suggested}
+
+    def _excel_cells(header, rows, name_col, emp_col, civil_col):
+        col_map = {}
+        if name_col not in (None, ""):
+            col_map["name"] = int(name_col)
+            if emp_col not in (None, ""):
+                col_map["emp"] = int(emp_col)
+            if civil_col not in (None, ""):
+                col_map["civil"] = int(civil_col)
+        else:
+            for i, h in enumerate(header):
+                hl = norm_ar(h)
+                if hl in ("الاسم", "اسمالمعلم", "اسم") and "name" not in col_map:
+                    col_map["name"] = i
+                elif "الوظيفي" in hl:
+                    col_map["emp"] = i
+                elif "المدني" in hl:
+                    col_map["civil"] = i
+        if "name" not in col_map:
+            raise HTTPException(400, "يجب تحديد عمود الاسم")
+
+        def cell(row, key):
+            i = col_map.get(key, -1)
+            v = row[i] if 0 <= i < len(row) else None
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            return str(v).strip() if v not in (None, "") else ""
+
+        return [(cell(r, "name"), cell(r, "emp"), cell(r, "civil")) for r in rows]
+
+    def _name_score(a: str, b: str) -> float:
+        ka, kb = name_key(a), name_key(b)
+        if not ka or not kb:
+            return 0.0
+        if ka == kb:
+            return 1.0
+        drop = {"بن", "بنت", "ابن"}
+        ta = [t for t in ka.split() if t not in drop] or ka.split()
+        tb = [t for t in kb.split() if t not in drop] or kb.split()
+        if ta == tb:
+            return 0.98
+        ratio = difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio()
+        common = len(set(ta) & set(tb))
+        token = (common / min(len(ta), len(tb))) * 0.7 + (common / max(len(ta), len(tb))) * 0.3 if common >= 2 else 0.0
+        prefix = 0.15 if ta[:2] == tb[:2] else 0.0
+        return min(1.0, max(ratio, token) * 0.85 + prefix)
+
+    @router.post("/teachers/import/match")
+    async def match_teachers_import(
+        file: UploadFile = File(...),
+        name_col: Optional[str] = Form(None),
+        emp_col: Optional[str] = Form(None),
+        civil_col: Optional[str] = Form(None),
+        u=Depends(require_admin),
+    ):
+        """مطابقة أسماء Excel مع المعلمين الموجودين تلقائياً (بدون إنشاء معلمين جدد)."""
+        header, rows = _parse_excel(await file.read())
+        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "id": 1, "name": 1, "subject": 1, "employee_number": 1, "civil_number": 1}).sort("name", 1).to_list(None)
+        out, seen, used = [], set(), set()
+        for idx, (name, emp, civil) in enumerate(_excel_cells(header, rows, name_col, emp_col, civil_col)):
+            if not name:
+                continue
+            key = name_key(name)
+            dup = key in seen
+            seen.add(key)
+            out.append({"row": idx, "name": name, "emp": emp, "civil": civil, "match_id": None,
+                        "confidence": "none", "score": 0.0, "duplicate": dup})
+        # المرحلة ١: المطابقات التامة أولاً، ثم المرحلة ٢: التقريبية للمتبقي
+        for pass_exact in (True, False):
+            for r in out:
+                if r["match_id"] or r["duplicate"]:
+                    continue
+                best, best_score = None, 0.0
+                for t in teachers:
+                    if t["id"] in used:
+                        continue
+                    s = _name_score(r["name"], t["name"])
+                    if s > best_score:
+                        best, best_score = t, s
+                r["score"] = max(r["score"], round(best_score, 2))
+                if best and ((pass_exact and best_score >= 0.98) or (not pass_exact and best_score >= 0.6)):
+                    used.add(best["id"])
+                    r["match_id"] = best["id"]
+                    r["score"] = round(best_score, 2)
+                    r["confidence"] = "exact" if best_score >= 0.98 else "high" if best_score >= 0.85 else "low"
+        return {"rows": out, "teachers": teachers}
+
+    class MatchApplyRow(BaseModel):
+        teacher_id: str
+        emp: str = ""
+        civil: str = ""
+
+    class MatchApplyBody(BaseModel):
+        rows: List[MatchApplyRow]
+
+    @router.post("/teachers/import/apply")
+    async def apply_teachers_match(body: MatchApplyBody, u=Depends(require_admin)):
+        """نقل الرقم المدني والوظيفي فقط إلى المعلمين المطابَقين."""
+        updated, skipped = 0, 0
+        seen = set()
+        for r in body.rows:
+            if r.teacher_id in seen:
+                skipped += 1
+                continue
+            seen.add(r.teacher_id)
+            cur = await db.grades_users.find_one({"id": r.teacher_id, "role": "teacher"}, {"_id": 0})
+            if not cur:
+                skipped += 1
+                continue
+            emp, civil = r.emp.strip(), r.civil.strip()
+            upd = {}
+            if emp:
+                upd["employee_number"] = emp
+                if emp != cur.get("employee_number", ""):
+                    upd["password_hash"] = hash_password(teacher_password(emp))
+            if civil:
+                upd["civil_number"] = civil
+            new_username = civil or emp
+            if new_username and new_username != cur.get("username") and \
+                    not await db.grades_users.find_one({"username": new_username, "id": {"$ne": cur["id"]}}):
+                upd["username"] = new_username
+            if upd:
+                await db.grades_users.update_one({"id": cur["id"]}, {"$set": upd})
+                updated += 1
+            else:
+                skipped += 1
+        return {"updated": updated, "skipped": skipped}
+
+    @router.post("/teachers/sync-credentials")
+    async def sync_teacher_credentials(u=Depends(require_admin)):
+        """تحديث جميع المعلمين: اسم المستخدم = الرقم المدني، كلمة المرور = آخر ٤ أرقام من الرقم الوظيفي."""
+        updated = 0
+        async for t in db.grades_users.find({"role": "teacher"}, {"_id": 0}):
+            emp, civil = (t.get("employee_number") or "").strip(), (t.get("civil_number") or "").strip()
+            if not emp and not civil:
+                continue
+            upd = {}
+            username = civil or emp
+            if username != t.get("username") and not await db.grades_users.find_one({"username": username, "id": {"$ne": t["id"]}}):
+                upd["username"] = username
+            if emp:
+                upd["password_hash"] = hash_password(teacher_password(emp))
+            if upd:
+                await db.grades_users.update_one({"id": t["id"]}, {"$set": upd})
+                updated += 1
+        return {"updated": updated}
 
     @router.post("/teachers/import")
     async def import_teachers(
@@ -342,31 +607,50 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if "name" not in col_map:
             raise HTTPException(400, "يجب تحديد عمود الاسم")
         added, updated, skipped = 0, 0, 0
+        seen_names = set()
+
+        def cell(row, key):
+            i = col_map.get(key, -1)
+            v = row[i] if 0 <= i < len(row) else None
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            return str(v).strip() if v not in (None, "") else ""
+
         for row in rows:
-            name = str(row[col_map["name"]] or "").strip() if col_map.get("name", -1) < len(row) else ""
+            name, emp, civil = cell(row, "name"), cell(row, "emp"), cell(row, "civil")
             if not name:
                 continue
-            emp = str(row[col_map["emp"]] if col_map.get("emp", -1) < len(row) and row[col_map["emp"]] else "").strip()
-            civil = str(row[col_map["civil"]] if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
-            existing = await db.grades_users.find_one({"$or": [
-                {"username": emp or civil or name},
-                {"employee_number": emp} if emp else {"__skip": 1},
-            ]})
-            if existing and existing.get("role") == "teacher":
-                await db.grades_users.update_one({"id": existing["id"]}, {"$set": {
-                    "name": name, "employee_number": emp, "civil_number": civil,
-                }})
+            key = name_key(name)
+            if key in seen_names:
+                skipped += 1
+                continue
+            seen_names.add(key)
+            existing = (await db.grades_users.find_one({"role": "teacher", "employee_number": emp}, {"_id": 0}) if emp else None) \
+                or await find_teacher_by_name(name)
+            if existing:
+                upd = {}
+                if emp:
+                    upd["employee_number"] = emp
+                    if emp != existing.get("employee_number", ""):
+                        upd["password_hash"] = hash_password(teacher_password(emp))
+                if civil:
+                    upd["civil_number"] = civil
+                new_username = civil or emp
+                if new_username and new_username != existing.get("username") and \
+                        not await db.grades_users.find_one({"username": new_username, "id": {"$ne": existing["id"]}}):
+                    upd["username"] = new_username
+                if upd:
+                    await db.grades_users.update_one({"id": existing["id"]}, {"$set": upd})
                 updated += 1
             else:
-                username = emp or civil or f"t{uuid.uuid4().hex[:6]}"
-                # ضمان عدم تكرار اسم المستخدم
+                username = teacher_username(emp, civil)
                 if await db.grades_users.find_one({"username": username}):
                     username = f"{username}_{uuid.uuid4().hex[:4]}"
                 await db.grades_users.insert_one({
                     "id": str(uuid.uuid4()), "name": name,
                     "employee_number": emp, "civil_number": civil,
-                    "username": username, "password_hash": hash_password("123456"),
-                    "role": "teacher", "is_active": True, "assignments": [],
+                    "username": username, "password_hash": hash_password(teacher_password(emp)),
+                    "role": "teacher", "is_active": True, "subject": "", "classes": [], "assignments": [],
                     "created_at": now_iso(),
                 })
                 added += 1
@@ -482,12 +766,41 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         total_students = await db.grades_students.count_documents({})
         teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).to_list(None)
         entered_ids = set()
+        student_counts = {}
         for t in teachers:
+            with_classes(t)
             c = await db.grades_scores.count_documents({"teacher_id": t["id"]})
             t["entered"] = c > 0
             t["scores_count"] = c
             if c > 0:
                 entered_ids.add(t["id"])
+            # متابعة الإكمال: لكل شعبة وفصل دراسي
+            scores = await db.grades_scores.find({"teacher_id": t["id"]}, {"_id": 0}).to_list(None)
+            pending = []
+            expected = 0
+            complete = 0
+            for a in t.get("assignments", []):
+                key = (a["grade"], str(a["section"]))
+                if key not in student_counts:
+                    student_counts[key] = await db.grades_students.count_documents({"grade": key[0], "section": key[1]})
+                n = student_counts[key]
+                for sem in SEMESTERS:
+                    done = sum(1 for s in scores
+                               if s.get("grade") == a["grade"] and str(s.get("section")) == str(a["section"])
+                               and s.get("subject") == a["subject"] and s.get("semester") == sem
+                               and s.get("quiz1") is not None and s.get("quiz2") is not None)
+                    expected += n
+                    complete += min(done, n)
+                    if n > 0 and done < n:
+                        pending.append({
+                            "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
+                            "semester": sem, "semester_label": SEMESTER_LABELS[sem],
+                            "students": n, "done": done, "missing": n - done,
+                        })
+            t["expected"] = expected
+            t["complete"] = complete
+            t["pending"] = pending
+            t["incomplete"] = len(pending) > 0
         # إحصائيات حسب الصف
         by_grade = {}
         for g in GRADES:
@@ -501,6 +814,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "teachers_entered": len(entered_ids),
             "teachers_pending": total_teachers - len(entered_ids),
             "total_scores": total_scores,
+            "teachers_incomplete": sum(1 for t in teachers if t.get("incomplete")),
             "by_grade": by_grade,
             "teachers": teachers,
         }
@@ -521,7 +835,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "teacher_id": u["uid"], "grade": grade, "section": section,
             "subject": subject, "semester": semester,
         }, {"_id": 0}).to_list(None)
-        return {"scores": {s["student_id"]: s for s in scores}}
+        q1max, q2max = max_for(await get_settings(), subject)
+        return {"scores": {s["student_id"]: s for s in scores}, "quiz1_max": q1max, "quiz2_max": q2max}
 
     @router.put("/my/scores")
     async def save_score(req: ScoreSave, u=Depends(current_user)):
@@ -533,8 +848,9 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                  for a in u["user"].get("assignments", []))
         if not ok and u["role"] != "admin":
             raise HTTPException(403, "لا تملك صلاحية إدخال الدرجات لهذا الصف/الشعبة")
-        quiz1 = None if req.quiz1 is None else max(0.0, min(float(req.quiz1), QUIZ_MAX))
-        quiz2 = None if req.quiz2 is None else max(0.0, min(float(req.quiz2), QUIZ_MAX))
+        q1max, q2max = max_for(s, req.subject)
+        quiz1 = None if req.quiz1 is None else max(0.0, min(float(req.quiz1), q1max))
+        quiz2 = None if req.quiz2 is None else max(0.0, min(float(req.quiz2), q2max))
         doc = {
             "teacher_id": u["uid"], "teacher_name": u["user"]["name"],
             "student_id": req.student_id, "subject": req.subject,
@@ -551,8 +867,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     @router.get("/my/stats")
     async def my_stats(u=Depends(current_user)):
         assignments = u["user"].get("assignments", [])
+        settings = await get_settings()
         out = []
         for a in assignments:
+            q1max, q2max = max_for(settings, a["subject"])
+            max_total = q1max + q2max
             students = await db.grades_students.find({"grade": a["grade"], "section": str(a["section"])}, {"_id": 0}).to_list(None)
             total_students = len(students)
             for sem in SEMESTERS:
@@ -561,8 +880,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     "subject": a["subject"], "semester": sem,
                 }, {"_id": 0}).to_list(None)
                 entered = len(scores)
-                # من حصل على الدرجة النهائية (quiz1 + quiz2 = 20)
-                full = sum(1 for s in scores if (s.get("quiz1") or 0) + (s.get("quiz2") or 0) >= QUIZ_MAX * 2)
+                full = sum(1 for s in scores if (s.get("quiz1") or 0) + (s.get("quiz2") or 0) >= max_total)
                 avg = None
                 if scores:
                     totals = [(s.get("quiz1") or 0) + (s.get("quiz2") or 0) for s in scores]
@@ -571,9 +889,42 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
                     "semester": sem, "semester_label": SEMESTER_LABELS[sem],
                     "total_students": total_students, "entered": entered,
-                    "full_mark": full, "avg": avg,
+                    "full_mark": full, "avg": avg, "max_total": max_total,
                 })
         return {"stats": out}
+
+    @router.get("/full-marks")
+    async def full_marks(semester: Optional[str] = None, u=Depends(current_user)):
+        """الطلاب الحاصلون على الدرجة النهائية (٢٠/٢٠) — المعلم يرى درجاته فقط، والمدير يرى الجميع."""
+        q = {} if u["role"] == "admin" else {"teacher_id": u["uid"]}
+        if semester:
+            q["semester"] = semester
+        scores = await db.grades_scores.find(q, {"_id": 0}).to_list(None)
+        ids = {s["student_id"] for s in scores}
+        students = await db.grades_students.find({"id": {"$in": list(ids)}}, {"_id": 0}).to_list(None)
+        smap = {s["id"]: s for s in students}
+        settings = await get_settings()
+        rows = []
+        for s in scores:
+            total = (s.get("quiz1") or 0) + (s.get("quiz2") or 0)
+            q1max, q2max = max_for(settings, s.get("subject", ""))
+            sub_max = q1max + q2max
+            if sub_max <= 0 or total < sub_max:
+                continue
+            st = smap.get(s["student_id"], {})
+            rows.append({
+                "student_name": st.get("name", "—"),
+                "grade": s.get("grade") or st.get("grade", ""),
+                "section": str(s.get("section") or st.get("section", "")),
+                "subject": s.get("subject", ""),
+                "semester": s.get("semester", ""),
+                "semester_label": SEMESTER_LABELS.get(s.get("semester", ""), ""),
+                "teacher_name": s.get("teacher_name", ""),
+                "total": total,
+                "max": sub_max,
+            })
+        rows.sort(key=lambda r: (GRADE_NUM.get(r["grade"], "9"), r["section"], r["student_name"]))
+        return {"rows": rows, "count": len(rows), "subject_max": subject_max_map(settings)}
 
     # ---- parent: results by civil number (public) ----
     @router.get("/parent/results")
@@ -588,12 +939,15 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if not student:
             raise HTTPException(404, "لا يوجد طالب بهذا الرقم المدني")
         scores = await db.grades_scores.find({"student_id": student["id"]}, {"_id": 0}).to_list(None)
+        settings = await get_settings()
         # تجميع حسب المادة ثم الفصل
         results = []
         for sub in SUBJECTS:
             sub_scores = [s for s in scores if s.get("subject") == sub]
             if not sub_scores:
                 continue
+            q1max, q2max = max_for(settings, sub)
+            sub_max = q1max + q2max
             for sem in SEMESTERS:
                 sem_scores = [s for s in sub_scores if s.get("semester") == sem]
                 if not sem_scores:
@@ -601,10 +955,12 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 s = sem_scores[0]
                 q1, q2 = s.get("quiz1"), s.get("quiz2")
                 total = (q1 or 0) + (q2 or 0) if (q1 is not None or q2 is not None) else None
+                pct = (total / sub_max * 100) if (total is not None and sub_max > 0) else None
                 results.append({
                     "subject": sub, "semester": sem, "semester_label": SEMESTER_LABELS[sem],
                     "quiz1": q1, "quiz2": q2, "total": total,
-                    "max": QUIZ_MAX * 2, "level": level_letter(total) if total is not None else "",
+                    "quiz1_max": q1max, "quiz2_max": q2max,
+                    "max": sub_max, "level": level_letter(pct) if pct is not None else "",
                     "teacher": s.get("teacher_name", ""),
                 })
         # إحصائيات لكل مادة
