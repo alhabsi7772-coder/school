@@ -54,25 +54,23 @@ export default function SubSwapPrint() {
 
         <table style={{ marginTop: 22 }} data-testid="sub-swap-print-table">
           <thead>
-            <tr><th style={{ width: 36 }}>م</th><th>المعلم</th><th style={{ width: 56 }}>الحصة</th><th style={{ width: 60 }}>الصف</th><th>المادة</th><th>يُغطّيها</th></tr>
+            <tr><th style={{ width: 36 }}>م</th><th>المعلم</th><th style={{ width: 56 }}>الحصة</th><th style={{ width: 60 }}>الصف</th><th>المادة</th></tr>
           </thead>
           <tbody>
             {swaps.map((s, gi) => (
               <Fragment key={s.id}>
-                <tr><td colSpan={6} style={{ textAlign: 'right', fontWeight: 800, background: '#FAFAFA' }}>تبادل {gi + 1}: {s.teacher_a_name} ↔ {s.teacher_b_name}</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'right', fontWeight: 800, background: '#FAFAFA' }}>تبادل {gi + 1}: {s.teacher_a_name} ↔ {s.teacher_b_name}</td></tr>
                 <tr>
                   <td>{gi * 2 + 1}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{s.teacher_a_name}</td>
                   <td>{s.period_b}</td><td>{s.class_b}</td><td>{s.subject_b}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{s.teacher_b_name}</td>
                 </tr>
                 <tr>
                   <td>{gi * 2 + 2}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{s.teacher_b_name}</td>
                   <td>{s.period_a}</td><td>{s.class_a}</td><td>{s.subject_a}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{s.teacher_a_name}</td>
                 </tr>
               </Fragment>
             ))}
-            {swaps.length === 0 && <tr><td colSpan={6} style={{ padding: 18, color: '#666' }}>لا توجد عمليات تبادل حصص لهذا اليوم</td></tr>}
+            {swaps.length === 0 && <tr><td colSpan={5} style={{ padding: 18, color: '#666' }}>لا توجد عمليات تبادل حصص لهذا اليوم</td></tr>}
           </tbody>
         </table>
 

@@ -153,15 +153,16 @@ export default function TeacherLayout({ children, title, backTo }) {
         </button>
       </div>
 
-      {/* AI Badge */}
-      <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl"
-        style={lux
-          ? { background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.16)' }
-          : { background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)' }}>
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: lux ? '#28F5A7' : '#D500F9' }} />
-          <p className="text-xs font-medium" style={{ color: lux ? 'rgba(40,245,167,0.9)' : 'rgba(213,0,249,0.9)' }}>مدعوم بالذكاء الاصطناعي</p>
-        </div>
+      {/* زر نظام الدرجات */}
+      <div className="mx-3 mb-3">
+        <a href="/grades/login" data-testid="sidebar-grades-link"
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors"
+          style={lux
+            ? { background: 'rgba(22,214,122,0.06)', border: '1px solid rgba(22,214,122,0.16)', color: 'rgba(40,245,167,0.95)' }
+            : { background: 'linear-gradient(135deg, rgba(213,0,249,0.1), rgba(0,229,255,0.08))', border: '1px solid rgba(213,0,249,0.15)', color: 'rgba(213,0,249,0.95)' }}>
+          <GraduationCap className="w-3.5 h-3.5 flex-shrink-0" />
+          <p className="text-xs font-bold">نظام الدرجات</p>
+        </a>
       </div>
 
       {/* Footer */}
