@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import ParentVideoBackground from './ParentVideoBackground';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Search, GraduationCap, BookOpen, TrendingUp, Award, ArrowRight } from 'lucide-react';
-import { gradesApi, errMsg, SCHOOL_NAME, QUIZ_MAX, levelLetter, LEVEL_COLORS } from './gradesApi';
+import { Search, GraduationCap, BookOpen, ArrowRight } from 'lucide-react';
+import { gradesApi, errMsg, SCHOOL_NAME, QUIZ_MAX } from './gradesApi';
 import { useGradesTheme, themeClass } from './gradesTheme';
 import { ThemeSwitch } from './GradesLayout';
 import LuxParticles from '../LuxParticles';
@@ -105,7 +105,7 @@ export default function GradesParent() {
               </h3>
               <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
                 <table className="sub-table">
-                  <thead><tr><th>المادة</th><th>الفصل</th><th>اختبار قصير 1</th><th>اختبار قصير 2</th><th>المجموع</th><th>المستوى</th></tr></thead>
+                  <thead><tr><th>المادة</th><th>الفصل</th><th>اختبار قصير 1</th><th>اختبار قصير 2</th><th>المجموع</th></tr></thead>
                   <tbody>
                     {data.results.map((r, i) => (
                       <tr key={i}>
@@ -114,40 +114,15 @@ export default function GradesParent() {
                         <td>{r.quiz1 ?? '—'}</td>
                         <td>{r.quiz2 ?? '—'}</td>
                         <td className="font-black">{r.total ?? '—'} <span className="text-[10px] font-normal" style={{ color: 'var(--sub-muted)' }}>/ {r.max}</span></td>
-                        <td>{r.level ? <span className="sub-badge" style={{ background: `${LEVEL_COLORS[r.level]}22`, color: LEVEL_COLORS[r.level] }}>{r.level}</span> : '—'}</td>
                       </tr>
                     ))}
                     {data.results.length === 0 && (
-                      <tr><td colSpan={6} className="text-center py-6" style={{ color: 'var(--sub-muted)' }}>لا توجد درجات مدخلة بعد</td></tr>
+                      <tr><td colSpan={5} className="text-center py-6" style={{ color: 'var(--sub-muted)' }}>لا توجد درجات مدخلة بعد</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
-
-            {/* إحصائيات المواد */}
-            {data.subject_stats.length > 0 && (
-              <div className="sub-card p-5 sub-rise">
-                <h3 className="font-black mb-4 flex items-center gap-2" style={{ color: 'var(--sub-navy-ink)' }}>
-                  <TrendingUp className="w-5 h-5" /> إحصائيات المواد
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {data.subject_stats.map((s, i) => (
-                    <div key={i} className="p-4 rounded-2xl" style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
-                      <p className="font-bold text-sm mb-2" style={{ color: 'var(--sub-navy-ink)' }}>{s.subject}</p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: 'var(--sub-muted)' }}>المتوسط</span>
-                        <span className="font-black" style={{ color: 'var(--sub-amber-ink)' }}>{s.avg}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs mt-1">
-                        <span style={{ color: 'var(--sub-muted)' }}>أعلى درجة</span>
-                        <span className="font-black flex items-center gap-1" style={{ color: 'var(--sub-green-ink)' }}><Award className="w-3 h-3" /> {s.best}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

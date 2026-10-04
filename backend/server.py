@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
 import os
 import re
+import math
 import shutil
 import logging
 import json
@@ -370,7 +371,7 @@ async def get_quiz_monitor_data(qid: str, t=Depends(get_teacher)):
     subs = await db.submissions.find(
         {"quiz_id": qid},
         {"_id": 0, "id": 1, "student_name": 1, "grade": 1, "section": 1,
-         "score": 1, "submitted": 1, "start_time": 1, "total_score": 1, "max_score": 1}
+         "started_at": 1, "submitted_at": 1, "total_score": 1, "max_score": 1}
     ).to_list(500)
     return {"quiz": q, "submissions": subs}
 
@@ -1537,8 +1538,9 @@ async def apply_quiz(gid: str, data: GBApplyReq, t=Depends(get_teacher)):
     for m in data.mappings:
         if m.student_id not in valid_ids or m.submission_id not in score_map:
             continue
-        # ننقل الدرجة الفعلية للطالب كما هي في الاختبار، مع اقتصاصها على الحد الأقصى للعمود
-        score = round(min(float(score_map[m.submission_id]), mx), 2)
+        # ننقل الدرجة الفعلية للطالب كما هي في الاختبار، مع اقتصاصها على الحد الأقصى للعمود وتقريبها لأقرب عدد صحيح
+        raw = min(float(score_map[m.submission_id]), mx)
+        score = float(math.floor(raw + 0.5))
         sets[f"scores.{data.semester}.{m.student_id}.{data.column}"] = score
     if sets:
         await db.gradebooks.update_one({"id": gid}, {"$set": {**sets, "updated_at": now_iso()}})

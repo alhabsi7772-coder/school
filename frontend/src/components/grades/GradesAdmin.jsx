@@ -1,9 +1,62 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Users, BookOpen, CheckCircle2, Clock, Lock, Unlock, Lock as LockIcon, AlertTriangle, FileUp, Settings } from 'lucide-react';
+import { Users, BookOpen, CheckCircle2, Clock, Lock, Unlock, Lock as LockIcon, AlertTriangle, FileUp, Settings, KeyRound, X } from 'lucide-react';
 import GradesLayout from './GradesLayout';
 import { gradesApi, errMsg, GRADES_LIST, SUBJECTS, classLabel } from './gradesApi';
+
+function ChangePasswordModal({ onClose }) {
+  const [oldPwd, setOldPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [newPwd2, setNewPwd2] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (newPwd.length < 4) return toast.error('كلمة المرور الجديدة قصيرة جداً');
+    if (newPwd !== newPwd2) return toast.error('كلمتا المرور الجديدتان غير متطابقتين');
+    setSaving(true);
+    try {
+      await gradesApi.post('/auth/change-password', { old_password: oldPwd, new_password: newPwd });
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      onClose();
+    } catch (e) { toast.error(errMsg(e, 'تعذر تغيير كلمة المرور — تأكد من كلمة المرور الحالية')); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={onClose}>
+      <form onSubmit={submit} className="sub-card p-6 w-full max-w-sm sub-rise" onClick={(e) => e.stopPropagation()} data-testid="grades-change-password-modal">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-black text-lg flex items-center gap-2" style={{ color: 'var(--sub-navy-ink)' }}>
+            <KeyRound className="w-5 h-5" /> تغيير كلمة المرور
+          </h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-black/5" data-testid="grades-change-password-close"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--sub-muted)' }}>كلمة المرور الحالية</label>
+            <input type="password" className="sub-input w-full" value={oldPwd} onChange={(e) => setOldPwd(e.target.value)} required data-testid="grades-old-password-input" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--sub-muted)' }}>كلمة المرور الجديدة</label>
+            <input type="password" className="sub-input w-full" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} required data-testid="grades-new-password-input" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--sub-muted)' }}>تأكيد كلمة المرور الجديدة</label>
+            <input type="password" className="sub-input w-full" value={newPwd2} onChange={(e) => setNewPwd2(e.target.value)} required data-testid="grades-new-password-confirm-input" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="sub-btn sub-btn-ghost" onClick={onClose} data-testid="grades-change-password-cancel">إلغاء</button>
+          <button type="submit" disabled={saving} className="sub-btn sub-btn-primary" data-testid="grades-change-password-submit">
+            {saving ? 'جارٍ الحفظ...' : 'حفظ كلمة المرور'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 export default function GradesAdmin() {
   const [stats, setStats] = useState(null);
@@ -12,6 +65,7 @@ export default function GradesAdmin() {
   const [savingMax, setSavingMax] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [showPwdModal, setShowPwdModal] = useState(false);
 
   const fetchAll = async () => {
     try {
@@ -82,6 +136,9 @@ export default function GradesAdmin() {
         <div className="flex items-center gap-2 mb-4">
           <Settings className="w-5 h-5" style={{ color: 'var(--sub-navy)' }} />
           <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>التحكم في النظام</h3>
+          <button onClick={() => setShowPwdModal(true)} className="sub-btn sub-btn-ghost sub-btn-sm mr-auto" data-testid="grades-open-change-password">
+            <KeyRound className="w-4 h-4" /> تغيير كلمة المرور
+          </button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -257,6 +314,7 @@ export default function GradesAdmin() {
           </table>
         </div>
       </div>
+      {showPwdModal && <ChangePasswordModal onClose={() => setShowPwdModal(false)} />}
     </GradesLayout>
   );
 }
