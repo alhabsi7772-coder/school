@@ -205,11 +205,6 @@ class LoginReq(BaseModel):
     password: str
 
 
-class ChangePwdReq(BaseModel):
-    old_password: str
-    new_password: str
-
-
 class TeacherProfileUpdate(BaseModel):
     teacher_name: Optional[str] = None
     school_name: Optional[str] = None
@@ -336,15 +331,6 @@ async def login(req: LoginReq):
         "academic_year": doc.get("academic_year", DEFAULT_ACADEMIC_YEAR),
         "semester": doc.get("semester", DEFAULT_SEMESTER)
     }
-
-
-@api_router.post("/auth/change-password")
-async def change_password(req: ChangePwdReq, t=Depends(get_teacher)):
-    doc = await db.teachers.find_one({"id": t["teacher_id"]})
-    if not verify_password(req.old_password, doc['password_hash']):
-        raise HTTPException(status_code=400, detail="كلمة المرور القديمة غير صحيحة")
-    await db.teachers.update_one({"id": t["teacher_id"]}, {"$set": {"password_hash": hash_password(req.new_password)}})
-    return {"message": "تم تغيير كلمة المرور"}
 
 
 @api_router.get("/auth/profile")

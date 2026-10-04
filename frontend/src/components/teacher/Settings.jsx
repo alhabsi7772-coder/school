@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Lock, User, Save, Eye, EyeOff, Award, Check, Palette, Sun, Moon, GraduationCap, Type, CalendarRange, AlertTriangle } from 'lucide-react';
+import { User, Save, Award, Check, Palette, Sun, Moon, GraduationCap, Type, CalendarRange, AlertTriangle } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 import { TEMPLATE_LIST } from '../../utils/generateCertificate';
@@ -112,9 +112,6 @@ function ThemeCard({ t, isSelected, onSelect }) {
 
 export default function Settings() {
   const [profile, setProfile] = useState({ teacher_name: '', school_name: '' });
-  const [pwd, setPwd] = useState({ old: '', new: '', confirm: '' });
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(false);
   const [certTemplate, setCertTemplate] = useState(() => localStorage.getItem(CERT_TEMPLATE_KEY) || 'classic_blue');
   const [studentMode, setStudentMode] = useState('dark');
@@ -205,20 +202,6 @@ export default function Settings() {
       toast.success('تم حفظ الملف الشخصي');
     } catch { toast.error('تعذر الحفظ'); }
     finally { setLoading(false); }
-  };
-
-  const changePassword = async (e) => {
-    e.preventDefault();
-    if (pwd.new !== pwd.confirm) return toast.error('كلمة المرور الجديدة غير متطابقة');
-    if (pwd.new.length < 6) return toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-    setLoading(true);
-    try {
-      await axios.post(`${API}/auth/change-password`, { old_password: pwd.old, new_password: pwd.new }, getAuthHeaders());
-      toast.success('تم تغيير كلمة المرور');
-      setPwd({ old: '', new: '', confirm: '' });
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'تعذر تغيير كلمة المرور');
-    } finally { setLoading(false); }
   };
 
   const selectTemplate = (id) => {
@@ -627,60 +610,6 @@ export default function Settings() {
               data-testid="save-profile-btn">
               <Save className="w-4 h-4" />
               <span>حفظ التغييرات</span>
-            </button>
-          </form>
-        </div>
-
-        {/* Change password */}
-        <div className="quiz-card p-6">
-          <h2 className="font-bold text-white mb-5 flex items-center gap-2">
-            <Lock className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
-            تغيير كلمة المرور
-          </h2>
-          <form onSubmit={changePassword} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                كلمة المرور الحالية
-              </label>
-              <div className="relative">
-                <input type={showOld ? 'text' : 'password'} className="input-field pl-10"
-                  placeholder="كلمة المرور الحالية"
-                  value={pwd.old} onChange={e => setPwd(p => ({ ...p, old: e.target.value }))}
-                  data-testid="old-password-input" />
-                <button type="button" onClick={() => setShowOld(!showOld)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                كلمة المرور الجديدة
-              </label>
-              <div className="relative">
-                <input type={showNew ? 'text' : 'password'} className="input-field pl-10"
-                  placeholder="كلمة المرور الجديدة (6 أحرف على الأقل)"
-                  value={pwd.new} onChange={e => setPwd(p => ({ ...p, new: e.target.value }))}
-                  data-testid="new-password-input" />
-                <button type="button" onClick={() => setShowNew(!showNew)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                تأكيد كلمة المرور الجديدة
-              </label>
-              <input type="password" className="input-field"
-                placeholder="أعد كتابة كلمة المرور الجديدة"
-                value={pwd.confirm} onChange={e => setPwd(p => ({ ...p, confirm: e.target.value }))}
-                data-testid="confirm-password-input" />
-            </div>
-            <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2"
-              data-testid="change-pwd-btn">
-              <Lock className="w-4 h-4" />
-              <span>تغيير كلمة المرور</span>
             </button>
           </form>
         </div>
