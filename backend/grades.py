@@ -198,7 +198,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
 
     async def init():
         await db.grades_users.create_index("username", unique=True, sparse=True)
-        await db.grades_scores.create_index([("student_id", 1), ("teacher_id", 1), ("semester", 1)], unique=True)
+        try:
+            await db.grades_scores.drop_index("student_id_1_teacher_id_1_semester_1")
+        except Exception:
+            pass
+        await db.grades_scores.create_index([("student_id", 1), ("teacher_id", 1), ("subject", 1), ("semester", 1)], unique=True)
         await db.grades_students.create_index("civil_number", sparse=True)
         admin = await db.grades_users.find_one({"role": "admin"})
         if not admin:
@@ -858,7 +862,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "quiz1": quiz1, "quiz2": quiz2, "updated_at": now_iso(),
         }
         await db.grades_scores.update_one(
-            {"student_id": req.student_id, "teacher_id": u["uid"], "semester": req.semester},
+            {"student_id": req.student_id, "teacher_id": u["uid"], "subject": req.subject, "semester": req.semester},
             {"$set": doc, "$setOnInsert": {"id": str(uuid.uuid4()), "created_at": now_iso()}},
             upsert=True,
         )
