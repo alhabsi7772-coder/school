@@ -1,6 +1,7 @@
 """نظام درجات الخيرات — نظام مستقل لإدارة درجات الاختبارات القصيرة."""
 import difflib
 import io
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,6 +81,20 @@ def build_assignments(subject: str, classes: list) -> list:
     return [{"subject": subject, "grade": c["grade"], "section": str(c["section"])} for c in classes] if subject else []
 
 
+_INVISIBLE_RE = re.compile(r'[\u200b-\u200f\u202a-\u202e\ufeff]')
+
+
+def cell_str(v):
+    """يحوّل خلية إكسل إلى نص نظيف: يحذف علامات التحكم الخفية في النص العربي (مثل RTL mark)
+    التي قد تنتج من لصق البيانات من مصادر خارجية، ويعالج الأرقام العشرية الصحيحة (مثل ١٢٣٤٥٦٧٨.٠) لتصبح ١٢٣٤٥٦٧٨."""
+    if v is None:
+        return ""
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    s = _INVISIBLE_RE.sub('', str(v)).strip()
+    return "" if s.lower() == "none" else s
+
+
 def _parse_excel(data: bytes):
     try:
         wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
@@ -89,18 +104,8 @@ def _parse_excel(data: bytes):
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
         raise HTTPException(400, "الملف فارغ")
-    header = [str(c or "").strip() for c in rows[0]]
+    header = [cell_str(c) for c in rows[0]]
     return header, rows[1:]
-
-
-def cell_str(v):
-    """يحوّل خلية إكسل إلى نص، مع معالجة الأرقام العشرية الصحيحة (مثل ١٢٣٤٥٦٧٨.٠) لتصبح ١٢٣٤٥٦٧٨."""
-    if v is None:
-        return ""
-    if isinstance(v, float) and v.is_integer():
-        v = int(v)
-    s = str(v).strip()
-    return "" if s.lower() == "none" else s
 
 
 # =================== Models ===================
@@ -343,8 +348,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             classes = sorted(update.get("classes", cur["classes"]), key=_class_sort)
             update.update({"subject": subject, "classes": classes, "assignments": build_assignments(subject, classes)})
         if "employee_number" in update or "civil_number" in update:
-            emp = update.get("employee_number", cur.get("employee_number", "")).strip()
-            civil = update.get("civil_number", cur.get("civil_number", "")).strip()
+            emp = cell_str(update.get("employee_number", cur.get("employee_number", "")))
+            civil = cell_str(update.get("civil_number", cur.get("civil_number", "")))
             update["employee_number"], update["civil_number"] = emp, civil
             new_username = civil or emp
             if new_username and new_username != cur.get("username"):
@@ -377,7 +382,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             raise HTTPException(400, "الاسم مطلوب")
         if await find_teacher_by_name(name):
             raise HTTPException(400, "يوجد معلم بنفس الاسم")
-        emp, civil = body.employee_number.strip(), body.civil_number.strip()
+        emp, civil = cell_str(body.employee_number), cell_str(body.civil_number)
         username = teacher_username(emp, civil)
         if await db.grades_users.find_one({"username": username}):
             raise HTTPException(400, "يوجد معلم بنفس الرقم الوظيفي/المدني")
@@ -398,7 +403,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         name = body.name.strip()
         if not name:
             raise HTTPException(400, "الاسم مطلوب")
-        civil = body.civil_number.strip()
+        civil = cell_str(body.civil_number)
         if civil and await db.grades_students.find_one({"civil_number": civil}):
             raise HTTPException(400, "يوجد طالب بنفس الرقم المدني")
         await db.grades_students.insert_one({
@@ -424,7 +429,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         if body.section is not None:
             sets["section"] = body.section.strip()
         if body.civil_number is not None:
-            civil = body.civil_number.strip()
+            civil = cell_str(body.civil_number)
             if civil and civil != student.get("civil_number"):
                 dup = await db.grades_students.find_one({"civil_number": civil, "id": {"$ne": sid}})
                 if dup:
@@ -507,9 +512,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         def cell(row, key):
             i = col_map.get(key, -1)
             v = row[i] if 0 <= i < len(row) else None
-            if isinstance(v, float) and v.is_integer():
-                v = int(v)
-            return str(v).strip() if v not in (None, "") else ""
+            return cell_str(v)
 
         return [(cell(r, "name"), cell(r, "emp"), cell(r, "civil")) for r in rows]
 
@@ -664,9 +667,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         def cell(row, key):
             i = col_map.get(key, -1)
             v = row[i] if 0 <= i < len(row) else None
-            if isinstance(v, float) and v.is_integer():
-                v = int(v)
-            return str(v).strip() if v not in (None, "") else ""
+            return cell_str(v)
 
         for row in rows:
             name, emp, civil = cell(row, "name"), cell(row, "emp"), cell(row, "civil")
@@ -786,9 +787,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         def cell(row, key):
             i = col_map.get(key, -1)
             v = row[i] if 0 <= i < len(row) else None
-            if isinstance(v, float) and v.is_integer():
-                v = int(v)
-            return str(v).strip() if v not in (None, "") else ""
+            return cell_str(v)
 
         added, updated = 0, 0
         for row in rows:
@@ -991,11 +990,13 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def parent_results(civil_number: str):
         if not civil_number or not civil_number.strip():
             raise HTTPException(400, "أدخل الرقم المدني للطالب")
-        civil = civil_number.strip()
+        civil = cell_str(civil_number)
         student = await db.grades_students.find_one({"civil_number": civil}, {"_id": 0})
         if not student:
-            # محاولة مطابقة مرنة (إزالة المسافات)
-            student = await db.grades_students.find_one({"civil_number": {"$regex": f"^{civil.replace(' ', '')}$"}}, {"_id": 0})
+            # محاولة مطابقة مرنة (إزالة المسافات والرموز الخفية من البيانات المخزنة)
+            student = await db.grades_students.find_one(
+                {"civil_number": {"$regex": f"^{re.escape(civil)}$"}}, {"_id": 0}
+            )
         if not student:
             raise HTTPException(404, "لا يوجد طالب بهذا الرقم المدني")
         scores = await db.grades_scores.find({"student_id": student["id"]}, {"_id": 0}).to_list(None)
