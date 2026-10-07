@@ -42,6 +42,11 @@ def name_key(s: str) -> str:
     return " ".join(norm_ar(s).split())
 
 
+def norm_nospace(s: str) -> str:
+    """لمطابقة عناوين أعمدة Excel بغض النظر عن المسافات، مثل 'اسم الطالب' و'اسم الطالب '."""
+    return norm_ar(s).replace(" ", "")
+
+
 GRADE_NUM = {"الخامس": "5", "السادس": "6", "السابع": "7", "الثامن": "8"}
 GRADE_BY_NUM = {v: k for k, v in GRADE_NUM.items()}
 
@@ -469,7 +474,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         header, rows = _parse_excel(data)
         suggested = {"name": None, "emp": None, "civil": None}
         for i, h in enumerate(header):
-            hl = norm_ar(h)
+            hl = norm_nospace(h)
             if hl in ("الاسم", "اسمالمعلم", "اسم") and suggested["name"] is None:
                 suggested["name"] = i
             elif ("الوظيفي" in hl or "الرقمالوظيفي" in hl) and suggested["emp"] is None:
@@ -489,7 +494,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 col_map["civil"] = int(civil_col)
         else:
             for i, h in enumerate(header):
-                hl = norm_ar(h)
+                hl = norm_nospace(h)
                 if hl in ("الاسم", "اسمالمعلم", "اسم") and "name" not in col_map:
                     col_map["name"] = i
                 elif "الوظيفي" in hl:
@@ -644,7 +649,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         else:
             col_map = {}
             for i, h in enumerate(header):
-                hl = norm_ar(h)
+                hl = norm_nospace(h)
                 if hl in ("الاسم", "اسمالمعلم", "اسم") and "name" not in col_map:
                     col_map["name"] = i
                 elif "الوظيفي" in hl or "الرقمالوظيفي" in hl:
@@ -732,7 +737,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         header, rows = _parse_excel(data)
         suggested = {"name": None, "grade": None, "section": None, "civil": None}
         for i, h in enumerate(header):
-            hl = norm_ar(h)
+            hl = norm_nospace(h)
             if hl in ("الاسم", "اسمالطالب", "اسم") and suggested["name"] is None:
                 suggested["name"] = i
             elif hl in ("الصف", "الصفالدراسي") and suggested["grade"] is None:
@@ -766,7 +771,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         else:
             col_map = {}
             for i, h in enumerate(header):
-                hl = norm_ar(h)
+                hl = norm_nospace(h)
                 if hl in ("الاسم", "اسمالطالب", "اسم") and "name" not in col_map:
                     col_map["name"] = i
                 elif hl in ("الصف", "الصفالدراسي") and "grade" not in col_map:
