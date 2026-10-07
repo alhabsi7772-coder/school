@@ -1,0 +1,23 @@
+{
+  "summary": "Verified the Excel import space-header auto-detection fix (norm_nospace) in /app/backend/grades.py for the standalone grades system. Wrote /app/backend/tests/test_grades_import_space_headers.py with 7 pytest cases (all passing) + Playwright UI run covering admin import → students list → score entry → parent lookup, plus curl-based verification of the real teacher account (tca83c8b0) seeing students via /my/students. Fix is working end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_grades_import_space_headers.py",
+    "/app/test_reports/pytest/grades_space_headers.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/grades.py is now 1042 lines — recommend splitting into submodules (auth / teachers / students / scores / parent / import) when time permits.",
+    "The civil-number auto-detect uses `'المدني' in hl or 'الرقمالمدني' in hl` — this is permissive and could accidentally match an unrelated column containing the Arabic word 'المدني'. Lower priority since real-world header will be the civil-number column, but worth noting.",
+    "Row-cell AttributeError risk from previous iteration (str(row[col].strip())) is now mitigated for students by the local cell() helper (isinstance float/int check + str()) — same pattern should be mirrored in teachers import path for consistency."
+  ],
+  "updated_files": ["/app/backend/tests/test_grades_import_space_headers.py (new)"],
+  "success_rate": {"backend": "100% (7/7 tests)", "frontend": "100% (import map modal auto-detected all 4 spaced columns, confirm enabled, import succeeded, student visible in table + /grades/enter + /grades/parent lookup)"},
+  "test_credentials": "Grades admin admin/admin123, teacher tca83c8b0/test1234 (both verified working).",
+  "seed_data_creation": "Tests create UITEST_STUDENT_* and TEST_<digits>_* students and clean them up on teardown. 112 real imported teachers were NOT touched. grades_students should be back to empty after this run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The space-header auto-detection fix (norm_nospace() in grades.py:45) is working for both /students/import/preview+/import and /teachers/import/preview+/import. Backend tests at /app/backend/tests/test_grades_import_space_headers.py — must run with -n0 since tests share state via pytest module attrs: `REACT_APP_BACKEND_URL=<url> pytest backend/tests/test_grades_import_space_headers.py -v -n0`. UI test confirmed: upload xlsx with headers 'اسم الطالب','الصف','الشعبة','الرقم المدني' → import-map-name auto-selects col 0 (not '— لا يوجد —'), confirm button enabled, student imported with clean civil number (no .0 suffix), appears in /grades/enter score table (admin + teacher) and /grades/parent lookup finds it.",
+  "rca of the issue": "ROOT CAUSE (previously bug): header matching used norm_ar() which only normalized Arabic forms but did NOT strip spaces, so natural headers like 'اسم الطالب' never matched the hardcoded candidate 'اسمالطالب' (no space). Result: name column auto-detect returned None → required 'name' col unmapped → either whole import rejected (HTTP 400 'يجب تحديد عمود الاسم') or users had to manually fix mapping, which previous testing missed because tests used headers without spaces. FIX: new norm_nospace() helper strips all whitespace after Arabic normalization, applied in 5 header-matching locations in grades.py (students preview/import, teachers preview/import, and the _excel_cells helper used by TeacherMatchModal). VERIFIED: all 7 backend regression tests pass + full UI/API flow works for admin + real teacher."
+}
