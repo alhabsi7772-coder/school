@@ -9,6 +9,7 @@ import Dashboard from './components/teacher/Dashboard';
 import QuizEditor from './components/teacher/QuizEditor';
 import QuizMonitor from './components/teacher/QuizMonitor';
 import QuizResults from './components/teacher/QuizResults';
+import QuizPrint from './components/teacher/QuizPrint';
 import GradeAnswers from './components/teacher/GradeAnswers';
 import Settings from './components/teacher/Settings';
 import TeacherProjects from './components/teacher/TeacherProjects';
@@ -126,6 +127,7 @@ function App() {
             <Route path="/teacher/quiz/:quizId/edit" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/monitor" element={<ProtectedRoute><QuizMonitor /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/results" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
+            <Route path="/teacher/quiz/:quizId/print" element={<ProtectedRoute><QuizPrint /></ProtectedRoute>} />
             <Route path="/teacher/quiz/:quizId/grade" element={<ProtectedRoute><GradeAnswers /></ProtectedRoute>} />
             <Route path="/teacher/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/substitution/login" element={<SubLogin />} />

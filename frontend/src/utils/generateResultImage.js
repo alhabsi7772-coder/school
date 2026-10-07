@@ -87,7 +87,7 @@ export async function generateStudentResultCanvas(student, quiz, schoolName) {
   // School name
   ctx.fillStyle = COLORS.white;
   ctx.font = 'bold 22px Tajawal, Arial';
-  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين', W - 30, 62);
+  ctx.fillText(schoolName || 'مدرسة الخيرات للبنين ٥-٨', W - 30, 62);
 
   // Quiz title
   ctx.fillStyle = 'rgba(255,255,255,0.82)';
@@ -233,7 +233,7 @@ export async function generateStudentResultCanvas(student, quiz, schoolName) {
   ctx.fillStyle = COLORS.slate500;
   ctx.font = '12px Tajawal, Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`منصة اختبارات مدرسة الخيرات  •  ${new Date().toLocaleDateString('ar-KW')}`, W / 2, H - 18);
+  ctx.fillText(`${schoolName || 'مدرسة الخيرات للبنين ٥-٨'}  •  ${new Date().toLocaleDateString('ar-KW')}`, W / 2, H - 18);
 
   return canvas;
 }

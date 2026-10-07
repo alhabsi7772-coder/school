@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import JSZip from 'jszip';
 import {
   Trophy, Users, BarChart2, Eye, Pencil, CheckCircle, XCircle,
-  Clock, GraduationCap, Save, X, Download, ImageDown, Archive, Award
+  Clock, GraduationCap, Save, X, Download, ImageDown, Archive, Award, FileText
 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import GradebookSyncButton from './GradebookSyncButton';
@@ -205,6 +205,12 @@ export default function QuizResults() {
       {/* Actions */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={() => navigate(`/teacher/quiz/${quizId}/print`)}
+            data-testid="download-blank-template-btn"
+            className="flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-700 border border-sky-200 rounded-xl text-sm font-medium hover:bg-sky-100 transition-colors">
+            <FileText className="w-4 h-4" />
+            تنزيل نموذج فارغ
+          </button>
           {hasLongQuestions && submissions?.some(s => !s.is_graded && s.submitted_at) && (
             <button onClick={() => navigate(`/teacher/quiz/${quizId}/grade`)}
               data-testid="grade-btn"
