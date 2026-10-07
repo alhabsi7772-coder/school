@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { BookOpen, FileUp, Trash2, Search, Plus } from 'lucide-react';
+import { BookOpen, FileUp, Trash2, Search, Plus, Pencil } from 'lucide-react';
 import GradesLayout from './GradesLayout';
 import ImportMapModal from './ImportMapModal';
 import { gradesApi, errMsg, GRADES_LIST } from './gradesApi';
@@ -73,8 +73,15 @@ export default function GradesStudents() {
   const addStudent = async (e) => {
     e.preventDefault();
     try {
-      await gradesApi.post('/students', addForm);
-      toast.success('تمت إضافة الطالب');
+      if (addForm.id) {
+        await gradesApi.put(`/students/${addForm.id}`, {
+          name: addForm.name, grade: addForm.grade, section: addForm.section, civil_number: addForm.civil_number,
+        });
+        toast.success('تم تعديل بيانات الطالب');
+      } else {
+        await gradesApi.post('/students', addForm);
+        toast.success('تمت إضافة الطالب');
+      }
       setAddForm(null);
       fetchStudents();
     } catch (err) { toast.error(errMsg(err)); }
@@ -145,7 +152,10 @@ export default function GradesStudents() {
                   <td>{s.grade}</td>
                   <td>{s.section}</td>
                   <td className="text-xs" style={{ color: 'var(--sub-muted)' }}>{s.civil_number || '—'}</td>
-                  <td><button onClick={() => deleteStudent(s.id)} className="sub-btn sub-btn-danger sub-btn-sm"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                  <td className="flex gap-1.5">
+                    <button onClick={() => setAddForm({ id: s.id, name: s.name, grade: s.grade, section: s.section, civil_number: s.civil_number || '' })} className="sub-btn sub-btn-ghost sub-btn-sm" data-testid={`edit-student-${s.id}`}><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => deleteStudent(s.id)} className="sub-btn sub-btn-danger sub-btn-sm" data-testid={`delete-student-${s.id}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && !loading && (
@@ -166,8 +176,8 @@ export default function GradesStudents() {
       />
       {addForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--sub-overlay)' }} onClick={() => setAddForm(null)}>
-          <form onSubmit={addStudent} className="sub-card p-6 w-full max-w-md sub-rise space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>إضافة طالب</h3>
+          <form onSubmit={addStudent} className="sub-card p-6 w-full max-w-md sub-rise space-y-3" onClick={(e) => e.stopPropagation()} data-testid="student-form-modal">
+            <h3 className="font-black text-lg" style={{ color: 'var(--sub-navy-ink)' }}>{addForm.id ? 'تعديل بيانات الطالب' : 'إضافة طالب'}</h3>
             <input className="sub-input" placeholder="اسم الطالب" required value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} data-testid="add-student-name" />
             <div className="flex gap-2">
               <select className="sub-input flex-1" required value={addForm.grade} onChange={(e) => setAddForm({ ...addForm, grade: e.target.value })}>
@@ -176,10 +186,10 @@ export default function GradesStudents() {
               </select>
               <input className="sub-input w-24" placeholder="الشعبة" required value={addForm.section} onChange={(e) => setAddForm({ ...addForm, section: e.target.value })} />
             </div>
-            <input className="sub-input" placeholder="الرقم المدني" value={addForm.civil_number} onChange={(e) => setAddForm({ ...addForm, civil_number: e.target.value })} />
+            <input className="sub-input" placeholder="الرقم المدني" value={addForm.civil_number} onChange={(e) => setAddForm({ ...addForm, civil_number: e.target.value })} data-testid="add-student-civil" />
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" className="sub-btn sub-btn-ghost" onClick={() => setAddForm(null)}>إلغاء</button>
-              <button type="submit" className="sub-btn sub-btn-primary" data-testid="add-student-save">حفظ</button>
+              <button type="submit" className="sub-btn sub-btn-primary" data-testid="add-student-save">{addForm.id ? 'حفظ التعديل' : 'حفظ'}</button>
             </div>
           </form>
         </div>

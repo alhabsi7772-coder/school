@@ -88,6 +88,16 @@ def _parse_excel(data: bytes):
     return header, rows[1:]
 
 
+def cell_str(v):
+    """يحوّل خلية إكسل إلى نص، مع معالجة الأرقام العشرية الصحيحة (مثل ١٢٣٤٥٦٧٨.٠) لتصبح ١٢٣٤٥٦٧٨."""
+    if v is None:
+        return ""
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    s = str(v).strip()
+    return "" if s.lower() == "none" else s
+
+
 # =================== Models ===================
 class LoginReq(BaseModel):
     username: str
@@ -123,6 +133,13 @@ class StudentCreate(BaseModel):
     grade: str = ""
     section: str = ""
     civil_number: str = ""
+
+
+class StudentUpdate(BaseModel):
+    name: Optional[str] = None
+    grade: Optional[str] = None
+    section: Optional[str] = None
+    civil_number: Optional[str] = None
 
 
 class TeacherUpdate(BaseModel):
@@ -386,6 +403,32 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         })
         return {"ok": True}
 
+    @router.put("/students/{sid}")
+    async def update_student(sid: str, body: StudentUpdate, u=Depends(require_admin)):
+        student = await db.grades_students.find_one({"id": sid})
+        if not student:
+            raise HTTPException(404, "الطالب غير موجود")
+        sets = {}
+        if body.name is not None:
+            name = body.name.strip()
+            if not name:
+                raise HTTPException(400, "الاسم مطلوب")
+            sets["name"] = name
+        if body.grade is not None:
+            sets["grade"] = body.grade.strip()
+        if body.section is not None:
+            sets["section"] = body.section.strip()
+        if body.civil_number is not None:
+            civil = body.civil_number.strip()
+            if civil and civil != student.get("civil_number"):
+                dup = await db.grades_students.find_one({"civil_number": civil, "id": {"$ne": sid}})
+                if dup:
+                    raise HTTPException(400, "يوجد طالب آخر بنفس الرقم المدني")
+            sets["civil_number"] = civil
+        if sets:
+            await db.grades_students.update_one({"id": sid}, {"$set": sets})
+        return {"ok": True}
+
     @router.post("/teachers/import-substitution")
     async def import_from_substitution(u=Depends(require_admin)):
         """استيراد المعلمين ومادتهم وصفوفهم من جداول نظام حصص الاحتياط (مطابقة بالاسم بدون تكرار)."""
@@ -433,7 +476,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 suggested["emp"] = i
             elif ("المدني" in hl or "الرقمالمدني" in hl) and suggested["civil"] is None:
                 suggested["civil"] = i
-        sample = [[("" if c is None else str(c)) for c in row] for row in rows[:5]]
+        sample = [[cell_str(c) for c in row] for row in rows[:5]]
         return {"headers": header, "sample_rows": sample, "total_rows": len(rows), "suggested": suggested}
 
     def _excel_cells(header, rows, name_col, emp_col, civil_col):
@@ -698,7 +741,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 suggested["section"] = i
             elif ("المدني" in hl or "الرقمالمدني" in hl) and suggested["civil"] is None:
                 suggested["civil"] = i
-        sample = [[("" if c is None else str(c)) for c in row] for row in rows[:5]]
+        sample = [[cell_str(c) for c in row] for row in rows[:5]]
         return {"headers": header, "sample_rows": sample, "total_rows": len(rows), "suggested": suggested}
 
     @router.post("/students/import")
@@ -734,14 +777,22 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                     col_map["civil"] = i
         if "name" not in col_map:
             raise HTTPException(400, "يجب تحديد عمود الاسم")
+
+        def cell(row, key):
+            i = col_map.get(key, -1)
+            v = row[i] if 0 <= i < len(row) else None
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+            return str(v).strip() if v not in (None, "") else ""
+
         added, updated = 0, 0
         for row in rows:
-            name = str(row[col_map["name"]] or "").strip() if col_map.get("name", -1) < len(row) else ""
+            name = cell(row, "name")
             if not name:
                 continue
-            grade = str(row[col_map["grade"]] if col_map.get("grade", -1) < len(row) and row[col_map["grade"]] else "").strip()
-            section = str(row[col_map["section"]] if col_map.get("section", -1) < len(row) and row[col_map["section"]] else "").strip()
-            civil = str(row[col_map["civil"]] if col_map.get("civil", -1) < len(row) and row[col_map["civil"]] else "").strip()
+            grade = cell(row, "grade")
+            section = cell(row, "section")
+            civil = cell(row, "civil")
             # التحقق من التكرار بالرقم المدني أو الاسم+الصف+الشعبة
             dup_q = {}
             if civil:
