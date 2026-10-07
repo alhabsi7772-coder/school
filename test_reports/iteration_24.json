@@ -1,0 +1,25 @@
+{
+  "summary": "Verified the hidden-unicode sanitization fix (cell_str) in Grades System. Wrote 8 pytest cases in /app/backend/tests/test_grades_unicode_sanitization.py covering: student bulk import with \\u200f/\\u200b/\\ufeff in name+civil, parent lookup with clean civil, parent lookup with dirty civil (query param sanitized), teachers import preview+commit sanitization + teacher login with civil as username, manual add student sanitization, edit student civil sanitization, and admin login regression. All 8 pass. Frontend smoke: /grades/parent page loads and correctly returns 'لا يوجد' (not-found) for a bogus civil number, confirming the public endpoint is wired up and sanitization doesn't break the error path.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_grades_unicode_sanitization.py",
+    "/app/test_reports/pytest/grades_unicode_iter24.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/backend/grades.py is now 1042+ lines — still worth splitting (auth / teachers / students / scores / parent / import) when time allows.",
+    "cell_str() is called in many places; a Pydantic validator on StudentCreate/TeacherCreate/StudentUpdate/TeacherUpdate using the same regex would centralize this and avoid future regressions if a new endpoint is added without remembering to call cell_str().",
+    "parent_results endpoint: the regex fallback with ^...$ is functionally equivalent to the primary exact-match query since the DB is already sanitized post-fix — the fallback is only useful for legacy dirty data. Fine to keep as defensive but worth a comment."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_grades_unicode_sanitization.py (new)"
+  ],
+  "success_rate": {"backend": "100% (8/8 tests)", "frontend": "parent lookup page renders & returns correct not-found message; full admin-UI import flow not re-tested in UI this iteration but is covered by prior iteration_23 UI run and current backend tests"},
+  "test_credentials": "Grades admin admin/admin123 (verified). Teacher login verified in tests using newly-imported teacher's civil_number + last 4 digits of employee_number as password.",
+  "seed_data_creation": "Tests create ephemeral TEST_* students/teachers and clean them up at the end of the run (test_cleanup).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run with: `REACT_APP_BACKEND_URL=<url> pytest backend/tests/test_grades_unicode_sanitization.py -v -n0`. Tests are self-cleaning. The sanitization regex is in grades.py:_INVISIBLE_RE and applied via cell_str() at every write path (bulk import students+teachers, manual add/update students+teachers) and at the parent/results query input. If anyone adds a new write endpoint touching civil_number/employee_number, ensure cell_str() is called.",
+  "rca of the issue": "ROOT CAUSE: Excel files from the school system contain hidden RTL unicode marks (\\u200f, \\u200b-\\u200f, \\u202a-\\u202e, \\ufeff) embedded in Arabic text cells. Previous local cell() helpers used str(v).strip() which does not strip these invisible characters, so civil_number/name were persisted with hidden chars → parent-page civil-number lookup (exact MongoDB match) silently failed. FIX: shared cell_str() helper strips invisible chars via _INVISIBLE_RE; now called in all import helpers + add/update endpoints + the parent lookup query param. Verified with 8 backend tests all passing."
+}
