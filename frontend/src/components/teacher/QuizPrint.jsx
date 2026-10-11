@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Printer, ArrowRight } from 'lucide-react';
+import { Printer, ArrowRight, FileDown } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { API, getAuthHeaders } from '../../utils';
 
 const typeLabel = (t) => ({ mcq: 'اختيار من متعدد', true_false: 'صواب / خطأ', short: 'إجابة قصيرة', long: 'إجابة مطوّلة' }[t] || '');
@@ -14,6 +16,7 @@ export default function QuizPrint() {
   const [quiz, setQuiz] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -34,6 +37,21 @@ export default function QuizPrint() {
   if (!quiz) return null;
 
   const totalPoints = (quiz.questions || []).reduce((s, q) => s + (q.points || 1), 0);
+
+  const downloadPdf = async () => {
+    const el = document.querySelector('.print-page');
+    if (!el) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+      const img = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const w = 210, h = (canvas.height * w) / canvas.width;
+      pdf.addImage(img, 'PNG', 0, 0, w, h);
+      pdf.save(`${quiz.title || 'نموذج فارغ'}.pdf`);
+    } catch { toast.error('تعذر إنشاء ملف PDF'); }
+    finally { setDownloading(false); }
+  };
 
   return (
     <>
@@ -88,6 +106,11 @@ export default function QuizPrint() {
           className="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-[1.02]"
           style={{ background: '#34D399', color: '#0B1120' }}>
           <Printer className="w-4 h-4" /> طباعة / حفظ PDF
+        </button>
+        <button onClick={downloadPdf} disabled={downloading} data-testid="quiz-print-download-pdf-btn"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-60"
+          style={{ background: 'rgba(255,255,255,0.08)', color: 'white', border: '1px solid rgba(255,255,255,0.15)' }}>
+          <FileDown className="w-4 h-4" /> {downloading ? 'جارٍ التجهيز...' : 'تحميل PDF'}
         </button>
       </div>
 

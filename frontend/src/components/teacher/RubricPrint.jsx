@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Printer, ArrowRight, FileText, Users } from 'lucide-react';
+import { Printer, ArrowRight, FileText, Users, FileDown } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { API, getAuthHeaders } from '../../utils';
 import { GB_FIELDS } from '../../utils/gradebook';
 
@@ -21,6 +23,7 @@ export default function RubricPrint() {
   const [mode, setMode] = useState('filled'); // 'filled' | 'blank'
   const [loading, setLoading] = useState(true);
   const [schoolName, setSchoolName] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -49,6 +52,24 @@ export default function RubricPrint() {
     if (!gb) return [];
     return gb.students || [];
   }, [mode, gb]);
+
+  const downloadPdf = async () => {
+    const pages = document.querySelectorAll('.print-page');
+    if (!pages.length) { toast.error('لا توجد صفحات للتحميل'); return; }
+    setDownloading(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { scale: 2, backgroundColor: '#ffffff' });
+        const img = canvas.toDataURL('image/png');
+        const w = 210, h = (canvas.height * w) / canvas.width;
+        if (i > 0) pdf.addPage();
+        pdf.addImage(img, 'PNG', 0, 0, w, h);
+      }
+      pdf.save(`${rubric.title || 'بطاقة تقييم'}.pdf`);
+    } catch { toast.error('تعذر إنشاء ملف PDF'); }
+    finally { setDownloading(false); }
+  };
 
   if (loading) {
     return (
@@ -145,6 +166,11 @@ export default function RubricPrint() {
           className="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-[1.02]"
           style={{ background: '#34D399', color: '#0B1120' }}>
           <Printer className="w-4 h-4" /> طباعة / حفظ PDF
+        </button>
+        <button onClick={downloadPdf} disabled={downloading} data-testid="print-download-pdf-btn"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-60"
+          style={{ background: 'rgba(255,255,255,0.08)', color: 'white', border: '1px solid rgba(255,255,255,0.15)' }}>
+          <FileDown className="w-4 h-4" /> {downloading ? 'جارٍ التجهيز...' : 'تحميل PDF'}
         </button>
       </div>
 
