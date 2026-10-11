@@ -6,9 +6,7 @@ import { Printer, ArrowRight, FileText, Users, FileDown } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { API, getAuthHeaders } from '../../utils';
-import { GB_FIELDS } from '../../utils/gradebook';
 
-const colLabel = (key) => GB_FIELDS.find(f => f.key === key)?.label || key;
 const semLabel = (s) => (s === '2' ? 'الفصل الثاني' : 'الفصل الأول');
 const fmt = (v) => v == null ? '' : (v % 1 === 0 ? Math.round(v) : v.toFixed(1));
 
@@ -92,25 +90,29 @@ export default function RubricPrint() {
           .print-page:last-child { page-break-after: auto; }
         }
         .print-page {
-          width: 210mm; min-height: 297mm; padding: 14mm 12mm;
+          width: 210mm; min-height: 297mm; padding: 10mm 12mm;
           background: #fff; color: #1a1a1a; font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif;
           margin: 0 auto 12mm; box-shadow: 0 6px 28px rgba(0,0,0,0.35);
           box-sizing: border-box; position: relative;
           display: flex; flex-direction: column;
         }
-        .print-header { text-align: center; margin-bottom: 6mm; }
-        .print-header .moe-logo { width: 34mm; height: 34mm; object-fit: contain; margin: 0 auto 2mm; display: block; }
-        .print-header .line-1 { font-weight: 700; font-size: 13pt; color: #7A1E1E; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
-        .print-header .line-2 { font-weight: 500; font-size: 11pt; color: #444; margin-top: 1mm; }
-        .print-header .line-3 { font-weight: 900; font-size: 15pt; margin-top: 2mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
-        .print-divider { border-top: 2px solid #1a1a1a; margin: 4mm 0 6mm; }
-        .print-title { text-align: center; font-weight: 800; font-size: 16pt; margin: 2mm 0 5mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
-        .print-meta-row { display: flex; gap: 10mm; margin-bottom: 5mm; font-size: 12pt; font-weight: 600; }
+        .print-header { text-align: center; margin-bottom: 3mm; }
+        .print-header .moe-logo { width: 18mm; height: 18mm; object-fit: contain; margin: 0 auto 1mm; display: block; }
+        .print-header .line-1 { font-weight: 700; font-size: 10.5pt; color: #7A1E1E; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
+        .print-header .line-2 { font-weight: 500; font-size: 8.5pt; color: #444; margin-top: 0.5mm; }
+        .print-header .line-3 { font-weight: 900; font-size: 12pt; margin-top: 1mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
+        .print-divider { border-top: 2px solid #1a1a1a; margin: 2mm 0 4mm; }
+        .print-title { text-align: center; font-weight: 800; font-size: 14pt; margin: 1mm 0 4mm; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
+        .print-meta-row { display: flex; gap: 8mm; margin-bottom: 4mm; font-size: 11.5pt; font-weight: 600; }
         .print-meta-row .field { flex: 1; border-bottom: 1.5px dotted #1a1a1a; padding-bottom: 1mm; }
         .print-meta-row .field span.label { font-weight: 800; }
         .print-meta-row .field span.value { font-weight: 600; margin-right: 2mm; }
-        .print-question { border: 1.4px solid #1a1a1a; border-radius: 2mm; padding: 2.5mm 3.5mm; margin-bottom: 5mm; font-size: 11.5pt; font-weight: 500; background: #f7f7f7; }
+        .print-question { border: 1.4px solid #1a1a1a; border-radius: 2mm; padding: 2.5mm 3.5mm; margin-bottom: 4mm; font-size: 11.5pt; font-weight: 500; background: #f7f7f7; }
         .print-question .label { font-weight: 800; }
+        .print-images { display: flex; flex-wrap: wrap; gap: 2.5mm; justify-content: center; align-items: center; margin-bottom: 4mm; }
+        .print-images img { object-fit: contain; border: 1px solid #ccc; border-radius: 1.5mm; background: #fafafa; }
+        .print-images.single img { max-height: 78mm; max-width: 100%; }
+        .print-images.multi img { max-height: 34mm; max-width: 47%; }
         .print-table { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 11.5pt; }
         .print-table th, .print-table td { border: 1.4px solid #1a1a1a; padding: 2.6mm 3mm; vertical-align: middle; }
         .print-table th { background: #f0f0f0; font-weight: 800; text-align: center; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
@@ -212,18 +214,11 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section, schoo
           <span className="label">الاسم:</span>
           <span className="value">{studentName}</span>
         </div>
-        <div className="field" style={{ flex: '0 0 50mm' }}>
+        <div className="field" style={{ flex: '0 0 40mm' }}>
           <span className="label">الصف:</span>
           <span className="value">{gradeStr}</span>
         </div>
-      </div>
-
-      <div className="print-meta-row">
-        <div className="field">
-          <span className="label">النشاط/المهارة:</span>
-          <span className="value">{colLabel(rubric.column)}</span>
-        </div>
-        <div className="field" style={{ flex: '0 0 50mm' }}>
+        <div className="field" style={{ flex: '0 0 40mm' }}>
           <span className="label">الفصل:</span>
           <span className="value">{semLabel(rubric.semester)}</span>
         </div>
@@ -232,6 +227,12 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section, schoo
       {rubric.question && (
         <div className="print-question">
           <span className="label">السؤال:</span> {rubric.question}
+        </div>
+      )}
+
+      {rubric.images?.length > 0 && (
+        <div className={`print-images ${rubric.images.length === 1 ? 'single' : 'multi'}`}>
+          {rubric.images.slice(0, 4).map((url, i) => <img key={i} src={url} alt="" />)}
         </div>
       )}
 
