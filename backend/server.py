@@ -2133,6 +2133,7 @@ class RubricCreate(BaseModel):
     grade: str
     semester: str = "1"
     column: str
+    question: Optional[str] = None  # نص السؤال/التعليمات (اختياري) يُعرض أعلى المعايير
     criteria: List[RubricCriterion]
     images: Optional[List[str]] = None  # قائمة data URLs للصور المرفقة بالبطاقة (اختياري)
 
@@ -2200,6 +2201,7 @@ async def create_rubric(data: RubricCreate, t=Depends(get_teacher)):
         "grade": data.grade,
         "semester": data.semester,
         "column": data.column,
+        "question": (data.question or "").strip(),
         "criteria": criteria,
         "images": images,
         "total_max": round(sum(c["max"] for c in criteria), 2),
@@ -2224,6 +2226,7 @@ async def update_rubric(rid: str, data: RubricCreate, t=Depends(get_teacher)):
     new_total_max = round(sum(c["max"] for c in criteria), 2)
     await db.rubrics.update_one({"id": rid}, {"$set": {
         "title": data.title.strip(), "grade": data.grade, "semester": data.semester, "column": data.column,
+        "question": (data.question or "").strip(),
         "criteria": criteria, "images": images,
         "total_max": new_total_max,
         "updated_at": now_iso(),

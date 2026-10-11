@@ -88,6 +88,8 @@ export default function RubricPrint() {
         .print-meta-row .field { flex: 1; border-bottom: 1.5px dotted #1a1a1a; padding-bottom: 1mm; }
         .print-meta-row .field span.label { font-weight: 800; }
         .print-meta-row .field span.value { font-weight: 600; margin-right: 2mm; }
+        .print-question { border: 1.4px solid #1a1a1a; border-radius: 2mm; padding: 2.5mm 3.5mm; margin-bottom: 5mm; font-size: 11.5pt; font-weight: 500; background: #f7f7f7; }
+        .print-question .label { font-weight: 800; }
         .print-table { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 11.5pt; }
         .print-table th, .print-table td { border: 1.4px solid #1a1a1a; padding: 2.6mm 3mm; vertical-align: middle; }
         .print-table th { background: #f0f0f0; font-weight: 800; text-align: center; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
@@ -200,6 +202,12 @@ function PrintCard({ rubric, student, evaluation, isBlank, grade, section, schoo
           <span className="value">{semLabel(rubric.semester)}</span>
         </div>
       </div>
+
+      {rubric.question && (
+        <div className="print-question">
+          <span className="label">السؤال:</span> {rubric.question}
+        </div>
+      )}
 
       <table className="print-table">
         <thead>

@@ -211,6 +211,13 @@ export default function RubricEvaluate() {
 
             {/* المعايير */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {rubric.question && (
+                <div className="rounded-2xl p-3.5" data-testid="rubric-eval-question"
+                  style={{ background: 'rgba(var(--theme-accent-rgb),0.08)', border: '1px solid rgba(var(--theme-accent-rgb),0.25)' }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: 'var(--theme-accent)' }}>السؤال / التعليمات</p>
+                  <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">{rubric.question}</p>
+                </div>
+              )}
               {rubric.criteria.map((c, ci) => (
                 <div key={c.id} className="rounded-2xl p-3.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div className="flex items-center justify-between mb-2.5 gap-2">

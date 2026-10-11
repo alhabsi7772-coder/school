@@ -26,6 +26,7 @@ export default function RubricEditor() {
   const [grade, setGrade] = useState('الخامس');
   const [semester, setSemester] = useGlobalSemester();
   const [column, setColumn] = useState('p1');
+  const [question, setQuestion] = useState('');
   const [criteria, setCriteria] = useState([newCriterion(), newCriterion(), newCriterion()]);
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -42,6 +43,7 @@ export default function RubricEditor() {
         const r = res.data;
         setTitle(r.title); setSemester(r.semester); setColumn(r.column);
         if (r.grade) setGrade(r.grade);
+        setQuestion(r.question || '');
         setCriteria(r.criteria.map(c => ({ key: c.id, id: c.id, name: c.name, max: String(c.max % 1 === 0 ? Math.round(c.max) : c.max) })));
         setImages(Array.isArray(r.images) ? r.images : []);
       })
@@ -100,6 +102,7 @@ export default function RubricEditor() {
     try {
       const payload = {
         title, grade, semester, column,
+        question: question.trim(),
         criteria: valid.map(c => ({ id: c.id, name: c.name.trim(), max: parseFloat(c.max) })),
         images,
       };
@@ -180,6 +183,14 @@ export default function RubricEditor() {
 
         {/* Criteria — مثل جدول النموذج الرسمي */}
         <div className="quiz-card rounded-2xl p-5">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>
+              السؤال / التعليمات <span className="text-[11px] font-normal" style={{ color: 'var(--text-hint)' }}>(اختياري)</span>
+            </label>
+            <textarea className="input-field resize-none" rows={2} value={question} onChange={e => setQuestion(e.target.value)}
+              placeholder="مثال: افتح مستكشف الملفات وأنشئ مجلداً باسمك، ثم انقل إليه ملفاً واحداً"
+              data-testid="rubric-question-input" />
+          </div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-white">المعايير / المهارات العملية</h3>
             <span className="px-3 py-1 rounded-lg text-sm font-black"
