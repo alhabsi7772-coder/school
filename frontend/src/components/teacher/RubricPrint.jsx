@@ -62,7 +62,7 @@ export default function RubricPrint() {
         const img = canvas.toDataURL('image/png');
         const w = 210, h = (canvas.height * w) / canvas.width;
         if (i > 0) pdf.addPage();
-        pdf.addImage(img, 'PNG', 0, 0, w, h);
+        pdf.addImage(img, 'PNG', 0, 0, w, Math.min(h, 297));
       }
       pdf.save(`${rubric.title || 'بطاقة تقييم'}.pdf`);
     } catch { toast.error('تعذر إنشاء ملف PDF'); }
@@ -90,12 +90,13 @@ export default function RubricPrint() {
           .print-page:last-child { page-break-after: auto; }
         }
         .print-page {
-          width: 210mm; min-height: 297mm; padding: 10mm 12mm;
+          width: 210mm; height: 297mm; padding: 8mm 12mm 10mm;
           background: #fff; color: #1a1a1a; font-family: 'Noto Sans Arabic', 'Tajawal', sans-serif;
           margin: 0 auto 12mm; box-shadow: 0 6px 28px rgba(0,0,0,0.35);
-          box-sizing: border-box; position: relative;
+          box-sizing: border-box; position: relative; overflow: hidden;
           display: flex; flex-direction: column;
         }
+        .print-page > * { flex: 0 0 auto; }
         .print-header { text-align: center; margin-bottom: 3mm; }
         .print-header .moe-logo { width: 18mm; height: 18mm; object-fit: contain; margin: 0 auto 1mm; display: block; }
         .print-header .line-1 { font-weight: 700; font-size: 10.5pt; color: #7A1E1E; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
@@ -109,10 +110,9 @@ export default function RubricPrint() {
         .print-meta-row .field span.value { font-weight: 600; margin-right: 2mm; }
         .print-question { border: 1.4px solid #1a1a1a; border-radius: 2mm; padding: 2.5mm 3.5mm; margin-bottom: 4mm; font-size: 11.5pt; font-weight: 500; background: #f7f7f7; }
         .print-question .label { font-weight: 800; }
-        .print-images { display: flex; flex-wrap: wrap; gap: 2.5mm; justify-content: center; align-items: center; margin-bottom: 4mm; }
-        .print-images img { object-fit: contain; border: 1px solid #ccc; border-radius: 1.5mm; background: #fafafa; }
-        .print-images.single img { max-height: 78mm; max-width: 100%; }
-        .print-images.multi img { max-height: 34mm; max-width: 47%; }
+        .print-page > .print-images { flex: 1 1 0; min-height: 20mm; overflow: hidden; display: flex; flex-wrap: wrap; gap: 2.5mm; justify-content: center; align-content: center; align-items: center; margin-bottom: 3mm; }
+        .print-images img { object-fit: contain; border: 1px solid #ccc; border-radius: 1.5mm; background: #fafafa; max-width: 100%; max-height: 100%; }
+        .print-images.multi img { max-height: 48%; max-width: 48%; }
         .print-table { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 11.5pt; }
         .print-table th, .print-table td { border: 1.4px solid #1a1a1a; padding: 2.6mm 3mm; vertical-align: middle; }
         .print-table th { background: #f0f0f0; font-weight: 800; text-align: center; font-family: 'Noto Kufi Arabic', 'Noto Sans Arabic', sans-serif; }
