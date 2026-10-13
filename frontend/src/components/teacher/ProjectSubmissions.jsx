@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Download, FileText, Users, Calendar, File } from 'lucide-react';
+import { Download, FileText, Users, Calendar, File, Link2, ExternalLink } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 
@@ -97,12 +97,20 @@ export default function ProjectSubmissions() {
                   <p className="text-xs text-slate-400">
                     {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString('ar-KW', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">{sub.files?.length || 0} ملف</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{sub.files?.length || 0} ملف{sub.link ? ' + رابط' : ''}</p>
                 </div>
               </div>
 
               {/* Files list */}
               <div className="space-y-2">
+                {sub.link && (
+                  <a href={sub.link} target="_blank" rel="noreferrer" data-testid={`submission-link-${sub.id}`}
+                    className="flex items-center gap-3 p-3 bg-teal-50 rounded-xl border border-teal-100 hover:bg-teal-100 transition-colors">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-teal-600 bg-white"><Link2 className="w-4 h-4" /></div>
+                    <p className="flex-1 min-w-0 text-sm font-medium text-teal-800 truncate" dir="ltr" style={{ textAlign: 'left' }}>{sub.link}</p>
+                    <ExternalLink className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                  </a>
+                )}
                 {(sub.files || []).map(f => (
                   <div key={f.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${FILE_ICON_COLOR(f.content_type)}`}>

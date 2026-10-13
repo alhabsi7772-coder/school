@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import ParentVideoBackground from './ParentVideoBackground';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Search, GraduationCap, BookOpen, ArrowRight } from 'lucide-react';
+import { Search, GraduationCap, BookOpen, ArrowRight, Lock } from 'lucide-react';
 import { gradesApi, errMsg, SCHOOL_NAME, QUIZ_MAX } from './gradesApi';
 import { useGradesTheme, themeClass } from './gradesTheme';
 import { ThemeSwitch } from './GradesLayout';
@@ -13,11 +13,13 @@ export default function GradesParent() {
   const [civil, setCivil] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
+  const [closed, setClosed] = useState(false);
   const navigate = useNavigate();
   const [theme, setTheme] = useGradesTheme();
 
   useEffect(() => {
     document.documentElement.classList.add('sub-app');
+    gradesApi.get('/status').then(r => setClosed(!!r.data.parent_closed)).catch(() => {});
     return () => document.documentElement.classList.remove('sub-app');
   }, []);
 
@@ -30,6 +32,7 @@ export default function GradesParent() {
       const res = await gradesApi.get('/parent/results', { params: { civil_number: civil.trim() } });
       setData(res.data);
     } catch (err) {
+      if (err?.response?.status === 403) setClosed(true);
       toast.error(errMsg(err, 'لا يوجد طالب بهذا الرقم المدني'));
     } finally {
       setLoading(false);
@@ -53,6 +56,18 @@ export default function GradesParent() {
               <p className="text-sm mt-1 font-bold" style={{ color: 'var(--sub-navy-ink)', textShadow: '0 1px 8px rgba(255,255,255,.35)' }}>{SCHOOL_NAME} — نظام درجات الخيرات</p>
             </div>
 
+            {closed ? (
+              <div className="sub-card parent-glass-card p-7 w-full max-w-md sub-rise text-center" data-testid="grades-parent-closed">
+                <div style={{ width: 56, height: 56, borderRadius: 16, display: 'grid', placeItems: 'center', background: 'var(--sub-red-soft)', margin: '0 auto' }}>
+                  <Lock className="w-6 h-6" style={{ color: 'var(--sub-red-ink)' }} />
+                </div>
+                <h2 className="font-black text-lg mt-4" style={{ color: 'var(--sub-navy-ink)' }}>عرض النتائج مغلق مؤقتاً من قبل الإدارة</h2>
+                <p className="text-xs mt-2" style={{ color: 'var(--sub-muted)' }}>يرجى المحاولة لاحقاً</p>
+                <Link to="/grades/login" className="flex items-center justify-center gap-1.5 text-xs font-bold pt-4" style={{ color: 'var(--sub-navy)' }}>
+                  <ArrowRight className="w-3.5 h-3.5" /> دخول المعلم / المدير
+                </Link>
+              </div>
+            ) : (
             <form onSubmit={search} className="sub-card parent-glass-card p-7 w-full max-w-md sub-rise space-y-5" data-testid="grades-parent-login-card">
               <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: 'var(--sub-line)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--sub-teal-soft)' }}>
@@ -78,6 +93,7 @@ export default function GradesParent() {
                 <ArrowRight className="w-3.5 h-3.5" /> دخول المعلم / المدير
               </Link>
             </form>
+            )}
           </div>
         ) : (
           <div>

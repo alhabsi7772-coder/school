@@ -281,6 +281,7 @@ class ProjectCreate(BaseModel):
     title: str
     description: str = ""
     deadline: Optional[str] = None
+    allow_link: bool = False
 
 class ProjectFileInput(BaseModel):
     filename: str
@@ -292,7 +293,8 @@ class ProjectSubmitReq(BaseModel):
     student_name: str
     grade: str
     section: str
-    files: List[ProjectFileInput]
+    files: List[ProjectFileInput] = []
+    link: str = ""
 
 
 # =================== AUTH ROUTES ===================
@@ -932,6 +934,7 @@ async def create_project(data: ProjectCreate, t=Depends(get_teacher)):
         "title": data.title,
         "description": data.description,
         "deadline": data.deadline,
+        "allow_link": data.allow_link,
         "code": code,
         "created_at": now_iso()
     }
@@ -964,8 +967,11 @@ async def submit_project(code: str, data: ProjectSubmitReq):
     p = await db.projects.find_one({"code": code}, {"_id": 0})
     if not p:
         raise HTTPException(404, "المشروع غير موجود")
-    if not data.files:
-        raise HTTPException(400, "يجب إرفاق ملف واحد على الأقل")
+    link = data.link.strip() if p.get("allow_link") else ""
+    if link and not re.match(r"^https?://\S+$", link):
+        raise HTTPException(400, "الرابط غير صحيح — يجب أن يبدأ بـ http:// أو https://")
+    if not data.files and not link:
+        raise HTTPException(400, "يجب إرفاق رابط أو ملف واحد على الأقل" if p.get("allow_link") else "يجب إرفاق ملف واحد على الأقل")
     if len(data.files) > 15:
         raise HTTPException(400, "الحد الأقصى 15 ملف")
     for f in data.files:
@@ -993,6 +999,7 @@ async def submit_project(code: str, data: ProjectSubmitReq):
         "grade": data.grade,
         "section": data.section,
         "files": file_metas,
+        "link": link,
         "submitted_at": now_iso()
     })
     return {"message": "تم تسليم المشروع بنجاح", "submission_id": sub_id}

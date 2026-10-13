@@ -174,15 +174,18 @@ class ScoreSave(BaseModel):
 class SettingsReq(BaseModel):
     site_closed: Optional[bool] = None
     grades_locked: Optional[bool] = None
+    parent_closed: Optional[bool] = None
     subject_max: Optional[dict] = None
+    grade_subject_max: Optional[dict] = None
 
 
-def subject_max_map(settings: dict) -> dict:
-    """الدرجات العظمى لكل مادة {subject: {quiz1, quiz2}} مع القيمة الافتراضية 10."""
+def subject_max_map(settings: dict, grade: str = None) -> dict:
+    """الدرجات العظمى لكل مادة {subject: {quiz1, quiz2}} — حسب الصف إن وُجد، وإلا الافتراضي 10."""
     saved = (settings or {}).get("subject_max") or {}
+    by_grade = ((settings or {}).get("grade_subject_max") or {}).get(grade or "") or {}
     out = {}
     for sub in SUBJECTS:
-        v = saved.get(sub) or {}
+        v = by_grade.get(sub) or saved.get(sub) or {}
         out[sub] = {
             "quiz1": float(v.get("quiz1", QUIZ_MAX) or 0),
             "quiz2": float(v.get("quiz2", QUIZ_MAX) or 0),
@@ -190,8 +193,26 @@ def subject_max_map(settings: dict) -> dict:
     return out
 
 
-def max_for(settings: dict, subject: str):
-    m = subject_max_map(settings).get(subject) or {"quiz1": QUIZ_MAX, "quiz2": QUIZ_MAX}
+def grade_max_all(settings: dict) -> dict:
+    return {g: subject_max_map(settings, g) for g in GRADES}
+
+
+def clean_max(raw: dict) -> dict:
+    clean = {}
+    for sub, v in (raw or {}).items():
+        if sub not in SUBJECTS:
+            continue
+        try:
+            q1 = max(0.0, min(100.0, float((v or {}).get("quiz1", QUIZ_MAX))))
+            q2 = max(0.0, min(100.0, float((v or {}).get("quiz2", QUIZ_MAX))))
+        except (TypeError, ValueError):
+            raise HTTPException(400, f"قيمة غير صحيحة للمادة: {sub}")
+        clean[sub] = {"quiz1": q1, "quiz2": q2}
+    return clean
+
+
+def max_for(settings: dict, subject: str, grade: str = None):
+    m = subject_max_map(settings, grade).get(subject) or {"quiz1": QUIZ_MAX, "quiz2": QUIZ_MAX}
     return m["quiz1"], m["quiz2"]
 
 
@@ -253,6 +274,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def site_status():
         s = await get_settings()
         return {"site_closed": s.get("site_closed", False), "grades_locked": s.get("grades_locked", False),
+                "parent_closed": s.get("parent_closed", False),
                 "subject_max": subject_max_map(s), "subjects": SUBJECTS}
 
     # ---- auth ----
@@ -287,6 +309,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def read_settings(u=Depends(require_admin)):
         s = await get_settings()
         s["subject_max"] = subject_max_map(s)
+        s["grade_subject_max"] = grade_max_all(s)
         s["subjects"] = SUBJECTS
         return s
 
@@ -294,20 +317,16 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def write_settings(req: SettingsReq, u=Depends(require_admin)):
         update = {k: v for k, v in req.dict().items() if v is not None}
         if "subject_max" in update:
-            clean = {}
-            for sub, v in (update["subject_max"] or {}).items():
-                if sub not in SUBJECTS:
-                    continue
-                try:
-                    q1 = max(0.0, min(100.0, float((v or {}).get("quiz1", QUIZ_MAX))))
-                    q2 = max(0.0, min(100.0, float((v or {}).get("quiz2", QUIZ_MAX))))
-                except (TypeError, ValueError):
-                    raise HTTPException(400, f"قيمة غير صحيحة للمادة: {sub}")
-                clean[sub] = {"quiz1": q1, "quiz2": q2}
-            update["subject_max"] = clean
+            update["subject_max"] = clean_max(update["subject_max"])
+        if "grade_subject_max" in update:
+            raw = update.pop("grade_subject_max") or {}
+            for g, m in raw.items():
+                if g in GRADES:
+                    update[f"grade_subject_max.{g}"] = clean_max(m)
         await db.grades_settings.update_one({}, {"$set": update}, upsert=True)
         s = await get_settings()
         s["subject_max"] = subject_max_map(s)
+        s["grade_subject_max"] = grade_max_all(s)
         s["subjects"] = SUBJECTS
         return s
 
@@ -894,7 +913,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "teacher_id": u["uid"], "grade": grade, "section": section,
             "subject": subject, "semester": semester,
         }, {"_id": 0}).to_list(None)
-        q1max, q2max = max_for(await get_settings(), subject)
+        q1max, q2max = max_for(await get_settings(), subject, grade)
         return {"scores": {s["student_id"]: s for s in scores}, "quiz1_max": q1max, "quiz2_max": q2max}
 
     @router.put("/my/scores")
@@ -907,7 +926,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                  for a in u["user"].get("assignments", []))
         if not ok and u["role"] != "admin":
             raise HTTPException(403, "لا تملك صلاحية إدخال الدرجات لهذا الصف/الشعبة")
-        q1max, q2max = max_for(s, req.subject)
+        q1max, q2max = max_for(s, req.subject, req.grade)
         quiz1 = None if req.quiz1 is None else max(0.0, min(float(req.quiz1), q1max))
         quiz2 = None if req.quiz2 is None else max(0.0, min(float(req.quiz2), q2max))
         doc = {
@@ -929,7 +948,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         settings = await get_settings()
         out = []
         for a in assignments:
-            q1max, q2max = max_for(settings, a["subject"])
+            q1max, q2max = max_for(settings, a["subject"], a["grade"])
             max_total = q1max + q2max
             students = await db.grades_students.find({"grade": a["grade"], "section": str(a["section"])}, {"_id": 0}).to_list(None)
             total_students = len(students)
@@ -966,11 +985,11 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         rows = []
         for s in scores:
             total = (s.get("quiz1") or 0) + (s.get("quiz2") or 0)
-            q1max, q2max = max_for(settings, s.get("subject", ""))
+            st = smap.get(s["student_id"], {})
+            q1max, q2max = max_for(settings, s.get("subject", ""), s.get("grade") or st.get("grade", ""))
             sub_max = q1max + q2max
             if sub_max <= 0 or total < sub_max:
                 continue
-            st = smap.get(s["student_id"], {})
             rows.append({
                 "student_name": st.get("name", "—"),
                 "grade": s.get("grade") or st.get("grade", ""),
@@ -990,6 +1009,8 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
     async def parent_results(civil_number: str):
         if not civil_number or not civil_number.strip():
             raise HTTPException(400, "أدخل الرقم المدني للطالب")
+        if (await get_settings()).get("parent_closed"):
+            raise HTTPException(403, "عرض النتائج مغلق مؤقتاً من قبل الإدارة")
         civil = cell_str(civil_number)
         student = await db.grades_students.find_one({"civil_number": civil}, {"_id": 0})
         if not student:
@@ -1007,7 +1028,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             sub_scores = [s for s in scores if s.get("subject") == sub]
             if not sub_scores:
                 continue
-            q1max, q2max = max_for(settings, sub)
+            q1max, q2max = max_for(settings, sub, student.get("grade"))
             sub_max = q1max + q2max
             for sem in SEMESTERS:
                 sem_scores = [s for s in sub_scores if s.get("semester") == sem]

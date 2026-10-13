@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { FolderOpen, Plus, Trash2, Users, Copy, Calendar, X } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Users, Copy, Calendar, X, Link2 } from 'lucide-react';
 import TeacherLayout from './TeacherLayout';
 import { API, getAuthHeaders } from '../../utils';
 
@@ -10,7 +10,7 @@ export default function TeacherProjects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', deadline: '' });
+  const [form, setForm] = useState({ title: '', description: '', deadline: '', allow_link: false });
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
@@ -31,7 +31,7 @@ export default function TeacherProjects() {
       await axios.post(`${API}/projects`, form, getAuthHeaders());
       toast.success('تم إنشاء المشروع');
       setShowCreate(false);
-      setForm({ title: '', description: '', deadline: '' });
+      setForm({ title: '', description: '', deadline: '', allow_link: false });
       fetchProjects();
     } catch { toast.error('تعذر إنشاء المشروع'); }
     finally { setCreating(false); }
@@ -89,7 +89,18 @@ export default function TeacherProjects() {
                 <input type="date" className="input-field" value={form.deadline}
                   onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} />
               </div>
-              <button onClick={createProject} disabled={creating} className="btn-primary w-full">
+              <label className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer" data-testid="project-allow-link-toggle">
+                <span className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-teal-600" />
+                  <span>
+                    <span className="text-sm font-semibold text-slate-700 block">السماح بالتسليم عبر رابط (اختياري)</span>
+                    <span className="text-xs text-slate-500">يستطيع الطالب إرفاق رابط مشروعه أو رفع ملفات</span>
+                  </span>
+                </span>
+                <input type="checkbox" className="w-5 h-5 accent-teal-600" checked={form.allow_link}
+                  onChange={e => setForm(p => ({ ...p, allow_link: e.target.checked }))} data-testid="project-allow-link-checkbox" />
+              </label>
+              <button onClick={createProject} disabled={creating} className="btn-primary w-full" data-testid="create-project-submit">
                 {creating ? 'جارٍ الإنشاء...' : 'إنشاء المشروع'}
               </button>
             </div>
@@ -123,6 +134,11 @@ export default function TeacherProjects() {
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
                         آخر موعد: {new Date(p.deadline).toLocaleDateString('ar-KW')}
+                      </span>
+                    )}
+                    {p.allow_link && (
+                      <span className="flex items-center gap-1 bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg" data-testid={`project-link-badge-${p.id}`}>
+                        <Link2 className="w-3.5 h-3.5" /> تسليم برابط
                       </span>
                     )}
                     <span className="font-mono bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg">{p.code}</span>

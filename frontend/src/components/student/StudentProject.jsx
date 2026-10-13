@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Upload, X, File, CheckCircle, CloudUpload, Calendar } from 'lucide-react';
+import { Upload, X, File, CheckCircle, CloudUpload, Calendar, Link2 } from 'lucide-react';
 import { GRADES } from '../../utils';
 import { useStudentMode } from '../../hooks/useStudentMode';
 
@@ -29,6 +29,7 @@ export default function StudentProject() {
   const [loadingProject, setLoadingProject] = useState(true);
   const [form, setForm] = useState({ student_name: '', grade: '', section: '' });
   const [files, setFiles] = useState([]);
+  const [link, setLink] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -65,7 +66,9 @@ export default function StudentProject() {
     if (!form.student_name.trim()) return toast.error('أدخل اسمك');
     if (!form.grade) return toast.error('اختر الصف');
     if (!form.section) return toast.error('اختر الشعبة');
-    if (!files.length) return toast.error('أرفق ملفاً واحداً على الأقل');
+    const cleanLink = project.allow_link ? link.trim() : '';
+    if (cleanLink && !/^https?:\/\/\S+$/.test(cleanLink)) return toast.error('الرابط غير صحيح — يجب أن يبدأ بـ https://');
+    if (!files.length && !cleanLink) return toast.error(project.allow_link ? 'أرفق رابط المشروع أو ملفاً واحداً على الأقل' : 'أرفق ملفاً واحداً على الأقل');
     setSubmitting(true);
     try {
       const filesData = await Promise.all(files.map(async f => ({
@@ -78,7 +81,8 @@ export default function StudentProject() {
         student_name: form.student_name,
         grade: form.grade,
         section: String(form.section),
-        files: filesData
+        files: filesData,
+        link: cleanLink
       });
       setSubmitted(true);
     } catch (err) {
@@ -160,6 +164,17 @@ export default function StudentProject() {
             </div>
           </div>
         </div>
+
+        {project.allow_link && (
+          <div className="quiz-card p-5" data-testid="project-link-section">
+            <h2 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+              <Link2 className="w-4 h-4 text-teal-600" /> رابط المشروع
+              <span className="text-slate-400 font-normal">(أو ارفع الملفات بالأسفل)</span>
+            </h2>
+            <input className="input-field" dir="ltr" style={{ textAlign: 'left' }} placeholder="https://..." value={link}
+              onChange={e => setLink(e.target.value)} data-testid="project-link-input" />
+          </div>
+        )}
 
         {/* File upload */}
         <div className="quiz-card p-5">

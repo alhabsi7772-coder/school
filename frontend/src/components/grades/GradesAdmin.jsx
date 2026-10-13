@@ -61,7 +61,9 @@ function ChangePasswordModal({ onClose }) {
 export default function GradesAdmin() {
   const [stats, setStats] = useState(null);
   const [settings, setSettings] = useState({ site_closed: false, grades_locked: false });
-  const [subjectMax, setSubjectMax] = useState({});
+  const [gradeMax, setGradeMax] = useState({});
+  const [maxGrade, setMaxGrade] = useState(GRADES_LIST[0]);
+  const subjectMax = gradeMax[maxGrade] || {};
   const [savingMax, setSavingMax] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
@@ -75,21 +77,24 @@ export default function GradesAdmin() {
       ]);
       setStats(s.data);
       setSettings(st.data);
-      setSubjectMax(st.data.subject_max || {});
+      setGradeMax(st.data.grade_subject_max || {});
     } catch (e) { toast.error(errMsg(e)); }
     finally { setLoading(false); }
   };
 
   const setMax = (sub, key, value) => {
-    setSubjectMax(prev => ({ ...prev, [sub]: { ...(prev[sub] || { quiz1: 10, quiz2: 10 }), [key]: value === '' ? 0 : Number(value) } }));
+    setGradeMax(prev => {
+      const g = prev[maxGrade] || {};
+      return { ...prev, [maxGrade]: { ...g, [sub]: { ...(g[sub] || { quiz1: 10, quiz2: 10 }), [key]: value === '' ? 0 : Number(value) } } };
+    });
   };
 
   const saveMax = async () => {
     setSavingMax(true);
     try {
-      const res = await gradesApi.put('/settings', { subject_max: subjectMax });
-      setSubjectMax(res.data.subject_max || {});
-      toast.success('تم حفظ الدرجات العظمى للمواد');
+      const res = await gradesApi.put('/settings', { grade_subject_max: { [maxGrade]: subjectMax } });
+      setGradeMax(res.data.grade_subject_max || {});
+      toast.success(`تم حفظ الدرجات العظمى للصف ${maxGrade}`);
     } catch (e) { toast.error(errMsg(e)); }
     finally { setSavingMax(false); }
   };
@@ -101,7 +106,8 @@ export default function GradesAdmin() {
     try {
       const res = await gradesApi.put('/settings', { [key]: !settings[key] });
       setSettings(res.data);
-      toast.success(!settings[key] ? (key === 'grades_locked' ? 'تم قفل كتابة الدرجات' : 'تم إغلاق النظام') : 'تم فتح النظام');
+      const closedMsg = { grades_locked: 'تم قفل كتابة الدرجات', parent_closed: 'تم إغلاق النتائج عن أولياء الأمور', site_closed: 'تم إغلاق النظام' };
+      toast.success(!settings[key] ? closedMsg[key] : (key === 'parent_closed' ? 'تم فتح النتائج لأولياء الأمور' : 'تم فتح النظام'));
     } catch (e) { toast.error(errMsg(e)); }
     finally { setToggling(false); }
   };
@@ -141,7 +147,7 @@ export default function GradesAdmin() {
           </button>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           {/* فتح/غلق النظام */}
           <div className="p-4 rounded-2xl flex items-center justify-between gap-3"
             style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
@@ -175,6 +181,23 @@ export default function GradesAdmin() {
               {settings.grades_locked ? <><Unlock className="w-4 h-4" /> فتح الإدخال</> : <><LockIcon className="w-4 h-4" /> قفل الإدخال</>}
             </button>
           </div>
+
+          {/* إغلاق النتائج عن أولياء الأمور */}
+          <div className="p-4 rounded-2xl flex items-center justify-between gap-3"
+            style={{ background: 'var(--sub-surface-2)', border: '1px solid var(--sub-line)' }}>
+            <div>
+              <p className="font-black text-sm" style={{ color: 'var(--sub-navy-ink)' }}>دخول أولياء الأمور</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--sub-muted)' }}>
+                {settings.parent_closed ? 'مغلق — لا يستطيع أولياء الأمور عرض النتائج' : 'مفتوح — يستطيع أولياء الأمور عرض نتائج أبنائهم'}
+              </p>
+            </div>
+            <button onClick={() => toggleLock('parent_closed')} disabled={toggling}
+              className="sub-btn sub-btn-sm flex-shrink-0"
+              style={settings.parent_closed ? { background: 'var(--sub-green-soft)', color: 'var(--sub-green-ink)', border: '1px solid var(--sub-green-line)' } : { background: 'var(--sub-red)', color: '#fff' }}
+              data-testid="grades-toggle-parent">
+              {settings.parent_closed ? <><Unlock className="w-4 h-4" /> فتح للأولياء</> : <><LockIcon className="w-4 h-4" /> غلق عن الأولياء</>}
+            </button>
+          </div>
         </div>
 
         {/* الحالة الحالية */}
@@ -185,6 +208,9 @@ export default function GradesAdmin() {
           </span>
           <span className={`sub-badge ${settings.grades_locked ? 'sub-badge-red' : 'sub-badge-green'}`} data-testid="grades-status-lock">
             {settings.grades_locked ? 'الإدخال مقفول' : 'الإدخال مفتوح'}
+          </span>
+          <span className={`sub-badge ${settings.parent_closed ? 'sub-badge-red' : 'sub-badge-green'}`} data-testid="grades-status-parent">
+            {settings.parent_closed ? 'النتائج مغلقة عن الأولياء' : 'النتائج متاحة للأولياء'}
           </span>
         </div>
 
@@ -206,9 +232,12 @@ export default function GradesAdmin() {
       {/* الدرجات العظمى للمواد */}
       <div className="sub-card p-5 mb-6 sub-rise" data-testid="grades-subject-max-card">
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الدرجات العظمى للاختبارات القصيرة (لكل مادة)</h3>
+          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الدرجات العظمى للاختبارات القصيرة (لكل صف ومادة)</h3>
+          <select className="sub-input w-auto text-sm font-bold" value={maxGrade} onChange={(e) => setMaxGrade(e.target.value)} data-testid="grades-max-grade-select">
+            {GRADES_LIST.map(g => <option key={g} value={g}>الصف {g}</option>)}
+          </select>
           <button onClick={saveMax} disabled={savingMax} className="sub-btn sub-btn-primary sub-btn-sm mr-auto" data-testid="grades-save-subject-max">
-            {savingMax ? 'جارٍ الحفظ...' : 'حفظ الدرجات العظمى'}
+            {savingMax ? 'جارٍ الحفظ...' : `حفظ درجات الصف ${maxGrade}`}
           </button>
         </div>
         <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
@@ -232,7 +261,7 @@ export default function GradesAdmin() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs mt-3" style={{ color: 'var(--sub-muted)' }}>تُطبَّق هذه الحدود فوراً على إدخال المعلمين وعلى حساب «الدرجة النهائية» في الإحصائيات وكشف المتميزين ونتائج ولي الأمر.</p>
+        <p className="text-xs mt-3" style={{ color: 'var(--sub-muted)' }}>اختر الصف ثم عدّل درجات مواده واحفظ — لكل صف درجات مستقلة. تُطبَّق هذه الحدود فوراً على إدخال المعلمين وعلى حساب «الدرجة النهائية» في الإحصائيات وكشف المتميزين ونتائج ولي الأمر.</p>
       </div>
 
       {/* توزيع الطلاب حسب الصف */}
