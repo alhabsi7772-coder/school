@@ -1,0 +1,25 @@
+{
+  "summary": "Tested the 3 new features: (1) parent_closed admin toggle + public message, (2) per-grade subject_max, (3) project allow_link UI/backend. All 6 pytest cases pass; all Playwright UI flows (grades admin toggle, parent closed page, max grades per-grade persistence/isolation, project create with/without allow_link, student link-only submit, submissions page link item) pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_review_i25.py",
+    "/app/test_reports/pytest/i25.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 3928 lines — recommend splitting into modular routers (projects, auth, quizzes, etc.) for maintainability.",
+    "project_info endpoint returns the raw project document publicly; no sensitive fields leak currently but consider whitelist projection for future safety.",
+    "SettingsReq.grade_subject_max uses dotted MongoDB keys built from user-controlled grade names — currently filtered to the GRADES whitelist, which is correct; keep this guard."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_review_i25.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Grades admin admin/admin123; Main app admin/teacher123",
+  "seed_data_creation": "Created transient TEST_i25_link_proj and TEST_i25_nolink projects via UI, submitted a link, then deleted both. Also deleted the pre-existing 'TEST link' (G14IMZ) project per request. Restored السابع/الرياضيات max back to 10/10 and parent_closed back to false.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file: /app/backend/tests/test_review_i25.py. Grades admin dashboard now has three control cards (site/grades/parent) plus per-grade max grades selector (data-testid=grades-max-grade-select) with inputs grades-max-q{1,2}-{i} and save btn grades-save-subject-max. Parent closed page shows data-testid=grades-parent-closed. Projects allow_link uses data-testid=project-allow-link-checkbox, project-link-badge-{id}, project-link-section, project-link-input, submission-link-{id}.",
+  "rca of the issue": "N/A — no bugs found."
+}

@@ -414,3 +414,13 @@
 - لإبقاء البطاقة في صفحة A4 واحدة مع وجود الصورة: صُغّرت الترويسة (شعار الوزارة من 34مم إلى 18مم، تصغير أحجام الخطوط والمسافات)، ودُمج حقلا "الصف" و"الفصل" في صف البيانات الأول مع "الاسم"، وحُذفت خانة "النشاط/المهارة" بالكامل بطلب المستخدم.
 - تم التحقق: لقطة شاشة فعلية + فتح ملف PDF المُنزَّل فعلياً (`pymupdf`) وتأكيد ظهور الصورة بوضوح والبطاقة كاملة في صفحة واحدة بدون فائض.
 - 2026-06: RubricPrint fixed to exact A4 height (297mm, overflow hidden); image area flexes to fill remaining space so images shrink automatically and the whole card fits one page (print + PDF download).
+
+## 2026-06 Update
+- Grades admin: "دخول أولياء الأمور" toggle (parent_closed) — parents page shows "عرض النتائج مغلق مؤقتاً من قبل الإدارة"; /parent/results returns 403.
+- Max grades per grade level: settings.grade_subject_max {grade:{subject:{quiz1,quiz2}}}; admin selects grade from dropdown; used in score entry, stats, full-marks, parent results (fallback legacy subject_max → 10).
+- Projects: optional allow_link on create; students submit link OR files; link shown in submissions.
+- Tested: iteration_25 (100%).
+## Backlog
+- P1: 422 on Substitution Stats/Swap print pages
+- P2: Auto alphabetical sort in Gradebook; image/PDF download for Swap & Stats pages
+- P3: Quiz sound effects; assign grades to older quizzes; WhatsApp notify late teachers
