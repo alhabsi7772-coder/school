@@ -424,3 +424,11 @@
 - P1: 422 on Substitution Stats/Swap print pages
 - P2: Auto alphabetical sort in Gradebook; image/PDF download for Swap & Stats pages
 - P3: Quiz sound effects; assign grades to older quizzes; WhatsApp notify late teachers
+
+## 2026-06 Update 2 (Grades System)
+- Admin enter page now shows teachers' scores; admin edits update the teacher's own score doc.
+- New /grades/settings (admin): current semester w/ confirm, system toggles, per-grade max grades, subjects add/hide/delete (settings.subjects_config), change password.
+- current_semester governs teacher entry (403 otherwise), stats, full-marks, parent results.
+- Admin stats: class-stats (GET /api/grades/class-stats?grade=&section=) ranked by overall %.
+- Zeyada font request cancelled by user.
+- Tested: iteration_26 (100%).

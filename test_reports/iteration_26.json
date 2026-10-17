@@ -1,0 +1,35 @@
+{
+  "summary": "Reviewed and tested the 4 Grades System features (admin sees teacher scores, class-stats, settings page with subjects CRUD/hide, semester separation). Backend: 12/12 pytest cases pass. Frontend: all required data-testids verified on admin dashboard, settings, stats and parent pages. Found and fixed a critical ReferenceError bug in GradesAdmin.jsx that referenced undefined `showPwdModal`/`ChangePasswordModal` (stray leftover from refactor) which would have crashed the admin home.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "GradesAdmin.jsx", "issue": "Referenced undefined `showPwdModal` and `ChangePasswordModal` after refactor; would throw ReferenceError at render — FIXED (removed stray line)", "selector": "/grades admin home", "priority": "FIXED"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_grades_i26.py",
+    "/app/test_reports/pytest/i26.xml"
+  ],
+  "action_items": [
+    "No open action items. Monitor: GradesAdmin.jsx fix applied by testing agent — review for correctness."
+  ],
+  "critical_code_review_comments": [
+    "GradesAdmin.jsx had dead reference to removed ChangePasswordModal — fixed during testing.",
+    "server.py / grades.py: active_subjects filtering is applied consistently (status, assignments, my/stats, full-marks, parent/results, class-stats) — good.",
+    "save_score admin branch correctly preserves original teacher_id when editing existing doc — verified by test.",
+    "Teacher-side semester enforcement returns 403 for non-current semester — verified."
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/grades/GradesAdmin.jsx",
+    "/app/backend/tests/test_grades_i26.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Grades admin admin/admin123. Seeded test teacher civil=123456726 pwd=0026 (deleted at end).",
+  "seed_data_creation": "Created TEST_معلم_اختبار_26 teacher + 2 TEST_طالب_ students + scores; cleaned up in fixture teardown. Restored settings: current_semester=1, all 10 subjects visible, flags=false.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file: /app/backend/tests/test_grades_i26.py (loads BASE from frontend/.env). Admin dashboard test-ids: grades-status-card, grades-status-semester, grades-go-settings. Settings page: grades-semester-{1,2}, grades-semester-confirm(-btn/-cancel), grades-toggle-{site,lock,parent}, grades-max-grade-select, grades-save-subject-max, grades-new-subject-input, grades-add-subject-btn, grades-subject-toggle-{i}, grades-subject-delete-{i}, grades-open-change-password. Stats admin card: grades-class-stats-card with -grade/-section selects and -row-{i}. Enter: grades-semester-fixed (teacher) / grades-semester-select (admin). Parent: grades-parent-semester badge.",
+  "rca of the issue": "GradesAdmin.jsx leftover line `{showPwdModal && <ChangePasswordModal onClose={...} />}` was not cleaned up when the change-password modal was moved to GradesSettings.jsx; neither identifier is imported/defined in GradesAdmin, so React would throw ReferenceError on render. Fix: remove the orphan line. Playwright verified admin home now renders without pageerror."
+}

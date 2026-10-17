@@ -131,7 +131,6 @@ export default function GradesAdmin() {
           </table>
         </div>
       </div>
-      {showPwdModal && <ChangePasswordModal onClose={() => setShowPwdModal(false)} />}
     </GradesLayout>
   );
 }
