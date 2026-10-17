@@ -896,9 +896,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         done_map, teacher_has = {}, set()
         async for sc in db.grades_scores.find({"semester": sem_now}, {"_id": 0}):
             teacher_has.add(sc.get("teacher_id"))
-            q1max, q2max = max_for(settings, sc.get("subject", ""), sc.get("grade"))
-            ok = (q1max <= 0 or sc.get("quiz1") is not None) and (q2max <= 0 or sc.get("quiz2") is not None)
-            if ok:
+            if sc.get("quiz1") is not None or sc.get("quiz2") is not None:
                 done_map.setdefault((sc.get("grade"), str(sc.get("section")), sc.get("subject")), set()).add(sc["student_id"])
         for t in teachers:
             with_classes(t)
