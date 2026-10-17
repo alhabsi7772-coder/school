@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Users, BookOpen, CheckCircle2, Clock, AlertTriangle, Settings } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, GRADES_LIST, classLabel } from './gradesApi';
+import EntryBoard from './EntryBoard';
+import { gradesApi, errMsg, GRADES_LIST } from './gradesApi';
 
 export default function GradesAdmin() {
   const [stats, setStats] = useState(null);
@@ -65,72 +66,7 @@ export default function GradesAdmin() {
         </div>
       </div>
 
-      {/* تنبيه: معلمون لم يكملوا إدخال الدرجات */}
-      {(stats?.teachers || []).some(t => t.incomplete) && (
-        <div className="sub-card p-5 mb-6 sub-rise" data-testid="grades-incomplete-card"
-          style={{ background: 'var(--sub-amber-soft)', borderColor: 'var(--sub-amber-line)' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5" style={{ color: 'var(--sub-amber-ink)' }} />
-            <h3 className="font-black" style={{ color: 'var(--sub-amber-ink)' }}>معلمون لم يكملوا إدخال درجات شعبهم</h3>
-            <span className="sub-badge sub-badge-amber mr-auto">{stats.teachers.filter(t => t.incomplete).length} معلم</span>
-          </div>
-          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-amber-line)', background: 'var(--sub-surface)' }}>
-            <table className="sub-table">
-              <thead><tr><th>م</th><th>المعلم</th><th>المادة</th><th>الشعب الناقصة</th><th>المتبقي</th></tr></thead>
-              <tbody>
-                {stats.teachers.filter(t => t.incomplete).map((t, i) => (
-                  <tr key={t.id} data-testid={`grades-incomplete-row-${i}`}>
-                    <td>{i + 1}</td>
-                    <td className="font-bold">{t.name}</td>
-                    <td className="text-xs font-semibold">{t.subject || '—'}</td>
-                    <td className="text-xs">
-                      {t.pending.map((p, k) => (
-                        <span key={k} className="sub-badge sub-badge-gray" style={{ margin: '2px' }}>
-                          {p.grade}/{p.section} · {p.semester_label} · ناقص {p.missing} من {p.students}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="font-black" style={{ color: 'var(--sub-red-ink)' }}>{t.pending.reduce((a, p) => a + p.missing, 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* حالة المعلمين */}
-      <div className="sub-card p-5 sub-rise">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>متابعة إدخال الدرجات</h3>
-          <Link to="/grades/teachers" className="sub-btn sub-btn-ghost sub-btn-sm">إدارة المعلمين</Link>
-        </div>
-        <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
-          <table className="sub-table">
-            <thead><tr><th>م</th><th>المعلم</th><th>الرقم الوظيفي</th><th>المادة</th><th>الصفوف</th><th>الدرجات المدخلة</th><th>الحالة</th></tr></thead>
-            <tbody>
-              {(stats?.teachers || []).map((t, i) => (
-                <tr key={t.id}>
-                  <td>{i + 1}</td>
-                  <td className="font-bold">{t.name}</td>
-                  <td className="text-xs" style={{ color: 'var(--sub-muted)' }}>{t.employee_number || '—'}</td>
-                  <td className="text-xs font-semibold">{t.subject || '—'}</td>
-                  <td className="text-xs">{(t.classes || []).map(classLabel).join('، ') || '—'}</td>
-                  <td className="font-black">{t.scores_count || 0}</td>
-                  <td>
-                    {t.entered
-                      ? <span className="sub-badge sub-badge-green"><CheckCircle2 className="w-3 h-3" /> أدخل</span>
-                      : <span className="sub-badge sub-badge-amber"><Clock className="w-3 h-3" /> لم يدخل</span>}
-                  </td>
-                </tr>
-              ))}
-              {(!stats?.teachers || stats.teachers.length === 0) && (
-                <tr><td colSpan={7} className="text-center py-8" style={{ color: 'var(--sub-muted)' }}>لا يوجد معلمون — استورد بيانات المعلمين من صفحة المعلمين</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <EntryBoard teachers={stats?.teachers || []} />
     </GradesLayout>
   );
 }

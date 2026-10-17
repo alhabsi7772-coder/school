@@ -432,3 +432,4 @@
 - Admin stats: class-stats (GET /api/grades/class-stats?grade=&section=) ranked by overall %.
 - Zeyada font request cancelled by user.
 - Tested: iteration_26 (100%).
+- 2026-06: Class stats: removed level, avg = sum of subject totals / subjects count (ranking by avg). Admin home: EntryBoard 3 colored columns (لم يبدأ/بدأ ولم يكمل/أكمل) with progress & missing sections + search (current semester).

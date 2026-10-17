@@ -1144,16 +1144,17 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             marks = by_student.get(st["id"], {})
             total = sum(marks.values())
             mx = sum(maxes[s] for s in marks)
+            avg = round(total / len(marks), 1) if marks else None
             pct = round(total / mx * 100, 1) if mx > 0 else None
-            rows.append({"id": st["id"], "name": st["name"], "section": str(st.get("section", "")),
+            rows.append({"avg": avg,"id": st["id"], "name": st["name"], "section": str(st.get("section", "")),
                          "marks": marks, "total": total, "max": mx, "pct": pct,
                          "level": level_letter(pct) if pct is not None else "", "subjects_count": len(marks)})
-        rows.sort(key=lambda r: (r["pct"] is None, -(r["pct"] or 0), r["name"]))
+        rows.sort(key=lambda r: (r["avg"] is None, -(r["avg"] or 0), r["name"]))
         rank, prev = 0, object()
         for i, r in enumerate(rows):
-            if r["pct"] is not None and r["pct"] != prev:
-                rank, prev = i + 1, r["pct"]
-            r["rank"] = rank if r["pct"] is not None else None
+            if r["avg"] is not None and r["avg"] != prev:
+                rank, prev = i + 1, r["avg"]
+            r["rank"] = rank if r["avg"] is not None else None
         used = [s for s in subs if any(s in r["marks"] for r in rows)]
         sub_avg = {s: round(sum(r["marks"][s] for r in rows if s in r["marks"]) / max(1, sum(1 for r in rows if s in r["marks"])), 1) for s in used}
         return {"grade": grade, "section": section or "", "semester": sem, "semester_label": SEMESTER_LABELS[sem],
