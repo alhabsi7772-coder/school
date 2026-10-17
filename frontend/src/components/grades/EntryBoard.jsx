@@ -47,7 +47,6 @@ export default function EntryBoard({ teachers = [] }) {
     const list = teachers.filter(t => !term || t.name.includes(term) || (t.subject || '').includes(term));
     const g = { none: [], partial: [], done: [] };
     list.filter(t => t.expected > 0).forEach(t => g[statusOf(t)].push(t));
-    g.partial.sort((a, b) => pctOf(a) - pctOf(b));
     return { groups: g, noClasses: list.filter(t => !t.expected).length };
   }, [teachers, q]);
 
@@ -70,7 +69,14 @@ export default function EntryBoard({ teachers = [] }) {
               <span className="sub-badge mr-auto font-black" style={{ background: 'var(--sub-surface)', color: col.ink }} data-testid={`entry-count-${col.key}`}>{groups[col.key].length}</span>
             </div>
             <div className="space-y-2 max-h-[520px] overflow-y-auto">
-              {groups[col.key].map(t => <TeacherCard key={t.id} t={t} col={col} />)}
+              {groups[col.key].map((t, i, arr) => (
+                <div key={t.id}>
+                  {(i === 0 || arr[i - 1].subject !== t.subject) && (
+                    <p className="text-[11px] font-black px-1 pt-1 pb-1" style={{ color: col.ink }} data-testid={`entry-subject-${col.key}-${i}`}>{t.subject || 'بدون مادة'}</p>
+                  )}
+                  <TeacherCard t={t} col={col} />
+                </div>
+              ))}
               {groups[col.key].length === 0 && <p className="text-center text-xs py-6 font-semibold" style={{ color: col.ink, opacity: 0.7 }}>لا يوجد</p>}
             </div>
           </div>

@@ -377,9 +377,14 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
                 return t
         return None
 
+    def by_subject(teachers: list, settings: dict) -> list:
+        order = {n: i for i, n in enumerate(all_subjects(settings))}
+        return sorted(teachers, key=lambda t: (order.get(t.get("subject") or "", 999), t.get("subject") or "", t.get("name", "")))
+
     @router.get("/teachers")
     async def list_teachers(u=Depends(require_admin)):
-        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).sort("name", 1).to_list(None)
+        teachers = await db.grades_users.find({"role": "teacher"}, {"_id": 0, "password_hash": 0}).to_list(None)
+        teachers = by_subject([with_classes(t) for t in teachers], await get_settings())
         # حالة إدخال الدرجات لكل معلم
         for t in teachers:
             with_classes(t)
@@ -937,7 +942,7 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
             "total_scores": total_scores,
             "teachers_incomplete": sum(1 for t in teachers if t.get("incomplete")),
             "by_grade": by_grade,
-            "teachers": teachers,
+            "teachers": by_subject(teachers, settings),
         }
 
     # ---- teacher: assignments & students ----
