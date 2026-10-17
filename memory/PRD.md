@@ -434,3 +434,4 @@
 - Tested: iteration_26 (100%).
 - 2026-06: Class stats: removed level, avg = sum of subject totals / subjects count (ranking by avg). Admin home: EntryBoard 3 colored columns (لم يبدأ/بدأ ولم يكمل/أكمل) with progress & missing sections + search (current semester).
 - 2026-06: EntryBoard redesigned: tabs 'حسب المادة' (expandable subject rows w/ progress + colored dots) and 'قائمة المعلمين' (sorted by lowest progress, filters الكل/لم يبدأ/ناقص/أكمل). Search removed.
+- 2026-06: admin/stats completion now computed per class+subject (any teacher/admin entry counts, current semester, quizzes with max 0 not required). Grades header compacted (h-12, compact nav, wraps on mobile).

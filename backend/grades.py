@@ -890,39 +890,37 @@ def make_router(db, hash_password, verify_password, make_token, jwt_secret, jwt_
         settings = await get_settings()
         active, sem_now = active_subjects(settings), cur_sem(settings)
         entered_ids = set()
-        student_counts = {}
+        sec_students = {}
+        async for st in db.grades_students.find({}, {"_id": 0, "id": 1, "grade": 1, "section": 1}):
+            sec_students.setdefault((st["grade"], str(st.get("section", ""))), set()).add(st["id"])
+        done_map, teacher_has = {}, set()
+        async for sc in db.grades_scores.find({"semester": sem_now}, {"_id": 0}):
+            teacher_has.add(sc.get("teacher_id"))
+            q1max, q2max = max_for(settings, sc.get("subject", ""), sc.get("grade"))
+            ok = (q1max <= 0 or sc.get("quiz1") is not None) and (q2max <= 0 or sc.get("quiz2") is not None)
+            if ok:
+                done_map.setdefault((sc.get("grade"), str(sc.get("section")), sc.get("subject")), set()).add(sc["student_id"])
         for t in teachers:
             with_classes(t)
-            c = await db.grades_scores.count_documents({"teacher_id": t["id"]})
-            t["entered"] = c > 0
-            t["scores_count"] = c
-            if c > 0:
-                entered_ids.add(t["id"])
-            # متابعة الإكمال: لكل شعبة وفصل دراسي
-            scores = await db.grades_scores.find({"teacher_id": t["id"]}, {"_id": 0}).to_list(None)
-            pending = []
-            expected = 0
-            complete = 0
+            pending, expected, complete = [], 0, 0
             for a in t.get("assignments", []):
                 if a["subject"] not in active:
                     continue
                 key = (a["grade"], str(a["section"]))
-                if key not in student_counts:
-                    student_counts[key] = await db.grades_students.count_documents({"grade": key[0], "section": key[1]})
-                n = student_counts[key]
-                for sem in [sem_now]:
-                    done = sum(1 for s in scores
-                               if s.get("grade") == a["grade"] and str(s.get("section")) == str(a["section"])
-                               and s.get("subject") == a["subject"] and s.get("semester") == sem
-                               and s.get("quiz1") is not None and s.get("quiz2") is not None)
-                    expected += n
-                    complete += min(done, n)
-                    if n > 0 and done < n:
-                        pending.append({
-                            "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
-                            "semester": sem, "semester_label": SEMESTER_LABELS[sem],
-                            "students": n, "done": done, "missing": n - done,
-                        })
+                studs = sec_students.get(key, set())
+                n = len(studs)
+                done = len(done_map.get((a["grade"], str(a["section"]), a["subject"]), set()) & studs)
+                expected += n
+                complete += done
+                if n > 0 and done < n:
+                    pending.append({
+                        "grade": a["grade"], "section": str(a["section"]), "subject": a["subject"],
+                        "semester": sem_now, "semester_label": SEMESTER_LABELS[sem_now],
+                        "students": n, "done": done, "missing": n - done,
+                    })
+            t["entered"] = complete > 0 or t["id"] in teacher_has
+            if t["entered"]:
+                entered_ids.add(t["id"])
             t["expected"] = expected
             t["complete"] = complete
             t["pending"] = pending

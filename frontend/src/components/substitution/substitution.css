@@ -260,6 +260,7 @@ select.sub-input { appearance: none; background-image: url("data:image/svg+xml,%
 /* الهيدر */
 .sub-nav-link { display: inline-flex; align-items: center; gap: 8px; padding: 0.55rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; color: var(--sub-muted); transition: background-color .15s, color .15s; background: transparent; border: none; cursor: pointer; font-family: inherit; }
 .sub-nav-link:hover { color: var(--sub-navy-ink); background: var(--sub-navy-soft); }
+.sub-nav-compact .sub-nav-link { padding: 0.35rem 0.7rem; font-size: 0.8rem; gap: 5px; }
 .sub-nav-link.active { background: var(--sub-navy); color: var(--sub-on-navy); font-family: var(--sub-font-heading); }
 
 .sub-stat { padding: 1.1rem 1.2rem; border-radius: 20px; background: var(--sub-surface); border: 1px solid var(--sub-line); box-shadow: var(--sub-shadow); transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s cubic-bezier(.2,.8,.2,1); }
