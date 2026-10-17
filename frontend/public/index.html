@@ -23,6 +23,8 @@
         -->
         <title>Emergent | Fullstack App</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+        <script>(function(){var x=/(chrome|moz|safari-web)-extension:\/\//;function ext(v){try{return x.test(String((v&&(v.stack||v.filename))||v||""))}catch(_){return false}}window.addEventListener("error",function(e){if(ext(e.filename)||ext(e.error)){e.stopImmediatePropagation();e.preventDefault()}},true);window.addEventListener("unhandledrejection",function(e){if(ext(e.reason)){e.stopImmediatePropagation();e.preventDefault()}},true)})();</script>
+
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
         <!--
         These two scripts have been added for the Visual Edits, please do not edit or remove them

@@ -100,6 +100,15 @@ webpackConfig.devServer = (devServerConfig) => {
     };
   }
 
+  devServerConfig.client = {
+    ...(devServerConfig.client || {}),
+    overlay: {
+      errors: true,
+      warnings: false,
+      runtimeErrors: (error) => !/(chrome|moz|safari-web)-extension:\/\//.test(String((error && error.stack) || error || "")),
+    },
+  };
+
   return devServerConfig;
 };
 
