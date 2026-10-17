@@ -118,6 +118,7 @@ export default function GradesParent() {
             <div className="sub-card p-5 mb-5 sub-rise">
               <h3 className="font-black mb-4 flex items-center gap-2" style={{ color: 'var(--sub-navy-ink)' }}>
                 <BookOpen className="w-5 h-5" /> نتائج المواد
+                {data.semester_label && <span className="sub-badge sub-badge-navy mr-auto" data-testid="grades-parent-semester">{data.semester_label}</span>}
               </h3>
               <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--sub-line)' }}>
                 <table className="sub-table">

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Users, BookOpen, BarChart3, LogOut, ExternalLink, Lock, Sun, Moon, Sparkles } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, BarChart3, LogOut, ExternalLink, Lock, Sun, Moon, Sparkles, Settings } from 'lucide-react';
 import LuxParticles from '../LuxParticles';
 import { SCHOOL_NAME } from './gradesApi';
 import { useGradesTheme, themeClass } from './gradesTheme';
@@ -25,6 +25,7 @@ const ADMIN_NAV = [
   { to: '/grades/students', label: 'الطلاب', icon: BookOpen, tid: 'students' },
   { to: '/grades/enter', label: 'إدخال الدرجات', icon: GraduationCap, tid: 'enter' },
   { to: '/grades/stats', label: 'الإحصائيات', icon: BarChart3, tid: 'stats' },
+  { to: '/grades/settings', label: 'الإعدادات', icon: Settings, tid: 'settings' },
 ];
 
 const TEACHER_NAV = [

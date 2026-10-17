@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { GRADES_LIST, SUBJECTS, GRADE_NUM } from './gradesApi';
+import { GRADES_LIST, GRADE_NUM, useGradesStatus } from './gradesApi';
 
 const SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
@@ -30,6 +30,7 @@ function ClassPicker({ classes, onChange }) {
 }
 
 export default function TeacherEditModal({ teacher, title, onClose, onSave }) {
+  const { subjects } = useGradesStatus();
   const [form, setForm] = useState({
     name: teacher.name || '', subject: teacher.subject || '',
     employee_number: teacher.employee_number || '', civil_number: teacher.civil_number || '',
@@ -55,7 +56,7 @@ export default function TeacherEditModal({ teacher, title, onClose, onSave }) {
           <input className="sub-input sm:col-span-2" placeholder="اسم المعلم" required value={form.name} onChange={set('name')} data-testid="teacher-edit-name" />
           <select className="sub-input" value={form.subject} onChange={set('subject')} data-testid="teacher-edit-subject">
             <option value="">— المادة —</option>
-            {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <input className="sub-input" placeholder="الرقم الوظيفي" value={form.employee_number} onChange={set('employee_number')} data-testid="teacher-edit-emp" />
           <input className="sub-input" placeholder="الرقم المدني" value={form.civil_number} onChange={set('civil_number')} data-testid="teacher-edit-civil" />

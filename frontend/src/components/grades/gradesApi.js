@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useEffect, useState } from 'react';
 
 export const GRADES_API = `${process.env.REACT_APP_BACKEND_URL}/api/grades`;
 export const SCHOOL_NAME = 'مدرسة الخيرات للبنين ٥-٨';
@@ -40,3 +41,9 @@ export const SEMESTERS = [
 export const QUIZ_MAX = 10;
 export const LEVEL_COLORS = { 'أ': '#34D399', 'ب': '#38BDF8', 'ج': '#FBBF24', 'د': '#FB923C', 'هـ': '#F87171' };
 export const levelLetter = (v) => v == null ? '' : v >= 90 ? 'أ' : v >= 80 ? 'ب' : v >= 65 ? 'ج' : v >= 50 ? 'د' : 'هـ';
+
+export function useGradesStatus() {
+  const [st, setSt] = useState({ subjects: SUBJECTS, current_semester: '1', semester_label: SEMESTERS[0].label, grades_locked: false });
+  useEffect(() => { gradesApi.get('/status').then(r => setSt(r.data)).catch(() => {}); }, []);
+  return st;
+}

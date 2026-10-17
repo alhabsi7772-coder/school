@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Printer } from 'lucide-react';
-import { gradesApi, SCHOOL_NAME, SEMESTERS } from './gradesApi';
+import { gradesApi, SCHOOL_NAME } from './gradesApi';
 import '../substitution/substitution.css';
 
 export default function GradesFullMarksPrint() {
@@ -9,16 +9,17 @@ export default function GradesFullMarksPrint() {
   const semester = params.get('semester') || '';
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [semLabel, setSemLabel] = useState('');
 
   useEffect(() => {
     document.documentElement.classList.add('sub-app');
+    gradesApi.get('/status').then(r => setSemLabel(r.data.semester_label || '')).catch(() => {});
     gradesApi.get('/full-marks', { params: semester ? { semester } : {} })
       .then(r => { setRows(r.data.rows || []); })
       .finally(() => setLoading(false));
     return () => document.documentElement.classList.remove('sub-app');
   }, [semester]);
 
-  const semLabel = SEMESTERS.find(s => s.value === semester)?.label || 'الفصلان الدراسيان';
   const today = new Date().toLocaleDateString('ar-EG');
 
   useEffect(() => { document.title = `كشف المتميزين — ${semLabel}`; }, [semLabel]);

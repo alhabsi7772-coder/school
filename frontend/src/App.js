@@ -53,6 +53,7 @@ import GradesEnter from './components/grades/GradesEnter';
 import GradesStats from './components/grades/GradesStats';
 import GradesParent from './components/grades/GradesParent';
 import GradesFullMarksPrint from './components/grades/GradesFullMarksPrint';
+import GradesSettings from './components/grades/GradesSettings';
 import './App.css';
 
 const SubRoute = ({ children }) => {
@@ -143,6 +144,7 @@ function App() {
             <Route path="/grades/login" element={<GradesLogin />} />
             <Route path="/grades/parent" element={<GradesParent />} />
             <Route path="/grades" element={<GradesRoute><GradesHome /></GradesRoute>} />
+            <Route path="/grades/settings" element={<GradesAdminRoute><GradesSettings /></GradesAdminRoute>} />
             <Route path="/grades/teachers" element={<GradesAdminRoute><GradesTeachers /></GradesAdminRoute>} />
             <Route path="/grades/students" element={<GradesAdminRoute><GradesStudents /></GradesAdminRoute>} />
             <Route path="/grades/enter" element={<GradesRoute><GradesEnter /></GradesRoute>} />

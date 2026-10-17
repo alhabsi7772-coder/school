@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { GraduationCap, Save, AlertTriangle, Lock, Check, Loader2 } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, GRADES_LIST, SUBJECTS, SEMESTERS, QUIZ_MAX } from './gradesApi';
+import { gradesApi, errMsg, GRADES_LIST, SEMESTERS, QUIZ_MAX } from './gradesApi';
 
 const ALL_SECTIONS = ['1', '2', '3', '4', '5', '6', '7'];
 
@@ -17,7 +17,7 @@ export default function GradesEnter() {
   const [subject, setSubject] = useState('');
   const [students, setStudents] = useState([]);
   const [scores, setScores] = useState({});
-  const [settings, setSettings] = useState({ grades_locked: false });
+  const [settings, setSettings] = useState({ grades_locked: false, subjects: [] });
   const [qmax, setQMax] = useState({ quiz1: QUIZ_MAX, quiz2: QUIZ_MAX });
   const [status, setStatus] = useState('idle'); // idle | saving | saved
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export default function GradesEnter() {
   const timer = useRef(null);
 
   useEffect(() => {
-    gradesApi.get('/status').then(r => setSettings(r.data)).catch(() => {});
+    gradesApi.get('/status').then(r => { setSettings(r.data); setSemester(r.data.current_semester || '1'); }).catch(() => {});
     gradesApi.get('/my/assignments').then(r => {
       const list = r.data.assignments || [];
       setAssignments(list);
@@ -156,9 +156,15 @@ export default function GradesEnter() {
           <div className="sub-card p-4 mb-5 sub-rise grid gap-3 md:grid-cols-4">
             <div>
               <label className="block text-xs font-bold mb-1" style={{ color: 'var(--sub-muted)' }}>الفصل الدراسي</label>
-              <select className="sub-input w-full" value={semester} onChange={(e) => setSemester(e.target.value)} data-testid="grades-semester-select">
-                {SEMESTERS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              {isAdmin ? (
+                <select className="sub-input w-full" value={semester} onChange={(e) => setSemester(e.target.value)} data-testid="grades-semester-select">
+                  {SEMESTERS.map(s => <option key={s.value} value={s.value}>{s.label}{s.value === settings.current_semester ? ' (الحالي)' : ''}</option>)}
+                </select>
+              ) : (
+                <div className="sub-input w-full flex items-center font-bold" data-testid="grades-semester-fixed" style={{ color: 'var(--sub-navy-ink)' }}>
+                  {SEMESTERS.find(s => s.value === semester)?.label}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold mb-1" style={{ color: 'var(--sub-muted)' }}>الصف</label>
@@ -179,7 +185,7 @@ export default function GradesEnter() {
               {isAdmin && !assignments.length ? (
                 <select className="sub-input w-full" value={subject} onChange={(e) => setSubject(e.target.value)} data-testid="grades-subject-select">
                   <option value="">— اختر المادة —</option>
-                  {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  {(settings.subjects || []).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               ) : (
                 <div className="sub-input w-full flex items-center font-bold" data-testid="grades-subject-fixed" style={{ color: 'var(--sub-navy-ink)' }}>{subject || '—'}</div>

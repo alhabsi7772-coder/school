@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BarChart3, Users, Award, TrendingUp, Trophy, Printer } from 'lucide-react';
 import GradesLayout from './GradesLayout';
-import { gradesApi, errMsg, SEMESTERS } from './gradesApi';
+import { gradesApi, errMsg, useGradesStatus } from './gradesApi';
+import ClassStatsCard from './ClassStatsCard';
 
 export default function GradesStats() {
   const [stats, setStats] = useState([]);
   const [full, setFull] = useState([]);
-  const [semFilter, setSemFilter] = useState('');
+  const { semester_label } = useGradesStatus();
   const [loading, setLoading] = useState(true);
   const isAdmin = (localStorage.getItem('gradesRole') || 'teacher') === 'admin';
 
@@ -18,7 +19,7 @@ export default function GradesStats() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  const fullRows = useMemo(() => semFilter ? full.filter(r => r.semester === semFilter) : full, [full, semFilter]);
+  const fullRows = full;
 
   const classSummary = useMemo(() => {
     const m = new Map();
@@ -36,6 +37,11 @@ export default function GradesStats() {
 
   return (
     <GradesLayout title="الإحصائيات" subtitle={isAdmin ? 'إحصائيات عامة والطلاب الحاصلون على الدرجة النهائية' : 'إحصائيات الصفوف التي تدرّسها والطلاب الحاصلون على الدرجة النهائية'}>
+      <div className="mb-5 flex items-center gap-2 sub-rise">
+        <span className="sub-badge sub-badge-navy" data-testid="grades-stats-semester">{semester_label}</span>
+      </div>
+      {isAdmin && <ClassStatsCard />}
+
       {/* ملخص الصفوف التي يدرسها المعلم */}
       {classSummary.length > 0 && (
         <div className="sub-card p-5 mb-5 sub-rise" data-testid="grades-classes-summary">
@@ -70,12 +76,8 @@ export default function GradesStats() {
           <Trophy className="w-5 h-5" style={{ color: 'var(--sub-amber-ink)' }} />
           <h3 className="font-black" style={{ color: 'var(--sub-navy-ink)' }}>الحاصلون على الدرجة النهائية لمادتهم</h3>
           <span className="sub-badge sub-badge-navy">{fullRows.length} طالب</span>
-          <select className="sub-input mr-auto w-auto" value={semFilter} onChange={(e) => setSemFilter(e.target.value)} data-testid="grades-full-sem-filter">
-            <option value="">كل الفصول</option>
-            {SEMESTERS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <a href={`/grades/full-marks/print${semFilter ? `?semester=${semFilter}` : ''}`} target="_blank" rel="noreferrer"
-            className="sub-btn sub-btn-primary sub-btn-sm" data-testid="grades-full-pdf-btn">
+          <a href="/grades/full-marks/print" target="_blank" rel="noreferrer"
+            className="sub-btn sub-btn-primary sub-btn-sm mr-auto" data-testid="grades-full-pdf-btn">
             <Printer className="w-4 h-4" /> تنزيل كشف PDF
           </a>
         </div>
